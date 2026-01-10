@@ -99,6 +99,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     current_password: Optional[str] = None
     new_password: Optional[str] = None
+    profile_image: Optional[str] = None  # Base64 string
 
     @field_validator('email')
     @classmethod
@@ -379,6 +380,7 @@ class AuthService:
             "username": username,
             "email": user.get("email"),
             "full_name": user.get("full_name"),
+            "profile_image": user.get("profile_image"),
             "created_at": user.get("created_at"),
             "is_admin": user.get("is_admin", False)
         }
@@ -401,6 +403,10 @@ class AuthService:
         # Update full_name if provided
         if update.full_name is not None:
             user["full_name"] = update.full_name
+        
+        # Update profile_image if provided
+        if update.profile_image is not None:
+            user["profile_image"] = update.profile_image
         
         # Update password if both current and new password provided
         if update.new_password is not None:

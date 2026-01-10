@@ -17,7 +17,9 @@ const state = {
     ragSearchEnabled: false,
     attachedImages: [],
     models: [],
-    selectedModel: null
+    selectedModel: null,
+    newProfileImage: null,
+    profileImage: null
 };
 
 // ============================================================================
@@ -57,6 +59,8 @@ const elements = {
     // Profile Modal
     profileModal: document.getElementById('profileModal'),
     profileForm: document.getElementById('profileForm'),
+    profilePicInput: document.getElementById('profilePicInput'),
+    profilePicPreview: document.getElementById('profilePicPreview'),
     profileUsername: document.getElementById('profileUsername'),
     profileEmail: document.getElementById('profileEmail'),
     profileFullName: document.getElementById('profileFullName'),
@@ -487,6 +491,17 @@ function setupEventListeners() {
     
     // Profile
     elements.userAvatar.addEventListener('click', openProfileModal);
+    
+    // Profile picture upload
+    const profilePicWrapper = document.querySelector('.profile-pic-wrapper');
+    if (profilePicWrapper) {
+        profilePicWrapper.addEventListener('click', () => {
+            elements.profilePicInput.click();
+        });
+    }
+    
+    elements.profilePicInput.addEventListener('change', handleProfilePicSelect);
+    
     elements.closeProfileBtn.addEventListener('click', closeProfileModal);
     elements.profileForm.addEventListener('submit', saveUserProfile);
     elements.logoutBtn.addEventListener('click', logout);
@@ -569,6 +584,24 @@ function handleImageSelect(e) {
 }
 
 /**
+ * Handle profile picture selection
+ * @param {Event} e - Change event
+ */
+async function handleProfilePicSelect(e) {
+    const file = e.target.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    
+    try {
+        const dataUrl = await resizeImage(file, 400); 
+        state.newProfileImage = dataUrl;
+        elements.profilePicPreview.src = dataUrl;
+    } catch (error) {
+        console.error('Error processing profile picture:', error);
+        showToast('Profil fotoğrafı işlenirken hata oluştu', 'error');
+    }
+}
+
+/**
  * Handle image files
  * @param {File[]} files - Array of image files
  */
@@ -577,7 +610,8 @@ async function handleFiles(files) {
         if (!file.type.startsWith('image/')) continue;
         
         try {
-            const base64 = await resizeImage(file);
+            const dataUrl = await resizeImage(file);
+            const base64 = dataUrl.split(',')[1];
             state.attachedImages.push(base64);
             addImagePreview(base64);
             updateSendButtonState();
@@ -593,14 +627,13 @@ async function handleFiles(files) {
  * @param {File} file - Image file
  * @returns {Promise<string>} Base64 encoded image
  */
-function resizeImage(file) {
+function resizeImage(file, maxSize = 800) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const maxSize = 800;
                 let width = img.width;
                 let height = img.height;
                 
@@ -618,10 +651,8 @@ function resizeImage(file) {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // Get base64 without data URL prefix
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                const base64 = dataUrl.split(',')[1];
-                resolve(base64);
+                resolve(dataUrl);
             };
             img.onerror = reject;
             img.src = e.target.result;
@@ -763,7 +794,10 @@ function appendMessage(role, content, images = []) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}`;
     
-    const avatar = role === 'user' ? '👤' : '🤖';
+    let avatar = role === 'user' ? '👤' : '🤖';
+    if (role === 'user' && state.profileImage) {
+        avatar = `<img src="${state.profileImage}" alt="${state.username}">`;
+    }
     
     messageDiv.innerHTML = `
         <div class="message-avatar">${avatar}</div>
@@ -1355,12 +1389,18 @@ async function loadUserProfile() {
         
         // Update state
         state.username = profile.username;
+        state.profileImage = profile.profile_image;
         localStorage.setItem('username', profile.username);
         
         // Update avatar
-        const initial = profile.username.charAt(0).toUpperCase();
-        elements.userAvatar.textContent = initial;
-        elements.userAvatar.title = profile.username;
+        if (profile.profile_image) {
+            elements.userAvatar.innerHTML = `<img src="${profile.profile_image}" class="nav-profile-pic" alt="${profile.username}">`;
+            elements.profilePicPreview.src = profile.profile_image;
+        } else {
+            const initial = profile.username.charAt(0).toUpperCase();
+            elements.userAvatar.innerHTML = initial;
+            elements.userAvatar.title = profile.username;
+        }
         
         // Update profile form
         elements.profileUsername.value = profile.username;
@@ -1397,7 +1437,8 @@ async function saveUserProfile(e) {
             headers: getAuthHeaders(),
             body: JSON.stringify({
                 email: email || null,
-                full_name: fullName || null
+                full_name: fullName || null,
+                profile_image: state.newProfileImage || null
             })
         });
         
@@ -1411,6 +1452,9 @@ async function saveUserProfile(e) {
         
         // Reload profile to get updated data
         await loadUserProfile();
+        
+        // Close modal after success
+        setTimeout(closeProfileModal, 1500);
         
     } catch (error) {
         console.error('Error saving profile:', error);
