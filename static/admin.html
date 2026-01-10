@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niko AI - Admin Panel</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Admin Panel Specific Styles */
+        .admin-container {
+            min-height: 100vh;
+            padding: var(--spacing-lg);
+        }
+
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            padding-bottom: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .admin-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .admin-title h1 {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .btn-primary {
+            background: var(--accent-gradient);
+            border: none;
+            color: var(--text-primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-glass-hover);
+            border-color: var(--accent-primary);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            border: none;
+            color: var(--text-primary);
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-sm {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: var(--font-size-xs);
+        }
+
+        /* Table Controls */
+        .table-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .filter-group label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .filter-group select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--bg-glass);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--border-focus);
+        }
+
+        /* Users Table */
+        .users-table-container {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: var(--spacing-md) var(--spacing-lg);
+            text-align: left;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .users-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+            transition: background var(--transition-fast);
+        }
+
+        .users-table th:hover {
+            background: var(--bg-glass-hover);
+        }
+
+        .users-table th.sortable::after {
+            content: ' ↕';
+            opacity: 0.5;
+        }
+
+        .users-table th.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        .users-table th.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        .users-table tbody tr {
+            transition: background var(--transition-fast);
+        }
+
+        .users-table tbody tr:hover {
+            background: var(--bg-glass);
+        }
+
+        .users-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+        }
+
+        .badge-admin {
+            background: var(--accent-primary);
+            color: var(--text-primary);
+        }
+
+        .badge-user {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        /* Loading State */
+        .loading-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-primary);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto var(--spacing-md);
+        }
+
+        /* Modal Styles */
+        .admin-modal .modal {
+            max-width: 500px;
+        }
+
+        .admin-modal .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .admin-modal .form-row {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+
+        .admin-modal .form-row .form-group {
+            flex: 1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-primary);
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-md);
+            }
+
+            .table-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .users-table-container {
+                overflow-x: auto;
+            }
+
+            .users-table {
+                min-width: 700px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="admin-title">
+                <span style="font-size: 2rem;">🤖</span>
+                <h1>Admin Panel</h1>
+            </div>
+            <div class="admin-actions">
+                <button class="btn btn-primary" id="newUserBtn">
+                    ➕ Yeni Kullanıcı
+                </button>
+                <button class="btn btn-secondary" id="backToAppBtn">
+                    ← Ana Sayfa
+                </button>
+            </div>
+        </header>
+
+        <!-- Table Controls -->
+        <div class="table-controls">
+            <div class="filter-group">
+                <label for="filterAdmin">Filtre:</label>
+                <select id="filterAdmin">
+                    <option value="">Tüm Kullanıcılar</option>
+                    <option value="true">Sadece Adminler</option>
+                    <option value="false">Sadece Normal Kullanıcılar</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="sortBy">Sırala:</label>
+                <select id="sortBy">
+                    <option value="username">Kullanıcı Adı</option>
+                    <option value="created_at">Kayıt Tarihi</option>
+                    <option value="is_admin">Admin Durumu</option>
+                </select>
+                <select id="sortOrder">
+                    <option value="asc">Artan</option>
+                    <option value="desc">Azalan</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="users-table-container">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="username">Kullanıcı Adı</th>
+                        <th>E-posta</th>
+                        <th>Ad Soyad</th>
+                        <th class="sortable" data-sort="is_admin">Rol</th>
+                        <th class="sortable" data-sort="created_at">Kayıt Tarihi</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <!-- Users will be rendered here -->
+                </tbody>
+            </table>
+            
+            <!-- Loading State -->
+            <div class="loading-state" id="loadingState">
+                <div class="loading-spinner"></div>
+                <p>Kullanıcılar yükleniyor...</p>
+            </div>
+            
+            <!-- Empty State -->
+            <div class="empty-state hidden" id="emptyState">
+                <div class="empty-state-icon">👥</div>
+                <p>Henüz kullanıcı bulunmuyor.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit User Modal -->
+    <div class="modal-overlay admin-modal" id="userModal">
+        <div class="modal">
+            <h3 class="modal-title" id="userModalTitle">Yeni Kullanıcı</h3>
+            <form id="userForm" class="auth-form" style="gap: var(--spacing-md);">
+                <div class="form-group">
+                    <label for="formUsername">Kullanıcı Adı *</label>
+                    <input type="text" id="formUsername" placeholder="Kullanıcı adı" required>
+                    <span class="field-hint">3-30 karakter, harf ile başlamalı</span>
+                </div>
+                <div class="form-group" id="passwordGroup">
+                    <label for="formPassword">Şifre *</label>
+                    <input type="password" id="formPassword" placeholder="Şifre">
+                    <span class="field-hint">En az 8 karakter, büyük/küçük harf ve rakam</span>
+                </div>
+                <div class="form-group">
+                    <label for="formEmail">E-posta</label>
+                    <input type="email" id="formEmail" placeholder="E-posta adresi">
+                </div>
+                <div class="form-group">
+                    <label for="formFullName">Ad Soyad</label>
+                    <input type="text" id="formFullName" placeholder="Ad ve soyad">
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="formIsAdmin">
+                        <label for="formIsAdmin">Admin yetkisi ver</label>
+                    </div>
+                </div>
+                <div id="formError" class="error-message" style="display: none;"></div>
+                <div class="modal-actions" style="margin-top: var(--spacing-md);">
+                    <button type="button" class="modal-btn cancel" id="cancelUserBtn">İptal</button>
+                    <button type="submit" class="modal-btn confirm" style="background: var(--accent-primary);" id="saveUserBtn">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <h3 class="modal-title">Kullanıcıyı Sil</h3>
+            <p class="modal-description" id="deleteDescription">
+                Bu kullanıcıyı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve kullanıcının tüm sohbet geçmişi silinecektir.
+            </p>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" id="cancelDeleteBtn">İptal</button>
+                <button class="modal-btn confirm" id="confirmDeleteBtn">Sil</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ============================================================================
+        // Admin Panel JavaScript
+        // Requirements: 2.3, 2.4, 3.4
+        // ============================================================================
+
+        // State
+        let users = [];
+        let currentEditUser = null;
+        let userToDelete = null;
+
+        // DOM Elements
+        const usersTableBody = document.getElementById('usersTableBody');
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const filterAdmin = document.getElementById('filterAdmin');
+        const sortBy = document.getElementById('sortBy');
+        const sortOrder = document.getElementById('sortOrder');
+        const userModal = document.getElementById('userModal');
+        const userModalTitle = document.getElementById('userModalTitle');
+        const userForm = document.getElementById('userForm');
+        const deleteModal = document.getElementById('deleteModal');
+        const deleteDescription = document.getElementById('deleteDescription');
+        const toastContainer = document.getElementById('toastContainer');
+
+        // ============================================================================
+        // Utility Functions
+        // ============================================================================
+
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('tr-TR', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch {
+                return dateString;
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================================================
+        // API Functions
+        // ============================================================================
+
+        async function fetchUsers() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            const params = new URLSearchParams();
+            if (filterAdmin.value) {
+                params.append('filter_admin', filterAdmin.value);
+            }
+            if (sortBy.value) {
+                params.append('sort_by', sortBy.value);
+            }
+            if (sortOrder.value) {
+                params.append('sort_order', sortOrder.value);
+            }
+
+            try {
+                const response = await fetch(`/api/admin/users?${params.toString()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                if (response.status === 403) {
+                    showToast('Admin yetkisi gerekli', 'error');
+                    window.location.href = '/';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Kullanıcılar yüklenemedi');
+                }
+
+                const data = await response.json();
+                users = data.users || [];
+                renderUsers();
+            } catch (error) {
+                showToast(error.message, 'error');
+                loadingState.classList.add('hidden');
+            }
+        }
+
+        async function createUser(userData) {
+            const token = getToken();
+            
+            try {
+                const response = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.error || 'Kullanıcı oluşturulamadı');
+                }
+
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function updateUser(username, userData) {
+            const token = getToken();
+            
+            try {
+                const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.error || 'Kullanıcı güncellenemedi');
+                }
+
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function deleteUser(username) {
+            const token = getToken();
+            
+            try {
+                const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.error || 'Kullanıcı silinemedi');
+                }
+
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // ============================================================================
+        // Render Functions
+        // ============================================================================
+
+        function renderUsers() {
+            loadingState.classList.add('hidden');
+            
+            if (users.length === 0) {
+                usersTableBody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            
+            usersTableBody.innerHTML = users.map(user => `
+                <tr>
+                    <td><strong>${escapeHtml(user.username)}</strong></td>
+                    <td>${escapeHtml(user.email) || '<span style="color: var(--text-muted);">-</span>'}</td>
+                    <td>${escapeHtml(user.full_name) || '<span style="color: var(--text-muted);">-</span>'}</td>
+                    <td>
+                        <span class="badge ${user.is_admin ? 'badge-admin' : 'badge-user'}">
+                            ${user.is_admin ? '👑 Admin' : '👤 Kullanıcı'}
+                        </span>
+                    </td>
+                    <td>${formatDate(user.created_at)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="openEditModal('${escapeHtml(user.username)}')" title="Düzenle">
+                                ✏️
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="openDeleteModal('${escapeHtml(user.username)}')" title="Sil">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ============================================================================
+        // Modal Functions
+        // ============================================================================
+
+        function openCreateModal() {
+            currentEditUser = null;
+            userModalTitle.textContent = 'Yeni Kullanıcı';
+            userForm.reset();
+            document.getElementById('formUsername').disabled = false;
+            document.getElementById('passwordGroup').style.display = 'block';
+            document.getElementById('formPassword').required = true;
+            document.getElementById('formError').style.display = 'none';
+            userModal.classList.add('active');
+        }
+
+        function openEditModal(username) {
+            const user = users.find(u => u.username === username);
+            if (!user) return;
+
+            currentEditUser = username;
+            userModalTitle.textContent = 'Kullanıcıyı Düzenle';
+            
+            document.getElementById('formUsername').value = user.username;
+            document.getElementById('formUsername').disabled = true;
+            document.getElementById('formEmail').value = user.email || '';
+            document.getElementById('formFullName').value = user.full_name || '';
+            document.getElementById('formIsAdmin').checked = user.is_admin;
+            document.getElementById('passwordGroup').style.display = 'none';
+            document.getElementById('formPassword').required = false;
+            document.getElementById('formError').style.display = 'none';
+            
+            userModal.classList.add('active');
+        }
+
+        function closeUserModal() {
+            userModal.classList.remove('active');
+            currentEditUser = null;
+        }
+
+        function openDeleteModal(username) {
+            userToDelete = username;
+            deleteDescription.innerHTML = `
+                <strong>${escapeHtml(username)}</strong> kullanıcısını silmek istediğinizden emin misiniz?
+                <br><br>
+                <span style="color: var(--error);">⚠️ Bu işlem geri alınamaz ve kullanıcının tüm sohbet geçmişi silinecektir.</span>
+            `;
+            deleteModal.classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            deleteModal.classList.remove('active');
+            userToDelete = null;
+        }
+
+        // ============================================================================
+        // Event Handlers
+        // ============================================================================
+
+        // New User Button
+        document.getElementById('newUserBtn').addEventListener('click', openCreateModal);
+
+        // Back to App Button
+        document.getElementById('backToAppBtn').addEventListener('click', () => {
+            window.location.href = '/';
+        });
+
+        // Filter and Sort Changes
+        filterAdmin.addEventListener('change', fetchUsers);
+        sortBy.addEventListener('change', fetchUsers);
+        sortOrder.addEventListener('change', fetchUsers);
+
+        // User Form Submit
+        userForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formError = document.getElementById('formError');
+            const saveBtn = document.getElementById('saveUserBtn');
+            
+            formError.style.display = 'none';
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Kaydediliyor...';
+
+            try {
+                if (currentEditUser) {
+                    // Update existing user
+                    const userData = {
+                        email: document.getElementById('formEmail').value || null,
+                        full_name: document.getElementById('formFullName').value || null,
+                        is_admin: document.getElementById('formIsAdmin').checked
+                    };
+                    
+                    await updateUser(currentEditUser, userData);
+                    showToast('Kullanıcı güncellendi', 'success');
+                } else {
+                    // Create new user
+                    const userData = {
+                        username: document.getElementById('formUsername').value,
+                        password: document.getElementById('formPassword').value,
+                        email: document.getElementById('formEmail').value || null,
+                        full_name: document.getElementById('formFullName').value || null,
+                        is_admin: document.getElementById('formIsAdmin').checked
+                    };
+                    
+                    await createUser(userData);
+                    showToast('Kullanıcı oluşturuldu', 'success');
+                }
+                
+                closeUserModal();
+                fetchUsers();
+            } catch (error) {
+                formError.textContent = error.message;
+                formError.style.display = 'block';
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Kaydet';
+            }
+        });
+
+        // Cancel User Modal
+        document.getElementById('cancelUserBtn').addEventListener('click', closeUserModal);
+
+        // Delete Confirmation
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+            if (!userToDelete) return;
+            
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Siliniyor...';
+
+            try {
+                await deleteUser(userToDelete);
+                showToast('Kullanıcı silindi', 'success');
+                closeDeleteModal();
+                fetchUsers();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Sil';
+            }
+        });
+
+        // Cancel Delete Modal
+        document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
+
+        // Close modals on overlay click
+        userModal.addEventListener('click', (e) => {
+            if (e.target === userModal) closeUserModal();
+        });
+
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) closeDeleteModal();
+        });
+
+        // Close modals on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeUserModal();
+                closeDeleteModal();
+            }
+        });
+
+        // ============================================================================
+        // Initialization
+        // ============================================================================
+
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            fetchUsers();
+        });
+    </script>
+</body>
+</html>

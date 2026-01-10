@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niko AI - Kayıt</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-logo">🤖 Niko AI</h1>
+                <p class="auth-subtitle">Yeni Hesap Oluştur</p>
+            </div>
+            
+            <form id="signupForm" class="auth-form">
+                <div class="form-group">
+                    <label for="username">Kullanıcı Adı *</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        placeholder="3-30 karakter, harf ile başlamalı"
+                        required
+                        autocomplete="username"
+                        minlength="3"
+                        maxlength="30"
+                    >
+                    <span class="field-hint">Harf ile başlamalı, sadece harf, rakam ve alt çizgi içerebilir</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Şifre *</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="En az 8 karakter"
+                        required
+                        autocomplete="new-password"
+                        minlength="8"
+                    >
+                    <span class="field-hint">En az 8 karakter, büyük/küçük harf ve rakam içermeli</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Şifre Tekrar *</label>
+                    <input 
+                        type="password" 
+                        id="confirmPassword" 
+                        name="confirmPassword" 
+                        placeholder="Şifrenizi tekrar girin"
+                        required
+                        autocomplete="new-password"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">E-posta</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="ornek@email.com"
+                        autocomplete="email"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="fullName">Ad Soyad</label>
+                    <input 
+                        type="text" 
+                        id="fullName" 
+                        name="fullName" 
+                        placeholder="Adınız ve soyadınız"
+                        autocomplete="name"
+                    >
+                </div>
+                
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+                <div id="successMessage" class="success-message" style="display: none;"></div>
+                
+                <button type="submit" class="auth-button" id="submitBtn">
+                    <span class="button-text">Kayıt Ol</span>
+                    <span class="button-loader" style="display: none;"></span>
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>Zaten hesabınız var mı? <a href="login.html">Giriş Yap</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Client-side validation functions
+        function validateUsername(username) {
+            if (username.length < 3 || username.length > 30) {
+                return 'Kullanıcı adı 3-30 karakter arasında olmalıdır';
+            }
+            if (!/^[a-zA-Z]/.test(username)) {
+                return 'Kullanıcı adı bir harf ile başlamalıdır';
+            }
+            if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(username)) {
+                return 'Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir';
+            }
+            return null;
+        }
+        
+        function validatePassword(password) {
+            if (password.length < 8) {
+                return 'Şifre en az 8 karakter olmalıdır';
+            }
+            if (!/[A-Z]/.test(password)) {
+                return 'Şifre en az bir büyük harf içermelidir';
+            }
+            if (!/[a-z]/.test(password)) {
+                return 'Şifre en az bir küçük harf içermelidir';
+            }
+            if (!/[0-9]/.test(password)) {
+                return 'Şifre en az bir rakam içermelidir';
+            }
+            return null;
+        }
+        
+        function validateEmail(email) {
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                return 'Geçerli bir e-posta adresi girin';
+            }
+            return null;
+        }
+        
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const email = document.getElementById('email').value.trim();
+            const fullName = document.getElementById('fullName').value.trim();
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const submitBtn = document.getElementById('submitBtn');
+            const buttonText = submitBtn.querySelector('.button-text');
+            const buttonLoader = submitBtn.querySelector('.button-loader');
+            
+            // Hide previous messages
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            
+            // Client-side validation
+            let error = validateUsername(username);
+            if (error) {
+                errorMessage.textContent = error;
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            error = validatePassword(password);
+            if (error) {
+                errorMessage.textContent = error;
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                errorMessage.textContent = 'Şifreler eşleşmiyor';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            error = validateEmail(email);
+            if (error) {
+                errorMessage.textContent = error;
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            buttonText.style.display = 'none';
+            buttonLoader.style.display = 'inline-block';
+            
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        email: email || null,
+                        full_name: fullName || null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Show success message and redirect
+                    successMessage.textContent = 'Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...';
+                    successMessage.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    // Show error message
+                    errorMessage.textContent = data.error || 'Kayıt başarısız. Lütfen tekrar deneyin.';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.';
+                errorMessage.style.display = 'block';
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                buttonText.style.display = 'inline';
+                buttonLoader.style.display = 'none';
+            }
+        });
+        
+        // Real-time validation feedback
+        document.getElementById('username').addEventListener('blur', function() {
+            const error = validateUsername(this.value.trim());
+            this.classList.toggle('input-error', !!error);
+        });
+        
+        document.getElementById('password').addEventListener('blur', function() {
+            const error = validatePassword(this.value);
+            this.classList.toggle('input-error', !!error);
+        });
+        
+        document.getElementById('confirmPassword').addEventListener('blur', function() {
+            const password = document.getElementById('password').value;
+            const match = this.value === password;
+            this.classList.toggle('input-error', !match && this.value.length > 0);
+        });
+        
+        document.getElementById('email').addEventListener('blur', function() {
+            const error = validateEmail(this.value.trim());
+            this.classList.toggle('input-error', !!error);
+        });
+        
+        // Check if already logged in
+        if (localStorage.getItem('token')) {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

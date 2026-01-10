@@ -1,0 +1,50 @@
+{
+  "admin": {
+    "password": "$2b$12$257awtuUZ8ktYNgP.B2zAuKL16TI.fT/0MFKXRcS/M.ShuWgzJJBy",
+    "email": "admin@nikoai.com",
+    "full_name": "admin",
+    "is_admin": true,
+    "created_at": "2026-01-01T00:00:00.000000"
+  },
+  "ahmet_yilmaz": {
+    "password": "$2b$12$XnxS0rui7dtdu6eezkkUhuQiCe5qpqBSIPSb/NXscIv7qehDzVowy",
+    "email": "ahmet.yilmaz@email.com",
+    "full_name": "Ahmet Yılmaz",
+    "is_admin": false,
+    "created_at": "2026-01-05T14:30:00.000000"
+  },
+  "elif_demir": {
+    "password": "$2b$12$XnxS0rui7dtdu6eezkkUhuQiCe5qpqBSIPSb/NXscIv7qehDzVowy",
+    "email": "elif.demir@email.com",
+    "full_name": "Elif Demir",
+    "is_admin": false,
+    "created_at": "2026-01-06T09:15:00.000000"
+  },
+  "mehmet_kaya": {
+    "password": "$2b$12$XnxS0rui7dtdu6eezkkUhuQiCe5qpqBSIPSb/NXscIv7qehDzVowy",
+    "email": null,
+    "full_name": "Mehmet Kaya",
+    "is_admin": false,
+    "created_at": "2026-01-07T16:45:00.000000"
+  },
+  "zeynep_ozturk": {
+    "password": "$2b$12$XnxS0rui7dtdu6eezkkUhuQiCe5qpqBSIPSb/NXscIv7qehDzVowy",
+    "email": "zeynep@email.com",
+    "full_name": "Zeynep Öztürk",
+    "is_admin": true,
+    "created_at": "2026-01-08T11:20:00.000000"
+  },
+  "can_arslan": {
+    "password": "$2b$12$XnxS0rui7dtdu6eezkkUhuQiCe5qpqBSIPSb/NXscIv7qehDzVowy",
+    "email": "can.arslan@email.com",
+    "full_name": "Can Arslan",
+    "is_admin": false,
+    "created_at": "2026-01-09T08:00:00.000000"
+  },
+  "emregoksu": {
+    "password": "$2b$12$qtwuIHhbeBq4Zj/cFsc4oOpKhaha8JBtVE1NZQ.5kzB0Ka65jAXY.",
+    "email": "atarroket312@gmail.com",
+    "full_name": "emre göksu",
+    "created_at": "2026-01-10T09:41:00.107139"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "b524ab9c-6224-47ee-9def-f7161b8e066a",
+  "title": "merhaba",
+  "timestamp": "2026-01-10T09:55:29.929950",
+  "messages": [
+    {
+      "role": "user",
+      "content": "merhaba"
+    },
+    {
+      "role": "bot",
+      "content": "Merhaba! Ne zaman yardımcı olmak için burada mısın?"
+    }
+  ]
+}

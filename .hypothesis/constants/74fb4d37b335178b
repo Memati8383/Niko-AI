@@ -1,0 +1,4 @@
+# file: C:\Users\USER\Desktop\niko ai en baştan\kiro\main.py
+# hypothesis_version: 6.150.0
+
+[400, 401, 8001, '*', '/', '/health', '/login', '/login.html', '/register', '/signup.html', '/static', '0.0.0.0', '1.0.0', 'HS256', 'JWT_SECRET', 'Kayıt başarılı', 'Kullanıcı bulunamadı', 'Mevcut şifre gerekli', 'Mevcut şifre yanlış', 'Niko AI Chat', 'Profil güncellendi', '__main__', 'access_token', 'bearer', 'created_at', 'email', 'exp', 'full_name', 'healthy', 'history', 'iat', 'message', 'new_password', 'normal', 'password', 'r', 'static', 'static/index.html', 'static/login.html', 'static/signup.html', 'status', 'sub', 'token_type', 'username', 'users.json', 'utf-8', 'w']

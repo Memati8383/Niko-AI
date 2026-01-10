@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niko AI - Yapay Zeka Sohbet</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Prism.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-logo">🤖 Niko AI</span>
+                <button class="new-chat-btn" id="newChatBtn" title="Yeni Sohbet">
+                    + Yeni
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="history-list" id="historyList">
+                    <!-- History items will be rendered here -->
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <button class="new-chat-btn" id="clearAllBtn" style="width: 100%; background: var(--error-bg); border-color: var(--error);">
+                    🗑️ Tümünü Temizle
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Chat Header -->
+            <header class="chat-header">
+                <div class="chat-header-left">
+                    <button class="menu-toggle" id="menuToggle" title="Menü">
+                        ☰
+                    </button>
+                    <select class="model-selector" id="modelSelector">
+                        <option value="">Model Yükleniyor...</option>
+                    </select>
+                </div>
+                
+                <div class="chat-header-right">
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Bağlı</span>
+                    </div>
+                    
+                    <div class="user-menu">
+                        <div class="user-avatar" id="userAvatar" title="Profil">
+                            ?
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessages">
+                <!-- Welcome message -->
+                <div class="welcome-message" id="welcomeMessage">
+                    <div class="welcome-icon">🤖</div>
+                    <h2>Niko AI'ya Hoş Geldiniz!</h2>
+                    <p>Size nasıl yardımcı olabilirim?</p>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <div class="chat-input-box">
+                        <div class="image-preview-container" id="imagePreviewContainer">
+                            <!-- Image previews will be added here -->
+                        </div>
+                        <div class="chat-input-row">
+                            <textarea 
+                                id="messageInput" 
+                                placeholder="Mesajınızı yazın..."
+                                rows="1"
+                            ></textarea>
+                            <div class="input-actions">
+                                <button class="input-action-btn" id="imageBtn" title="Görsel Ekle">
+                                    📷
+                                </button>
+                                <button class="input-action-btn" id="webSearchBtn" title="Web Araması">
+                                    🔍
+                                </button>
+                                <button class="input-action-btn" id="ragSearchBtn" title="Doküman Araması">
+                                    📚
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="send-btn" id="sendBtn" title="Gönder" disabled>
+                        ➤
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal">
+            <h3 class="modal-title">Profil</h3>
+            <form id="profileForm" class="auth-form" style="gap: var(--spacing-md);">
+                <div class="form-group">
+                    <label for="profileUsername">Kullanıcı Adı</label>
+                    <input type="text" id="profileUsername" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="profileEmail">E-posta</label>
+                    <input type="email" id="profileEmail" placeholder="E-posta adresiniz">
+                </div>
+                <div class="form-group">
+                    <label for="profileFullName">Ad Soyad</label>
+                    <input type="text" id="profileFullName" placeholder="Adınız ve soyadınız">
+                </div>
+                <div id="profileError" class="error-message" style="display: none;"></div>
+                <div id="profileSuccess" class="success-message" style="display: none;"></div>
+                <div class="modal-actions" style="margin-top: var(--spacing-md);">
+                    <button type="button" class="modal-btn cancel" id="closeProfileBtn">İptal</button>
+                    <button type="submit" class="modal-btn confirm" style="background: var(--accent-primary);">Kaydet</button>
+                </div>
+            </form>
+            <!-- Admin Panel Link (hidden by default, shown for admins) -->
+            <div id="adminPanelSection" style="display: none; margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--border-primary);">
+                <a href="/admin" class="auth-button" style="display: block; text-align: center; text-decoration: none; background: var(--accent-gradient);">
+                    👑 Admin Panel
+                </a>
+            </div>
+            <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--border-primary);">
+                <button class="auth-button" id="logoutBtn" style="background: var(--error);">
+                    Çıkış Yap
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <h3 class="modal-title" id="confirmTitle">Onay</h3>
+            <p class="modal-description" id="confirmDescription">Bu işlemi gerçekleştirmek istediğinizden emin misiniz?</p>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" id="confirmCancelBtn">İptal</button>
+                <button class="modal-btn confirm" id="confirmOkBtn">Onayla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer">
+        <!-- Toasts will be added here -->
+    </div>
+
+    <!-- Hidden file input for image upload -->
+    <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+
+    <script src="script.js"></script>
+</body>
+</html>
