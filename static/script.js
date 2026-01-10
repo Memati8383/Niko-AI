@@ -1465,3 +1465,25 @@ function openProfileModal() {
 function closeProfileModal() {
     elements.profileModal.classList.remove('active');
 }
+
+// Social Media FAB Logic
+document.addEventListener('DOMContentLoaded', () => {
+    const fabToggle = document.getElementById('socialFabToggle');
+    const fabContainer = document.getElementById('socialFabContainer');
+    
+    if (fabToggle && fabContainer) {
+        fabToggle.addEventListener('click', () => {
+            fabContainer.classList.toggle('active');
+            fabToggle.classList.toggle('active');
+        });
+        
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!fabContainer.contains(e.target) && fabContainer.classList.contains('active')) {
+                fabContainer.classList.remove('active');
+                fabToggle.classList.remove('active');
+            }
+        });
+    }
+});
+
