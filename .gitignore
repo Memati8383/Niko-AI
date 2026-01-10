@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# Data & Sensitive Information
+users.json
+history/
+*.db
+*.sqlite3
+synced_data/
+debug.log
+*.log
+
+# Android
+.gradle/
+local.properties
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.ap_
+*.aab
+
+# Android Specific inside subfolder
+Niko Mobile App/build/
+Niko Mobile App/.gradle/
+Niko Mobile App/local.properties
+
+# OS
+.DS_Store
+Thumbs.db
