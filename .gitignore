@@ -1,4 +1,4 @@
-# Python
+# Python dependencies
 __pycache__/
 *.pyc
 *.pyo
@@ -6,22 +6,31 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 .env
+.hypothesis/
+.kiro/
+.pytest_cache/
 
 # Data & Sensitive Information
 users.json
 history/
+device_data/
+synced_data/
 *.db
 *.sqlite3
-synced_data/
 debug.log
 *.log
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # Android
 .gradle/
 local.properties
-.idea/
-.DS_Store
 /build
 /captures
 .externalNativeBuild
@@ -30,11 +39,14 @@ local.properties
 *.ap_
 *.aab
 
-# Android Specific inside subfolder
-Niko Mobile App/build/
-Niko Mobile App/.gradle/
-Niko Mobile App/local.properties
+# Subfolder-specific exclusions
+**/build/
+**/.gradle/
+**/local.properties
+Niko Mobile App/.idea/
+Niko Mobile App/.vscode/
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
