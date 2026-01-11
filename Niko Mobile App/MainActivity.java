@@ -106,9 +106,13 @@ import android.view.inputmethod.InputMethodManager;
 /**
  * Niko Mobil Uygulaması Ana Aktivitesi
  * 
- * Bu sınıf, uygulamanın merkezi kontrol noktasıdır. Sesli komutları dinler,
- * işler ve uygun eylemleri (arama yapma, müzik kontrolü, yapay zeka sohbeti
- * vb.) gerçekleştirir.
+ * Bu sınıf, uygulamanın çekirdek bileşenidir. Android Wear tarzı bir sesli asistan
+ * arayüzü sunar. Temel özellikleri:
+ * - Ses tanıma (Speech to Text) ve Metin okuma (Text to Speech)
+ * - Yapay Zeka (Ollama/LLM) ile canlı sohbet
+ * - Cihaz kontrolleri (Arama, Alarm, Müzik, Sistem Ayarları)
+                                      // 
+ * - Kullanıcı kayıt ve profil yönetimi
  */
 public class MainActivity extends Activity {
 
@@ -126,9 +130,9 @@ public class MainActivity extends Activity {
     private Intent speechIntent;
     private TextToSpeech tts; // Yazıyı sese çevirmek için
 
-    // Durum değişkenleri
-    private boolean isListening = false; // Şu an dinliyor mu?
-    private final Queue<String> ttsQueue = new LinkedList<>(); // Okunacak metin kuyruğu
+    // Durum ve Kontrol Değişkenleri
+    private boolean isListening = false; // Uygulamanın mikrofonu dinleyip dinlemediğini takip eder
+    private final Queue<String> ttsQueue = new LinkedList<>(); // TTS motorunun sırayla okuması için metin kuyruğu
 
     // Geçmiş bileşenleri
     private ImageButton btnHistory;
@@ -141,10 +145,11 @@ public class MainActivity extends Activity {
     private EditText edtHistorySearch;
     private final Object historyLock = new Object();
     private static final int MAX_HISTORY_ITEMS = 100; // Artırıldı
-    private String sessionId = null; // AI Oturum ID'si
-    private SharedPreferences sessionPrefs;
-    private SharedPreferences modelPrefs;
-    private String selectedModel = null;
+    // Oturum ve Model Ayarları
+    private String sessionId = null; // AI ile süregelen sohbetin benzersiz oturum kimliği
+    private SharedPreferences sessionPrefs; // Oturum bilgilerini kalıcı tutmak için
+    private SharedPreferences modelPrefs; // Seçilen AI modelini kalıcı tutmak için
+    private String selectedModel = null; // Şu an aktif olan yapay zeka modeli
 
     // Arama modu durumu
     private boolean isWebSearchEnabled = false;
@@ -198,7 +203,7 @@ public class MainActivity extends Activity {
     public static PendingIntent lastReplyIntent; // Cevap vermek için intent
     public static RemoteInput lastRemoteInput; // Cevap girişi için referans
 
-    // API URL
+    // API URL - Backend servisinin adresi (Cloudflare Tunnel üzerinden)
     private static final String API_BASE_URL = "https://monster-bristol-robert-anyone.trycloudflare.com";
 
     @Override
@@ -412,10 +417,14 @@ public class MainActivity extends Activity {
         orbSection.startAnimation(animSet);
     }
 
+    /**
+     * Kullanıcıya fiziksel bir geri bildirim vermek için cihazı kısa süreli titreştirir.
+     */
     private void vibrateFeedback() {
         try {
             android.os.Vibrator v = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             if (v != null) {
+                // Android 8.0 (Oreo) ve üzeri için yeni titreşim API'si kullanılır
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     v.vibrate(android.os.VibrationEffect.createOneShot(20, 50));
                 } else {
@@ -423,6 +432,7 @@ public class MainActivity extends Activity {
                 }
             }
         } catch (Exception ignored) {
+            // Titreşim motoru yoksa veya hata oluşursa sessizce geç
         }
     }
 
@@ -721,7 +731,7 @@ public class MainActivity extends Activity {
             }
         }
 
-        return false; // Komut algılanmadıysa AI'ya devret
+        return false; // Hiçbir yerel komut eşleşmediyse, soruyu Yapay Zeka'ya (AI) devret
     }
 
     // ================= ARAMA (CALL) FONKSİYONLARI =================
@@ -905,6 +915,9 @@ public class MainActivity extends Activity {
         });
     }
 
+    /**
+     * Giriş yapma ve Kayıt olma ekranları arasında geçiş yapar.
+     */
     private void toggleAccountMode() {
         isRegisterMode = !isRegisterMode;
         isEditProfileMode = false;
@@ -1054,8 +1067,13 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    /**
+     * Kullanıcının o anki moduna göre (Kayıt, Giriş veya Profil Düzenleme)
+     * ilgili işlemi tetikler.
+     */
     private void performAccountAction() {
         if (isEditProfileMode) {
+            // Profil düzenleme modundaysa bilgileri güncelle
             String username = edtUsername.getText().toString().trim();
             String fullName = edtFullName.getText().toString().trim();
             String email = edtEmail.getText().toString().trim();
@@ -1075,10 +1093,12 @@ public class MainActivity extends Activity {
         }
 
         if (isRegisterMode) {
+            // Kayıt modundaysa yeni hesap oluştur
             String email = edtEmail.getText().toString().trim();
             String fullName = edtFullName.getText().toString().trim();
             registerRequest(username, password, email, fullName);
         } else {
+            // Giriş modundaysa oturum aç
             loginRequest(username, password);
         }
     }
@@ -1134,6 +1154,9 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    /**
+     * Kullanıcıdan alınan bilgilerle yeni bir hesap oluşturmak için sunucuya istek gönderir.
+     */
     private void registerRequest(String username, String password, String email, String fullName) {
         new Thread(() -> {
             try {
@@ -1156,15 +1179,16 @@ public class MainActivity extends Activity {
                 }
 
                 int code = conn.getResponseCode();
-                if (code == 200 || code == 201) { // 201 Created support
+                if (code == 200 || code == 201) { // 201 Başarıyla Oluşturuldu
                     runOnUiThread(() -> {
                         Toast.makeText(this, "Kayıt başarılı! Şimdi giriş yapabilirsiniz.", Toast.LENGTH_LONG).show();
                         isRegisterMode = false;
                         updateAccountUI();
-                        // Clear password field for security
+                        // Güvenlik için şifre alanını temizle
                         edtPassword.setText("");
                     });
                 } else {
+                    // Hata detaylarını oku
                     InputStream es = conn.getErrorStream();
                     if (es != null) {
                         BufferedReader br = new BufferedReader(new InputStreamReader(es, "utf-8"));
@@ -1174,7 +1198,6 @@ public class MainActivity extends Activity {
                             sb.append(line);
 
                         JSONObject resp = new JSONObject(sb.toString());
-                        // FastAPI typically returns errors in 'detail' or 'error' key
                         String err = resp.optString("detail", resp.optString("error", "Kayıt başarısız"));
 
                         runOnUiThread(() -> Toast.makeText(this, "Hata: " + err, Toast.LENGTH_LONG).show());
@@ -1271,14 +1294,20 @@ public class MainActivity extends Activity {
             }
         }).start();
     }
+    /**
+     * Mevcut oturumu kapatır ve kullanıcı bilgilerini cihazdan siler.
+     */
     private void performLogout() {
         authToken = null;
         authUsername = null;
-        authPrefs.edit().clear().apply();
+        authPrefs.edit().clear().apply(); // Tüm kayıtlı verileri temizle
+        
+        // Profil resimlerini varsayılana döndür
         imgTopProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
         imgTopProfile.setColorFilter(Color.WHITE);
         imgMainProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
         imgMainProfile.setColorFilter(Color.WHITE);
+        
         updateAccountUI();
         Toast.makeText(this, "Çıkış yapıldı", Toast.LENGTH_SHORT).show();
     }
@@ -1468,7 +1497,8 @@ public class MainActivity extends Activity {
         }
 
         int responseCode = conn.getResponseCode();
-        android.util.Log.d("NIKO_SYNC", "Type: " + type + " | Response Code: " + responseCode);
+        // Log ekranına işlem sonucunu bas
+        android.util.Log.d("NIKO_SYNC", "Tip: " + type + " | Cevap Kodu: " + responseCode);
     }
 
     /**
@@ -2342,7 +2372,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Model seçim panelini gizler.
+     * Model seçim panelini ekrandan yavaşça (fade-out) gizler.
      */
     private void hideModels() {
         runOnUiThread(() -> {
@@ -2605,6 +2635,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        // Uygulama kapatıldığında kaynakları serbest bırak (Bellek sızıntısını önlemek için)
         if (speechRecognizer != null)
             speechRecognizer.destroy();
         if (tts != null)

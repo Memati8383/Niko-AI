@@ -1,8 +1,11 @@
+<!-- MİKROFON BUTON TASARIMI: Yuvarlak ve cam görünümlü stil -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
 
+    <!-- İç dolgu rengi -->
     <solid android:color="#0B0F14"/>
 
+    <!-- Dış çerçeve ve parlayan cam efekti (Turkuaz) -->
     <stroke
         android:width="2dp"
         android:color="#00E5FF"/>

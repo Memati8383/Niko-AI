@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- AUTH EKRANI ARKA PLAN KATMANLARI: Modern ambiyans ışığı efekti -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Main Background -->
+    <!-- ANA ARKA PLAN: Koyu lacivert/siyah tonu -->
     <item>
         <shape android:shape="rectangle">
             <solid android:color="#0a0a0f" />
         </shape>
     </item>
-    <!-- Purple Radial Glow (Top Left) -->
+    <!-- SOL ÜST MOR IŞIMA: Yumuşak bir parlama efekti -->
     <item>
         <shape android:shape="rectangle">
             <gradient
@@ -18,7 +19,7 @@
                 android:endColor="#00000000" />
         </shape>
     </item>
-    <!-- Violet Radial Glow (Bottom Right) -->
+    <!-- SAĞ ALT VİYOLE IŞIMA: Karşıt köşede derinlik sağlar -->
     <item>
         <shape android:shape="rectangle">
             <gradient

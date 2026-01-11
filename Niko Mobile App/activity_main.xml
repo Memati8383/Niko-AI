@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- ANA EKRAN DÜZENİ: Uygulamanın temel arayüz yapısı -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/mainLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#05070A">
 
-    <!-- TOP BAR CONTROLS -->
+    <!-- ÜST ÇUBUK: Model seçimi, aktif model bilgisi ve profil/geçmiş butonları -->
     <RelativeLayout
         android:id="@+id/topBar"
         android:layout_width="match_parent"
@@ -73,7 +74,7 @@
             android:clipToOutline="true" />
     </RelativeLayout>
 
-    <!-- CENTER SECTION (ORB) -->
+    <!-- MERKEZİ BÖLÜM: Sesli etkileşim sırasında görünen animasyonlu küre -->
     <RelativeLayout
         android:id="@+id/orbSection"
         android:layout_width="match_parent"
@@ -96,7 +97,7 @@
             android:elevation="8dp" />
     </RelativeLayout>
 
-    <!-- AI REPLY AREA (Positioned between Top Bar and Orb) -->
+    <!-- YAPAY ZEKA YANIT ALANI: Yapay zekanın verdiği cevapların görüntülendiği kaydırılabilir alan -->
     <ScrollView
         android:id="@+id/aiResponseContainer"
         android:layout_width="match_parent"
@@ -125,6 +126,7 @@
             android:elevation="4dp" />
     </ScrollView>
 
+    <!-- ALT KONTROL PANELİ: Web araması, mikrofon ve durdurma butonları -->
     <LinearLayout
         android:id="@+id/bottomControlArea"
         android:layout_width="match_parent"
@@ -192,8 +194,8 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- OVERLAYS (HISTORY & MODELS & ACCOUNT) -->
-    <!-- ACCOUNT / LOGIN PANEL -->
+    <!-- KATMANLAR (GEÇMİŞ, MODELLER VE HESAP) -->
+    <!-- HESAP / GİRİŞ PANELİ: Kullanıcı girişi, kayıt olma ve profil yönetimi -->
     <LinearLayout
         android:id="@+id/layoutAccount"
         android:layout_width="match_parent"
@@ -276,7 +278,7 @@
                     android:src="@android:drawable/ic_menu_myplaces"
                     android:visibility="gone" />
 
-                <!-- Login / Register Form Fields -->
+                <!-- GİRİŞ VE KAYIT FORM ALANLARI: Kullanıcının bilgilerini girdiği kısım -->
                 <LinearLayout
                     android:id="@+id/layoutAccountFields"
                     android:layout_width="match_parent"
@@ -356,9 +358,9 @@
                         android:fontFamily="sans-serif-medium"
                         android:textSize="15sp" />
 
-                    <!-- Registration Only Fields -->
-                    <LinearLayout
-                        android:id="@+id/layoutRegisterExtras"
+                        <!-- KAYIT EKSTRA ALANLARI: Sadece kayıt olma modunda görünür -->
+                        <LinearLayout
+                            android:id="@+id/layoutRegisterExtras"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
@@ -437,7 +439,7 @@
                         android:padding="8dp" />
                 </LinearLayout>
 
-                <!-- Logged In Section -->
+                <!-- GİRİŞ YAPILMIŞ DURUM: Kullanıcı oturum açtığında görünen profil özeti -->
                 <LinearLayout
                     android:id="@+id/layoutLoggedIn"
                     android:layout_width="match_parent"
@@ -497,7 +499,7 @@
         </ScrollView>
     </LinearLayout>
 
-    <!-- MODEL SEÇİM PANELİ (GELİŞTİRİLMİŞ) -->
+    <!-- MODEL SEÇİM PANELİ: Farklı yapay zeka modelleri arasında geçiş yapma ekranı -->
     <LinearLayout
         android:id="@+id/layoutModels"
         android:layout_width="match_parent"
@@ -580,6 +582,7 @@
             android:layout_marginTop="16dp" />
     </LinearLayout>
 
+    <!-- GEÇMİŞ / HAFIZA PANELİ: Eski konuşmaların listelendiği ve arama yapıldığı ekran -->
     <LinearLayout
         android:id="@+id/layoutHistory"
         android:layout_width="match_parent"

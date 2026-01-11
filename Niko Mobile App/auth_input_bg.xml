@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- GİRİŞ ALANI (EDITTEXT) TASARIMI: Odaklanma durumuna göre değişen çerçeve -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ODAKLANILMIŞ DURUM: Kullanıcı yazı yazarken -->
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <solid android:color="#1AFFFFFF" />
@@ -7,6 +9,7 @@
             <corners android:radius="10dp" />
         </shape>
     </item>
+    <!-- VARSAYILAN DURUM -->
     <item>
         <shape android:shape="rectangle">
             <solid android:color="#0DFFFFFF" />
