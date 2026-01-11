@@ -27,7 +27,7 @@ git status -s
 echo.
 
 set "msg="
-set /p msg="Commit mesaji girin (Bos ise zaman damgasi): "
+set /p msg="Commit mesaji giriniz (Bos ise zaman damgasi): "
 
 if "!msg!"=="" set "msg=Guncelleme %date% %time%"
 
