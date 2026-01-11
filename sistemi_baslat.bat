@@ -86,8 +86,8 @@ goto MENU
 
 :DEPS
 cls
-echo [+] Bagimliliklar kontrol ediliyor ve yukleniyor...
-"%PYTHON_EXE%" -m pip install -r requirements.txt
+echo [+] Bagimliliklar kontrol ediliyor...
+"%PYTHON_EXE%" -m pip install -r requirements.txt --quiet --no-warn-script-location --disable-pip-version-check
 echo.
 echo [+] Tamamlandi.
 pause
