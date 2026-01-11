@@ -13,7 +13,7 @@ git status -s
 echo.
 
 :: Kullanıcıdan mesaj al
-set /p msg="Commit mesaji girin (Enter'a basarsaniz tarih saat atilir): "
+set /p msg="Commit mesaji girin (Enter'a basarsaniz tarih saat atılır): "
 
 :: Mesaj boşsa otomatik tarih saat ata
 if "%msg%"=="" (
