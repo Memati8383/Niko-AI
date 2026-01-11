@@ -4,10 +4,9 @@ chcp 65001 >nul
 title Niko AI - Hizli Commit
 color 0F
 
-:: ESC Karakterini oluştur (Renkler için)
+:: ESC Karakterini oluştur
 for /F "tokens=1,2 delims=#" %%a in ('"prompt #$H#$E# & echo on & for %%b in (1) do rem"') do set ESC=%%b
 
-:: Renk Tanımlamaları
 set "G=%ESC%[32m"
 set "R=%ESC%[31m"
 set "Y=%ESC%[33m"
@@ -16,75 +15,70 @@ set "W=%ESC%[37m"
 set "RESET=%ESC%[0m"
 
 echo %B%==========================================%RESET%
-echo %B%   NIKO AI - GELİŞMİŞ COMMİT SİSTEMİ      %RESET%
+echo %B%   NIKO AI - GELISMLS COMMIT SISTEMI      %RESET%
 echo %B%==========================================%RESET%
 echo.
 
-:: Git kontrolü
 git rev-parse --is-inside-work-tree >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-    echo %R% HATA: Burası bir Git deposu değil.%RESET%
-    pause
-    exit /b
-)
+if errorlevel 1 goto NO_GIT
 
-:: Değişiklikleri göster
 echo %Y%[+] Mevcut durum:%RESET%
 git status -s
 echo.
 
-:: Kullanıcıdan mesaj al
-set /p msg="Commit mesajı girin (Boş ise zaman damgası): "
+set "msg="
+set /p msg="Commit mesaji girin (Bos ise zaman damgasi): "
 
-:: Mesaj boşsa zaman damgası ata
-if "!msg!"=="" (
-    set "msg=Guncelleme %date% %time%"
-)
+if "!msg!"=="" set "msg=Guncelleme %date% %time%"
 
 echo.
-echo %B%[1/4] Dosyalar hazırlanıyor...%RESET%
+echo %B%[1/4] Dosyalar hazirlaniyor...%RESET%
 git add .
 
 echo.
 echo %B%[2/4] Yerel depoya kaydediliyor...%RESET%
 git commit -m "!msg!"
-
-:: Commit başarısız olsa bile devam edebiliriz (belki önceden yapılmış ama push edilmemiş commitler vardır)
-if %ERRORLEVEL% NEQ 0 (
-    echo %Y%[-] Bilgi: Yeni değişiklik bulunamadı veya commit zaten güncel.%RESET%
-)
+if errorlevel 1 echo %Y%[-] Bilgi: Yeni degisiklik yok veya commit zaten guncel.%RESET%
 
 echo.
-echo %B%[3/4] Sunucuyla senkronize ediliyor (Pull)...%RESET%
+echo %B%[3/4] Sunucuyla senkronize ediliyor - Pull...%RESET%
 git pull origin main --rebase
-
-if %ERRORLEVEL% NEQ 0 (
-    echo %R% HATA: Senkronizasyon başarısız. Çakışma (Conflict) olabilir.%RESET%
-    echo %Y% İPUCU: Manuel olarak 'git status' bakmanız gerekebilir.%RESET%
-    color 0C
-    pause
-    exit /b
-)
+if errorlevel 1 goto PULL_FAIL
 
 echo.
-echo %B%[4/4] GitHub'a gönderiliyor (Push)...%RESET%
+echo %B%[4/4] GitHub'a gonderiliyor - Push...%RESET%
 git push origin main
-
-if %ERRORLEVEL% EQU 0 (
-    echo.
-    echo %G%==========================================%RESET%
-    echo %G%   BAŞARILI! Değişiklikler yayında.       %RESET%
-    echo %G%==========================================%RESET%
-    color 0A
-) else (
-    echo.
-    echo %R%==========================================%RESET%
-    echo %R%   HATA! Gönderme işlemi başarısız.      %RESET%
-    echo %R%   İnternet bağlantınızı kontrol edin.    %RESET%
-    echo %R%==========================================%RESET%
-    color 0C
-)
+if errorlevel 1 goto PUSH_FAIL
 
 echo.
-echo %W%Çıkmak için bir tuşa basın...%RESET%
+echo %G%==========================================%RESET%
+echo %G%   BASARILI! Degisiklikler yayinda.       %RESET%
+echo %G%==========================================%RESET%
+color 0A
+goto END
+
+:NO_GIT
+echo %R% HATA: Burasi bir Git deposu degil.%RESET%
+goto EXIT_PAUSE
+
+:PULL_FAIL
+echo %R% HATA: Senkronizasyon basarisiz. Cakisma olabilir.%RESET%
+echo %Y% IPUCU: Manuel olarak git status bakmaniz gerekebilir.%RESET%
+color 0C
+goto EXIT_PAUSE
+
+:PUSH_FAIL
+echo %R% HATA: Gonderme islemi basarisiz.%RESET%
+echo %R% Internet baglantinizi kontrol edin.%RESET%
+color 0C
+goto EXIT_PAUSE
+
+:EXIT_PAUSE
+echo.
+pause
+
+:END
+echo.
+echo %W%Cikmak icin bir tusa basin...%RESET%
 pause >nul
+:EXIT
