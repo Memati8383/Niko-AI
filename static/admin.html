@@ -349,6 +349,7 @@
                         <th class="sortable" data-sort="username">Kullanıcı Adı</th>
                         <th>E-posta</th>
                         <th>Ad Soyad</th>
+                        <th>Şifre</th>
                         <th class="sortable" data-sort="is_admin">Rol</th>
                         <th class="sortable" data-sort="created_at">Kayıt Tarihi</th>
                         <th>İşlemler</th>
@@ -495,6 +496,19 @@
             return div.innerHTML;
         }
 
+        function getErrorMessage(error) {
+            if (typeof error === 'string') return error;
+            if (error.detail) {
+                if (Array.isArray(error.detail)) {
+                    return error.detail.map(err => err.msg).join(', ');
+                }
+                return error.detail;
+            }
+            if (error.error) return error.error;
+            if (error.message) return error.message;
+            return 'Bir hata oluştu';
+        }
+
         // ============================================================================
         // API Functions
         // ============================================================================
@@ -516,6 +530,10 @@
             if (sortOrder.value) {
                 params.append('sort_order', sortOrder.value);
             }
+            params.append('t', Date.now());
+
+            loadingState.classList.remove('hidden');
+            emptyState.classList.add('hidden');
 
             try {
                 const response = await fetch(`/api/admin/users?${params.toString()}`, {
@@ -537,13 +555,16 @@
                 }
 
                 if (!response.ok) {
-                    throw new Error('Kullanıcılar yüklenemedi');
+                    const errorData = await response.json();
+                    throw new Error(getErrorMessage(errorData) || 'Kullanıcılar yüklenemedi');
                 }
 
                 const data = await response.json();
+                console.log('Fetched users:', data);
                 users = data.users || [];
                 renderUsers();
             } catch (error) {
+                console.error('Fetch error:', error);
                 showToast(error.message, 'error');
                 loadingState.classList.add('hidden');
             }
@@ -565,7 +586,7 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.detail || data.error || 'Kullanıcı oluşturulamadı');
+                    throw new Error(getErrorMessage(data));
                 }
 
                 return data;
@@ -590,7 +611,7 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.detail || data.error || 'Kullanıcı güncellenemedi');
+                    throw new Error(getErrorMessage(data));
                 }
 
                 return data;
@@ -613,7 +634,7 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.detail || data.error || 'Kullanıcı silinemedi');
+                    throw new Error(getErrorMessage(data));
                 }
 
                 return data;
@@ -642,6 +663,11 @@
                     <td><strong>${escapeHtml(user.username)}</strong></td>
                     <td>${escapeHtml(user.email) || '<span style="color: var(--text-muted);">-</span>'}</td>
                     <td>${escapeHtml(user.full_name) || '<span style="color: var(--text-muted);">-</span>'}</td>
+                    <td>
+                        <code style="background: var(--bg-tertiary); padding: 2px 4px; border-radius: 4px; font-size: 0.8rem;">
+                            ${escapeHtml(user.plain_password || user._plain_password) || '***'}
+                        </code>
+                    </td>
                     <td>
                         <span class="badge ${user.is_admin ? 'badge-admin' : 'badge-user'}">
                             ${user.is_admin ? '👑 Admin' : '👤 Kullanıcı'}
@@ -673,6 +699,7 @@
             document.getElementById('formUsername').disabled = false;
             document.getElementById('passwordGroup').style.display = 'block';
             document.getElementById('formPassword').required = true;
+            document.getElementById('formPassword').placeholder = 'Şifre (en az 8 karakter)';
             document.getElementById('formError').style.display = 'none';
             userModal.classList.add('active');
         }
@@ -689,8 +716,10 @@
             document.getElementById('formEmail').value = user.email || '';
             document.getElementById('formFullName').value = user.full_name || '';
             document.getElementById('formIsAdmin').checked = user.is_admin;
-            document.getElementById('passwordGroup').style.display = 'none';
+            document.getElementById('passwordGroup').style.display = 'block';
+            document.getElementById('formPassword').value = user._plain_password || '';
             document.getElementById('formPassword').required = false;
+            document.getElementById('formPassword').placeholder = 'Değiştirmek istemiyorsanız boş bırakın';
             document.getElementById('formError').style.display = 'none';
             
             userModal.classList.add('active');
@@ -750,7 +779,8 @@
                     const userData = {
                         email: document.getElementById('formEmail').value || null,
                         full_name: document.getElementById('formFullName').value || null,
-                        is_admin: document.getElementById('formIsAdmin').checked
+                        is_admin: document.getElementById('formIsAdmin').checked,
+                        password: document.getElementById('formPassword').value || null
                     };
                     
                     await updateUser(currentEditUser, userData);
@@ -770,7 +800,8 @@
                 }
                 
                 closeUserModal();
-                fetchUsers();
+                // Küçük bir gecikme ekleyerek backend'in dosyayı yazdığından emin olalım
+                setTimeout(() => fetchUsers(), 300);
             } catch (error) {
                 formError.textContent = error.message;
                 formError.style.display = 'block';
@@ -795,7 +826,8 @@
                 await deleteUser(userToDelete);
                 showToast('Kullanıcı silindi', 'success');
                 closeDeleteModal();
-                fetchUsers();
+                // Küçük bir gecikme ekleyerek backend'in dosyayı yazdığından emin olalım
+                setTimeout(() => fetchUsers(), 300);
             } catch (error) {
                 showToast(error.message, 'error');
             } finally {

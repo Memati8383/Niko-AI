@@ -210,25 +210,23 @@ def build_full_prompt(
     user_message: str,
     web_results: str = "",
     rag_results: str = "",
-    include_system_prompt: bool = True
+    include_system_prompt: bool = True,
+    user_info: dict = None
 ) -> str:
     """
     Build the complete prompt for the AI model.
-    
-    Args:
-        user_message: The user's message/question
-        web_results: Optional web search results
-        rag_results: Optional RAG search results
-        include_system_prompt: Whether to include the system prompt
-        
-    Returns:
-        Complete formatted prompt ready for the AI model
     """
     parts = []
     
     # Add system prompt if requested
     if include_system_prompt:
-        parts.append(SYSTEM_PROMPT)
+        system_prompt = SYSTEM_PROMPT
+        if user_info and user_info.get("full_name"):
+            system_prompt += f"\n\n## Kullanıcı Bilgisi:\nŞu an konuştuğun kişinin adı: {user_info.get('full_name')}. Ona ismiyle hitap edebilirsin."
+        elif user_info and user_info.get("username"):
+            system_prompt += f"\n\n## Kullanıcı Bilgisi:\nŞu an konuştuğun kullanıcı: {user_info.get('username')}."
+            
+        parts.append(system_prompt)
     
     # Add search context if available
     context = format_hybrid_context(web_results, rag_results)

@@ -50,6 +50,20 @@
             android:scaleType="centerInside"
             android:src="@android:drawable/ic_menu_recent_history"
             android:tint="#FFFFFF" />
+
+        <ImageView
+            android:id="@+id/imgTopProfile"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_toStartOf="@id/btnHistory"
+            android:layout_marginEnd="12dp"
+            android:layout_centerVertical="true"
+            android:background="@drawable/profile_avatar_bg"
+            android:padding="0dp"
+            android:scaleType="centerCrop"
+            android:src="@android:drawable/ic_menu_myplaces"
+            android:elevation="4dp"
+            android:clipToOutline="true" />
     </RelativeLayout>
 
     <!-- CENTER SECTION (ORB) -->
@@ -168,7 +182,311 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- OVERLAYS (HISTORY & MODELS) -->
+    <!-- OVERLAYS (HISTORY & MODELS & ACCOUNT) -->
+    <!-- ACCOUNT / LOGIN PANEL -->
+    <LinearLayout
+        android:id="@+id/layoutAccount"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/auth_overlay_bg"
+        android:orientation="vertical"
+        android:padding="28dp"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="32dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/txtAccountTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🤖 Niko AI"
+                    android:textColor="#FFFFFF"
+                    android:textSize="32sp"
+                    android:letterSpacing="-0.02"
+                    android:fontFamily="sans-serif-black" />
+
+                <TextView
+                    android:id="@+id/txtAccountSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Yapay Zeka Sohbet Asistanı"
+                    android:textColor="#a0a0b0"
+                    android:textSize="14sp"
+                    android:letterSpacing="0.05"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnCloseAccount"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/auth_input_bg"
+                android:padding="12dp"
+                android:scaleType="centerInside"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="#FFFFFF" />
+        </RelativeLayout>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Profile Avatar (Visible when logged in or editing) -->
+                <ImageView
+                    android:id="@+id/imgMainProfile"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/profile_avatar_bg"
+                    android:clipToOutline="true"
+                    android:elevation="6dp"
+                    android:scaleType="centerCrop"
+                    android:src="@android:drawable/ic_menu_myplaces"
+                    android:visibility="gone" />
+
+                <!-- Login / Register Form Fields -->
+                <LinearLayout
+                    android:id="@+id/layoutAccountFields"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Kullanıcı Adı"
+                        android:textColor="#a0a0b0"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"
+                        android:fontFamily="sans-serif-medium" />
+
+                    <EditText
+                        android:id="@+id/edtUsername"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginBottom="16dp"
+                        android:background="@drawable/auth_input_bg"
+                        android:hint="Kullanıcı adınızı girin"
+                        android:textColorHint="#505060"
+                        android:textColor="#FFFFFF"
+                        android:paddingHorizontal="20dp"
+                        android:inputType="text"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:id="@+id/txtCurrentPasswordLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mevcut Şifre (Değişiklik İçin)"
+                        android:textColor="#a0a0b0"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:visibility="gone" />
+
+                    <EditText
+                        android:id="@+id/edtCurrentPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginBottom="16dp"
+                        android:background="@drawable/auth_input_bg"
+                        android:hint="Mevcut şifrenizi girin"
+                        android:textColorHint="#505060"
+                        android:textColor="#FFFFFF"
+                        android:paddingHorizontal="20dp"
+                        android:inputType="textPassword"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="15sp"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/txtPasswordLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Şifre"
+                        android:textColor="#a0a0b0"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"
+                        android:fontFamily="sans-serif-medium" />
+
+                    <EditText
+                        android:id="@+id/edtPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginBottom="16dp"
+                        android:background="@drawable/auth_input_bg"
+                        android:hint="Şifrenizi girin"
+                        android:textColorHint="#505060"
+                        android:textColor="#FFFFFF"
+                        android:paddingHorizontal="20dp"
+                        android:inputType="textPassword"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="15sp" />
+
+                    <!-- Registration Only Fields -->
+                    <LinearLayout
+                        android:id="@+id/layoutRegisterExtras"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="E-posta"
+                            android:textColor="#a0a0b0"
+                            android:textSize="12sp"
+                            android:layout_marginBottom="8dp"
+                            android:fontFamily="sans-serif-medium" />
+
+                        <EditText
+                            android:id="@+id/edtEmail"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_marginBottom="16dp"
+                            android:background="@drawable/auth_input_bg"
+                            android:hint="ornek@email.com"
+                            android:textColorHint="#505060"
+                            android:textColor="#FFFFFF"
+                            android:paddingHorizontal="20dp"
+                            android:inputType="textEmailAddress"
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="15sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ad Soyad"
+                            android:textColor="#a0a0b0"
+                            android:textSize="12sp"
+                            android:layout_marginBottom="8dp"
+                            android:fontFamily="sans-serif-medium" />
+
+                        <EditText
+                            android:id="@+id/edtFullName"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_marginBottom="16dp"
+                            android:background="@drawable/auth_input_bg"
+                            android:hint="Adınız ve soyadınız"
+                            android:textColorHint="#505060"
+                            android:textColor="#FFFFFF"
+                            android:paddingHorizontal="20dp"
+                            android:inputType="textPersonName"
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="15sp" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/btnSubmitAccount"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/auth_button_bg"
+                        android:text="Giriş Yap"
+                        android:textColor="#FFFFFF"
+                        android:textAllCaps="false"
+                        android:fontFamily="sans-serif-bold"
+                        android:textSize="16sp"
+                        android:elevation="4dp" />
+
+                    <TextView
+                        android:id="@+id/btnSwitchMode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:gravity="center"
+                        android:text="Hesabınız yok mu? Kayıt Olun"
+                        android:textColor="#6366f1"
+                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-bold"
+                        android:padding="8dp" />
+                </LinearLayout>
+
+                <!-- Logged In Section -->
+                <LinearLayout
+                    android:id="@+id/layoutLoggedIn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:visibility="gone">
+
+
+
+                    <TextView
+                        android:id="@+id/txtLoginStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Şu an giriş yapıldı: username"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:fontFamily="sans-serif-black"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="Niko AI ile sohbet etmeye hazırsınız"
+                        android:textColor="#a0a0b0"
+                        android:textSize="14sp"
+                        android:layout_marginBottom="24dp"
+                        android:fontFamily="sans-serif-medium" />
+
+                    <Button
+                        android:id="@+id/btnEditProfile"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/auth_button_bg"
+                        android:text="Profili Düzenle"
+                        android:textColor="#FFFFFF"
+                        android:textAllCaps="false"
+                        android:fontFamily="sans-serif-bold"
+                        android:textSize="16sp" />
+
+                    <Button
+                        android:id="@+id/btnLogout"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="@drawable/auth_secondary_button_bg"
+                        android:text="Oturumu Kapat"
+                        android:textColor="#ef4444"
+                        android:textAllCaps="false"
+                        android:fontFamily="sans-serif-bold"
+                        android:textSize="16sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
     <!-- MODEL SEÇİM PANELİ (GELİŞTİRİLMİŞ) -->
     <LinearLayout
         android:id="@+id/layoutModels"

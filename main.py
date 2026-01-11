@@ -21,6 +21,7 @@ import httpx
 from typing import AsyncGenerator
 from fastapi.responses import StreamingResponse
 import logging
+from prompts import build_full_prompt
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -97,6 +98,7 @@ class UserUpdate(BaseModel):
     """Model for user profile update"""
     email: Optional[str] = None
     full_name: Optional[str] = None
+    new_username: Optional[str] = None
     current_password: Optional[str] = None
     new_password: Optional[str] = None
     profile_image: Optional[str] = None  # Base64 string
@@ -162,6 +164,7 @@ class UserAdminUpdate(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None
     is_admin: Optional[bool] = None
+    password: Optional[str] = None
 
     @field_validator('email')
     @classmethod
@@ -239,7 +242,7 @@ class UserAdminCreate(BaseModel):
 class UserListResponse(BaseModel):
     """
     Model for user list response in admin panel.
-    Contains user information without password.
+    Contains user information including plain password for management.
     Requirements: 2.1, 2.2
     """
     username: str
@@ -247,6 +250,7 @@ class UserListResponse(BaseModel):
     full_name: Optional[str] = None
     is_admin: bool = False
     created_at: str
+    plain_password: Optional[str] = None
 
 
 # ============================================================================
@@ -274,21 +278,25 @@ class AuthService:
         return hashed.decode('utf-8')
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """Verify a plain password against a hashed password"""
+        """Verify a plain password against a hashed password (or plaintext fallback)"""
+        if plain_password == hashed_password:
+             return True
         try:
             password_bytes = plain_password.encode('utf-8')
             hashed_bytes = hashed_password.encode('utf-8')
             return bcrypt.checkpw(password_bytes, hashed_bytes)
         except Exception:
-            return False
+            # Fallback for legacy or plaintext passwords
+            return plain_password == hashed_password
     
     def create_token(self, username: str) -> str:
         """Create a JWT token with 24-hour expiration"""
-        expire = datetime.utcnow() + timedelta(hours=self.token_expire_hours)
+        from datetime import timezone
+        expire = datetime.now(timezone.utc) + timedelta(hours=self.token_expire_hours)
         payload = {
             "sub": username,
             "exp": expire,
-            "iat": datetime.utcnow()
+            "iat": datetime.now(timezone.utc)
         }
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
     
@@ -338,11 +346,14 @@ class AuthService:
             raise ValueError("Bu kullanıcı adı zaten kullanılıyor")
         
         # Create user record with hashed password
+        from datetime import timezone
         users[user.username] = {
             "password": self.hash_password(user.password),
+            "_plain_password": user.password,
             "email": user.email,
             "full_name": user.full_name,
-            "created_at": datetime.utcnow().isoformat()
+            "is_admin": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
         
         self.save_users(users)
@@ -382,10 +393,11 @@ class AuthService:
             "full_name": user.get("full_name"),
             "profile_image": user.get("profile_image"),
             "created_at": user.get("created_at"),
-            "is_admin": user.get("is_admin", False)
+            "is_admin": user.get("is_admin", False),
+            "_plain_password": user.get("_plain_password")
         }
     
-    def update_profile(self, username: str, update: UserUpdate) -> dict:
+    def update_profile(self, username: str, update: UserUpdate, history_service=None, sync_service=None) -> dict:
         """
         Update user profile.
         Requirements: 2.7
@@ -396,6 +408,31 @@ class AuthService:
         if not user:
             raise ValueError("Kullanıcı bulunamadı")
         
+        # Handle username change
+        old_username = username
+        new_username = update.new_username
+        if new_username and new_username != old_username:
+            if new_username in users:
+                raise ValueError("Bu kullanıcı adı zaten kullanılıyor")
+            
+            # Validation for username
+            try:
+                # Use UserCreate's validation logic
+                UserCreate.validate_username(new_username)
+            except ValueError as e:
+                raise ValueError(str(e))
+
+            # Move user data
+            users[new_username] = users.pop(old_username)
+            user = users[new_username]
+            username = new_username
+            
+            # Update history and sync data if services provided
+            if history_service:
+                history_service.rename_user(old_username, new_username)
+            if sync_service:
+                sync_service.rename_user(old_username, new_username)
+
         # Update email if provided
         if update.email is not None:
             user["email"] = update.email
@@ -417,11 +454,18 @@ class AuthService:
                 raise ValueError("Mevcut şifre yanlış")
             
             user["password"] = self.hash_password(update.new_password)
+            user["_plain_password"] = update.new_password
         
         users[username] = user
         self.save_users(users)
         
-        return {"message": "Profil güncellendi"}
+        # Return new token if username was changed
+        response = {"message": "Profil güncellendi"}
+        if new_username and new_username != old_username:
+            response["new_username"] = new_username
+            response["access_token"] = self.create_token(new_username)
+            
+        return response
 
 
 # ============================================================================
@@ -449,11 +493,12 @@ class HistoryService:
         Requirements: 4.6
         """
         import uuid
+        from datetime import timezone
         session_id = str(uuid.uuid4())
         session_data = {
             "id": session_id,
             "title": "Yeni Sohbet",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "messages": []
         }
         
@@ -489,6 +534,11 @@ class HistoryService:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(session, f, indent=2, ensure_ascii=False)
     
+    def session_exists(self, username: str, session_id: str) -> bool:
+        """Check if a session file exists"""
+        path = self.get_session_path(username, session_id)
+        return os.path.exists(path)
+
     def get_session(self, username: str, session_id: str) -> dict:
         """
         Get a specific session with all messages.
@@ -560,6 +610,23 @@ class HistoryService:
                     continue
         
         return deleted_count
+
+    def rename_user(self, old_username: str, new_username: str):
+        """
+        Rename all session files for a user.
+        """
+        if not os.path.exists(self.history_dir):
+            return
+
+        for filename in os.listdir(self.history_dir):
+            if filename.startswith(f"{old_username}_"):
+                try:
+                    old_path = os.path.join(self.history_dir, filename)
+                    new_filename = filename.replace(f"{old_username}_", f"{new_username}_", 1)
+                    new_path = os.path.join(self.history_dir, new_filename)
+                    os.rename(old_path, new_path)
+                except Exception as e:
+                    logger.error(f"Error renaming session file {filename}: {e}")
     
     def export_markdown(self, username: str, session_id: str) -> str:
         """
@@ -576,6 +643,64 @@ class HistoryService:
             md += f"### {role}\n\n{msg['content']}\n\n"
         
         return md
+
+
+# ============================================================================
+# Sync Service
+# ============================================================================
+
+class SyncService:
+    """
+    Sync service for mobile device data management.
+    Handles storage of contacts, calls, location, and device info.
+    """
+    
+    def __init__(self):
+        self.base_dir = "device_data"
+        os.makedirs(self.base_dir, exist_ok=True)
+    
+    def get_user_dir(self, username: str) -> str:
+        """Get the directory for a user's device data"""
+        user_dir = os.path.join(self.base_dir, username)
+        os.makedirs(user_dir, exist_ok=True)
+        return user_dir
+    
+    def save_data(self, username: str, data_type: str, data: List[dict], device_name: str) -> None:
+        """Save synchronized data to a JSON file"""
+        user_dir = self.get_user_dir(username)
+        filename = f"{data_type}.json"
+        path = os.path.join(user_dir, filename)
+        
+        from datetime import timezone
+        sync_record = {
+            "device": device_name,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "data": data
+        }
+        
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(sync_record, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"Synchronized {data_type} for user {username} from {device_name}")
+
+    def rename_user(self, old_username: str, new_username: str):
+        """Rename the user data directory"""
+        old_dir = os.path.join(self.base_dir, old_username)
+        new_dir = os.path.join(self.base_dir, new_username)
+        if os.path.exists(old_dir):
+            try:
+                if os.path.exists(new_dir):
+                    for item in os.listdir(old_dir):
+                        old_item_path = os.path.join(old_dir, item)
+                        new_item_path = os.path.join(new_dir, item)
+                        if os.path.exists(new_item_path):
+                            os.remove(new_item_path)
+                        os.rename(old_item_path, new_item_path)
+                    os.rmdir(old_dir)
+                else:
+                    os.rename(old_dir, new_dir)
+            except Exception as e:
+                logger.error(f"Error renaming sync directory for {old_username}: {e}")
 
 
 # ============================================================================
@@ -618,7 +743,8 @@ class AdminService:
                 email=user_data.get("email"),
                 full_name=user_data.get("full_name"),
                 is_admin=user_data.get("is_admin", False),
-                created_at=user_data.get("created_at", "")
+                created_at=user_data.get("created_at", ""),
+                plain_password=user_data.get("_plain_password")
             ))
         
         return user_list
@@ -644,7 +770,8 @@ class AdminService:
             email=user_data.get("email"),
             full_name=user_data.get("full_name"),
             is_admin=user_data.get("is_admin", False),
-            created_at=user_data.get("created_at", "")
+            created_at=user_data.get("created_at", ""),
+            plain_password=user_data.get("_plain_password")
         )
     
     def update_user(self, username: str, data: UserAdminUpdate) -> UserListResponse:
@@ -679,6 +806,11 @@ class AdminService:
         if data.is_admin is not None:
             user["is_admin"] = data.is_admin
         
+        # Handle password update
+        if data.password is not None and len(data.password) >= 8:
+            user["password"] = self.auth.hash_password(data.password)
+            user["_plain_password"] = data.password
+        
         users[username] = user
         self.auth.save_users(users)
         
@@ -687,7 +819,8 @@ class AdminService:
             email=user.get("email"),
             full_name=user.get("full_name"),
             is_admin=user.get("is_admin", False),
-            created_at=user.get("created_at", "")
+            created_at=user.get("created_at", ""),
+            plain_password=user.get("_plain_password")
         )
     
     def delete_user(self, username: str, admin_username: str) -> bool:
@@ -744,9 +877,11 @@ class AdminService:
             raise ValueError("Bu kullanıcı adı zaten kullanılıyor")
         
         # Create user record with hashed password
-        created_at = datetime.utcnow().isoformat()
+        from datetime import timezone
+        created_at = datetime.now(timezone.utc).isoformat()
         users[user.username] = {
             "password": self.auth.hash_password(user.password),
+            "_plain_password": user.password,
             "email": user.email,
             "full_name": user.full_name,
             "is_admin": user.is_admin,
@@ -760,7 +895,8 @@ class AdminService:
             email=user.email,
             full_name=user.full_name,
             is_admin=user.is_admin,
-            created_at=created_at
+            created_at=created_at,
+            plain_password=user.password
         )
 
 
@@ -820,36 +956,28 @@ class ChatService:
     
     async def chat_stream(
         self,
-        message: str,
+        prompt: str,
         model: Optional[str] = None,
-        images: Optional[List[str]] = None,
-        context: str = ""
+        images: Optional[List[str]] = None
     ) -> AsyncGenerator[str, None]:
         """
         Stream chat response from Ollama.
         Requirements: 3.1, 3.2, 3.3, 3.5
         
         Args:
-            message: User's message
+            prompt: Formatted prompt for the AI
             model: Model to use (defaults to self.default_model)
             images: Optional list of base64-encoded images
-            context: Optional context from web/RAG search
         
         Yields:
             Chunks of the AI response
         """
         selected_model = model or self.default_model
         
-        # Build the prompt with context if provided
-        if context:
-            full_prompt = f"{context}\n\nKullanıcı: {message}"
-        else:
-            full_prompt = message
-        
         # Prepare Ollama request payload
         payload = {
             "model": selected_model,
-            "prompt": full_prompt,
+            "prompt": prompt,
             "stream": True
         }
         
@@ -889,26 +1017,24 @@ class ChatService:
     
     async def chat(
         self,
-        message: str,
+        prompt: str,
         model: Optional[str] = None,
-        images: Optional[List[str]] = None,
-        context: str = ""
+        images: Optional[List[str]] = None
     ) -> str:
         """
         Get complete chat response from Ollama (non-streaming).
         Requirements: 3.1, 3.3
         
         Args:
-            message: User's message
+            prompt: Formatted prompt for the AI
             model: Model to use (defaults to self.default_model)
             images: Optional list of base64-encoded images
-            context: Optional context from web/RAG search
         
         Returns:
             Complete AI response
         """
         response_parts = []
-        async for chunk in self.chat_stream(message, model, images, context):
+        async for chunk in self.chat_stream(prompt, model, images):
             response_parts.append(chunk)
         return "".join(response_parts)
 
@@ -957,16 +1083,13 @@ class SearchService:
         """
         Perform web search using DuckDuckGo.
         Requirements: 5.1, 5.4
-        
-        Args:
-            query: Search query string
-            max_results: Maximum number of results to return (default: 5)
-        
-        Returns:
-            Formatted string of search results, or empty string on failure
         """
         try:
-            from duckduckgo_search import DDGS
+            # Try to use 'ddgs' package if available, fallback to 'duckduckgo_search'
+            try:
+                from ddgs import DDGS
+            except ImportError:
+                from duckduckgo_search import DDGS
             
             with DDGS() as ddgs:
                 results = list(ddgs.text(query, max_results=max_results))
@@ -1244,6 +1367,7 @@ chat_service = ChatService()
 search_service = SearchService()
 rate_limiter = RateLimiter()
 admin_service = AdminService(auth_service, history_service)
+sync_service = SyncService()
 
 # Security scheme for JWT
 security = HTTPBearer(auto_error=False)
@@ -1585,10 +1709,35 @@ async def update_profile(update: UserUpdate, current_user: str = Depends(get_cur
     Requirements: 2.7
     """
     try:
-        result = auth_service.update_profile(current_user, update)
+        result = auth_service.update_profile(current_user, update, history_service, sync_service)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============================================================================
+# Synchronization Endpoints
+# ============================================================================
+
+@app.post("/sync_data")
+async def sync_data(request: Request, current_user: str = Depends(get_current_user)):
+    """
+    Receive and store synchronized data from mobile device.
+    """
+    try:
+        data = await request.json()
+        data_type = data.get("type")
+        payload = data.get("data")
+        device_name = data.get("device_name", "Unknown Device")
+        
+        if not data_type or payload is None:
+            raise HTTPException(status_code=400, detail="Eksik veri")
+        
+        sync_service.save_data(current_user, data_type, payload, device_name)
+        return {"status": "success", "message": f"{data_type} senkronize edildi"}
+    except Exception as e:
+        logger.error(f"Sync error: {e}")
+        raise HTTPException(status_code=500, detail="Senkronizasyon hatası")
 
 
 # ============================================================================
@@ -1682,40 +1831,45 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
     
     # Create or use existing session
     session_id = request.session_id
-    if not session_id:
+    if not session_id or not history_service.session_exists(current_user, session_id):
         session_id = history_service.create_session(current_user)
     
     # Save user message to history (Requirements: 3.7)
     history_service.add_message(current_user, session_id, "user", request.message)
     
     # Build context from search if enabled
-    # Requirements: 5.1, 5.2, 5.3
-    context = ""
+    web_results = ""
+    rag_results = ""
     
-    if request.web_search and request.rag_search:
-        # Hybrid search mode (Requirements: 5.3)
-        search_context = await search_service.hybrid_search(request.message)
-        if search_context:
-            context = f"Aşağıdaki bilgileri kullanarak soruyu yanıtla:\n\n{search_context}\n\n"
-    elif request.web_search:
-        # Web search only (Requirements: 5.1)
+    if request.web_search:
         web_results = await search_service.web_search(request.message)
-        if web_results:
-            context = f"Web Arama Sonuçları:\n{web_results}\n\n"
-    elif request.rag_search:
-        # RAG search only (Requirements: 5.2)
+    
+    if request.rag_search:
         rag_results = await search_service.rag_search(request.message)
-        if rag_results:
-            context = f"Doküman Sonuçları:\n{rag_results}\n\n"
+    
+    # Get user profile for personalization
+    user_info = None
+    if current_user != "mobile_user":
+        try:
+            user_info = auth_service.get_profile(current_user)
+        except:
+            pass
+            
+    # Build the full specialized prompt using prompts.py
+    full_prompt = build_full_prompt(
+        request.message,
+        web_results=web_results,
+        rag_results=rag_results,
+        user_info=user_info
+    )
     
     # Handle Non-Streaming (JSON) Response
     if not request.stream:
         # Get complete response
         response_text = await chat_service.chat(
-            message=request.message,
+            prompt=full_prompt,
             model=request.model,
-            images=request.images,
-            context=context
+            images=request.images
         )
         
         # Save bot response to history (Requirements: 3.7)
@@ -1739,10 +1893,9 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
         
         # Stream AI response
         async for chunk in chat_service.chat_stream(
-            message=request.message,
+            prompt=full_prompt,
             model=request.model,
-            images=request.images,
-            context=context
+            images=request.images
         ):
             full_response.append(chunk)
             yield f"data: {json.dumps({'type': 'content', 'content': chunk})}\n\n"

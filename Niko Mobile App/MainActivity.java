@@ -25,6 +25,7 @@ import android.speech.tts.UtteranceProgressListener;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.media.MediaPlayer;
@@ -43,6 +44,8 @@ import android.location.Location;
 import android.location.LocationManager;
 import java.util.List;
 import android.content.pm.ResolveInfo;
+import android.provider.MediaStore;
+import java.io.ByteArrayOutputStream;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -78,6 +81,9 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.widget.LinearLayout;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.widget.Button;
 import android.view.ViewGroup;
 import android.text.TextWatcher;
@@ -161,6 +167,28 @@ public class MainActivity extends Activity {
             "qwen2.5-coder:7b"
     };
 
+    // Hesap/Profil bileşenleri
+    private ImageView imgTopProfile, imgMainProfile;
+    private View layoutAccount;
+    private ImageButton btnCloseAccount;
+    private TextView txtAccountTitle, txtAccountSubtitle;
+    private EditText edtUsername, edtPassword, edtEmail, edtFullName;
+    private View layoutRegisterExtras, layoutAccountFields;
+    private Button btnSubmitAccount;
+    private TextView btnSwitchMode;
+    private View layoutLoggedIn;
+    private TextView txtLoginStatus;
+    private Button btnLogout, btnEditProfile;
+    private EditText edtCurrentPassword;
+    private TextView txtCurrentPasswordLabel, txtPasswordLabel;
+    private SharedPreferences authPrefs;
+    private String authToken = null;
+    private String authUsername = null;
+    private boolean isRegisterMode = false;
+    private boolean isEditProfileMode = false;
+    private static final int PICK_IMAGE_REQUEST = 1001;
+    private String selectedImageBase64 = null;
+
     // WhatsApp entegrasyonu için veriler
     public static String lastWhatsAppMessage; // Son okunan mesaj
     public static String lastWhatsAppSender; // Son mesajın göndericisi
@@ -211,6 +239,40 @@ public class MainActivity extends Activity {
         } else {
             txtMainActiveModel.setText("Niko AI");
         }
+
+        // Hesap bileşenlerini bağla
+        imgTopProfile = findViewById(R.id.imgTopProfile);
+        imgMainProfile = findViewById(R.id.imgMainProfile);
+        layoutAccount = findViewById(R.id.layoutAccount);
+        btnCloseAccount = findViewById(R.id.btnCloseAccount);
+        txtAccountTitle = findViewById(R.id.txtAccountTitle);
+        txtAccountSubtitle = findViewById(R.id.txtAccountSubtitle);
+        edtUsername = findViewById(R.id.edtUsername);
+        edtPassword = findViewById(R.id.edtPassword);
+        edtEmail = findViewById(R.id.edtEmail);
+        edtFullName = findViewById(R.id.edtFullName);
+        layoutRegisterExtras = findViewById(R.id.layoutRegisterExtras);
+        layoutAccountFields = findViewById(R.id.layoutAccountFields);
+        btnSubmitAccount = findViewById(R.id.btnSubmitAccount);
+        btnSwitchMode = findViewById(R.id.btnSwitchMode);
+        layoutLoggedIn = findViewById(R.id.layoutLoggedIn);
+        txtLoginStatus = findViewById(R.id.txtLoginStatus);
+        btnLogout = findViewById(R.id.btnLogout);
+        btnEditProfile = findViewById(R.id.btnEditProfile);
+        edtCurrentPassword = findViewById(R.id.edtCurrentPassword);
+        txtCurrentPasswordLabel = findViewById(R.id.txtCurrentPasswordLabel);
+        txtPasswordLabel = findViewById(R.id.txtPasswordLabel);
+
+        authPrefs = getSharedPreferences("auth_settings", MODE_PRIVATE);
+        authToken = authPrefs.getString("access_token", null);
+        authUsername = authPrefs.getString("username", null);
+
+        imgTopProfile.setOnClickListener(v -> showAccount());
+        btnCloseAccount.setOnClickListener(v -> hideAccount());
+        btnSwitchMode.setOnClickListener(v -> toggleAccountMode());
+        btnSubmitAccount.setOnClickListener(v -> performAccountAction());
+        btnEditProfile.setOnClickListener(v -> enableEditMode());
+        btnLogout.setOnClickListener(v -> performLogout());
 
         // Gerekli başlatma işlemleri
         requestPermissions(); // İzinleri iste
@@ -306,6 +368,9 @@ public class MainActivity extends Activity {
 
         // Orb Animasyonunu Başlat
         startBreathingAnimation();
+
+        // Başlangıçta hesap durumunu kontrol et (Giriş yapılmışsa profil fotosunu yükler)
+        updateAccountUI();
     }
 
     /**
@@ -714,7 +779,13 @@ public class MainActivity extends Activity {
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                 conn.setRequestProperty("Accept", "application/json");
-                conn.setRequestProperty("x-api-key", "test");
+
+                // Kimlik Doğrulama
+                if (authToken != null) {
+                    conn.setRequestProperty("Authorization", "Bearer " + authToken);
+                } else {
+                    conn.setRequestProperty("x-api-key", "test");
+                }
                 conn.setDoOutput(true);
                 conn.setConnectTimeout(30000);
                 conn.setReadTimeout(60000);
@@ -789,6 +860,405 @@ public class MainActivity extends Activity {
                 speak("Yapay zeka asistanına şu an ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.", false);
             }
         }).start();
+    }
+
+    // ================= HESAP VE PROFİL İŞLEMLERİ (ACCOUNT & PROFILE)
+    // =================
+
+    private void showAccount() {
+        runOnUiThread(() -> {
+            layoutAccount.setVisibility(View.VISIBLE);
+            updateAccountUI();
+        });
+    }
+
+    private void hideAccount() {
+        runOnUiThread(() -> {
+            layoutAccount.setVisibility(View.GONE);
+            // Klavyeyi kapat
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(layoutAccount.getWindowToken(), 0);
+            }
+        });
+    }
+
+    private void toggleAccountMode() {
+        isRegisterMode = !isRegisterMode;
+        isEditProfileMode = false;
+        updateAccountUI();
+    }
+
+    private void enableEditMode() {
+        isEditProfileMode = true;
+        updateAccountUI();
+        
+        // Düzenleme modunda fotoğrafa tıklayınca galeriye git
+        imgMainProfile.setOnClickListener(v -> {
+            if (isEditProfileMode) {
+                Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                startActivityForResult(intent, PICK_IMAGE_REQUEST);
+            }
+        });
+    }
+
+    private void updateAccountUI() {
+        // Reset visibilities
+        edtUsername.setEnabled(true);
+        edtCurrentPassword.setVisibility(View.GONE);
+        txtCurrentPasswordLabel.setVisibility(View.GONE);
+        layoutRegisterExtras.setVisibility(View.GONE);
+        btnSwitchMode.setVisibility(View.VISIBLE);
+
+        if (authToken != null) {
+            imgMainProfile.setVisibility(View.VISIBLE);
+            if (isEditProfileMode) {
+                // Edit mode
+                txtAccountTitle.setText("Profili Düzenle");
+                txtAccountSubtitle.setText("Değiştirmek için fotoğrafın üzerine dokunun");
+                layoutLoggedIn.setVisibility(View.GONE);
+                layoutAccountFields.setVisibility(View.VISIBLE);
+                layoutRegisterExtras.setVisibility(View.VISIBLE);
+                
+                edtUsername.setEnabled(true); // Artık kullanıcı adı düzenlenebilir
+                edtCurrentPassword.setVisibility(View.VISIBLE);
+                txtCurrentPasswordLabel.setVisibility(View.VISIBLE);
+                
+                btnSubmitAccount.setText("Güncelle");
+                btnSwitchMode.setText("Geri Dön");
+                btnSwitchMode.setOnClickListener(v -> {
+                    isEditProfileMode = false;
+                    selectedImageBase64 = null; // Seçimi iptal et
+                    updateAccountUI();
+                });
+            } else {
+                // Fotoğrafa tıklama özelliğini sadece düzenleme modunda tut
+                imgMainProfile.setOnClickListener(null);
+                // Profile view mode
+                txtAccountTitle.setText("Profilim");
+                txtAccountSubtitle.setText("Niko AI Üyesi");
+                layoutLoggedIn.setVisibility(View.VISIBLE);
+                txtLoginStatus.setText("Bilgileriniz yükleniyor...");
+                fetchProfile();
+                layoutAccountFields.setVisibility(View.GONE);
+            }
+        } else {
+            imgMainProfile.setVisibility(View.GONE);
+            layoutLoggedIn.setVisibility(View.GONE);
+            layoutAccountFields.setVisibility(View.VISIBLE);
+
+            if (isRegisterMode) {
+                txtAccountTitle.setText("Yeni Hesap");
+                txtAccountSubtitle.setText("Niko dünyasına katılın");
+                layoutRegisterExtras.setVisibility(View.VISIBLE);
+                btnSubmitAccount.setText("Kayıt Ol");
+                btnSwitchMode.setText("Zaten hesabınız var mı? Giriş Yapın");
+                btnSwitchMode.setOnClickListener(v -> toggleAccountMode());
+            } else {
+                txtAccountTitle.setText("Giriş Yap");
+                txtAccountSubtitle.setText("Niko AI'ya hoş geldiniz");
+                layoutRegisterExtras.setVisibility(View.GONE);
+                btnSubmitAccount.setText("Giriş Yap");
+                btnSwitchMode.setText("Hesabınız yok mu? Kayıt Olun");
+                btnSwitchMode.setOnClickListener(v -> toggleAccountMode());
+            }
+        }
+    }
+
+    private void fetchProfile() {
+        if (authToken == null) return;
+        
+        new Thread(() -> {
+            try {
+                URL url = new URL(API_BASE_URL + "/me");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Authorization", "Bearer " + authToken);
+                
+                int code = conn.getResponseCode();
+                if (code == 200) {
+                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) sb.append(line);
+                    
+                    JSONObject resp = new JSONObject(sb.toString());
+                    String email = resp.optString("email", "");
+                    String fullName = resp.optString("full_name", "");
+                    String plainPass = resp.optString("plain_password", resp.optString("_plain_password", ""));
+                    String profileImgBase64 = resp.optString("profile_image", "");
+                    
+                    String displayInfo = "Kullanıcı: " + authUsername + "\n" +
+                                       "E-posta: " + (email.isEmpty() ? "Belirtilmedi" : email) + "\n" +
+                                       "Ad Soyad: " + (fullName.isEmpty() ? "Belirtilmedi" : fullName) + "\n" +
+                                       "Şifre: " + (plainPass.isEmpty() ? "Özel" : plainPass);
+                                       
+                    runOnUiThread(() -> {
+                        txtLoginStatus.setText(displayInfo);
+                        
+                        // Profil fotoğrafını yükle
+                        if (!profileImgBase64.isEmpty()) {
+                            try {
+                                if (profileImgBase64.contains(",")) {
+                                    String pureBase64 = profileImgBase64.split(",")[1];
+                                    byte[] decodedString = android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT);
+                                    Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                                    imgTopProfile.clearColorFilter();
+                                    imgMainProfile.clearColorFilter();
+                                    imgTopProfile.setImageBitmap(decodedByte);
+                                    imgMainProfile.setImageBitmap(decodedByte);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        } else {
+                            // Placeholder durumunda ikonu beyaz yap
+                            imgTopProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+                            imgTopProfile.setColorFilter(Color.WHITE);
+                            imgMainProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+                            imgMainProfile.setColorFilter(Color.WHITE);
+                        }
+
+                        if (isEditProfileMode) {
+                            edtUsername.setText(authUsername);
+                            edtEmail.setText(email);
+                            edtFullName.setText(fullName);
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private void performAccountAction() {
+        if (isEditProfileMode) {
+            String username = edtUsername.getText().toString().trim();
+            String fullName = edtFullName.getText().toString().trim();
+            String email = edtEmail.getText().toString().trim();
+            String currentPassword = edtCurrentPassword.getText().toString().trim();
+            String newPassword = edtPassword.getText().toString().trim();
+            
+            updateProfileRequest(username, fullName, email, currentPassword, newPassword);
+            return;
+        }
+
+        String username = edtUsername.getText().toString().trim();
+        String password = edtPassword.getText().toString().trim();
+
+        if (username.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (isRegisterMode) {
+            String email = edtEmail.getText().toString().trim();
+            String fullName = edtFullName.getText().toString().trim();
+            registerRequest(username, password, email, fullName);
+        } else {
+            loginRequest(username, password);
+        }
+    }
+
+    private void loginRequest(String username, String password) {
+        new Thread(() -> {
+            try {
+                URL url = new URL(API_BASE_URL + "/login");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                JSONObject payload = new JSONObject();
+                payload.put("username", username);
+                payload.put("password", password);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes("utf-8"));
+                }
+
+                int code = conn.getResponseCode();
+                if (code == 200) {
+                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null)
+                        sb.append(line);
+
+                    JSONObject resp = new JSONObject(sb.toString());
+                    authToken = resp.getString("access_token");
+                    authUsername = username;
+
+                    authPrefs.edit()
+                            .putString("access_token", authToken)
+                            .putString("username", username)
+                            .apply();
+
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Giriş başarılı! Hoş geldin " + username, Toast.LENGTH_SHORT).show();
+                        updateAccountUI();
+                        // 2 saniye sonra kapat
+                        new Handler(Looper.getMainLooper()).postDelayed(this::hideAccount, 1500);
+                    });
+                } else {
+                    runOnUiThread(() -> Toast.makeText(this, "Giriş başarısız. Kullanıcı adı veya şifre yanlış.",
+                            Toast.LENGTH_SHORT).show());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Bağlantı hatası", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private void registerRequest(String username, String password, String email, String fullName) {
+        new Thread(() -> {
+            try {
+                URL url = new URL(API_BASE_URL + "/register");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                JSONObject payload = new JSONObject();
+                payload.put("username", username);
+                payload.put("password", password);
+                if (!email.isEmpty())
+                    payload.put("email", email);
+                if (!fullName.isEmpty())
+                    payload.put("full_name", fullName);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes("utf-8"));
+                }
+
+                int code = conn.getResponseCode();
+                if (code == 200 || code == 201) { // 201 Created support
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Kayıt başarılı! Şimdi giriş yapabilirsiniz.", Toast.LENGTH_LONG).show();
+                        isRegisterMode = false;
+                        updateAccountUI();
+                        // Clear password field for security
+                        edtPassword.setText("");
+                    });
+                } else {
+                    InputStream es = conn.getErrorStream();
+                    if (es != null) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(es, "utf-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null)
+                            sb.append(line);
+
+                        JSONObject resp = new JSONObject(sb.toString());
+                        // FastAPI typically returns errors in 'detail' or 'error' key
+                        String err = resp.optString("detail", resp.optString("error", "Kayıt başarısız"));
+
+                        runOnUiThread(() -> Toast.makeText(this, "Hata: " + err, Toast.LENGTH_LONG).show());
+                    } else {
+                        runOnUiThread(() -> Toast.makeText(this, "Sunucu hatası: " + code, Toast.LENGTH_SHORT).show());
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Bağlantı hatası", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private void updateProfileRequest(String username, String fullName, String email, String currentPassword, String newPassword) {
+        new Thread(() -> {
+            try {
+                URL url = new URL(API_BASE_URL + "/me");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("PUT");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Authorization", "Bearer " + authToken);
+                conn.setDoOutput(true);
+
+                JSONObject payload = new JSONObject();
+                if (!username.equals(authUsername))
+                    payload.put("new_username", username);
+                if (!fullName.isEmpty())
+                    payload.put("full_name", fullName);
+                if (!email.isEmpty())
+                    payload.put("email", email);
+                if (selectedImageBase64 != null)
+                    payload.put("profile_image", selectedImageBase64);
+
+                // Add passwords only if they are being changed
+                if (!newPassword.isEmpty()) {
+                    if (currentPassword.isEmpty()) {
+                        runOnUiThread(() -> Toast.makeText(this, "Şifre değiştirmek için mevcut şifreniz gerekli",
+                                Toast.LENGTH_LONG).show());
+                        return;
+                    }
+                    payload.put("current_password", currentPassword);
+                    payload.put("new_password", newPassword);
+                }
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes("utf-8"));
+                }
+
+                int code = conn.getResponseCode();
+                if (code == 200) {
+                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) sb.append(line);
+                    JSONObject resp = new JSONObject(sb.toString());
+
+                    if (resp.has("access_token")) {
+                        authToken = resp.getString("access_token");
+                        authUsername = resp.getString("new_username");
+                        authPrefs.edit()
+                                .putString("access_token", authToken)
+                                .putString("username", authUsername)
+                                .apply();
+                    }
+
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Profil başarıyla güncellendi", Toast.LENGTH_LONG).show();
+                        isEditProfileMode = false;
+                        selectedImageBase64 = null; // Temizle
+                        updateAccountUI();
+                        // Şifre alanlarını temizle
+                        edtPassword.setText("");
+                        edtCurrentPassword.setText("");
+                    });
+                } else {
+                    InputStream es = conn.getErrorStream();
+                    if (es != null) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(es, "utf-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null)
+                            sb.append(line);
+                        JSONObject resp = new JSONObject(sb.toString());
+                        String err = resp.optString("detail", "Güncelleme başarısız");
+                        runOnUiThread(() -> Toast.makeText(this, "Hata: " + err, Toast.LENGTH_LONG).show());
+                    } else {
+                        runOnUiThread(() -> Toast.makeText(this, "Sunucu hatası: " + code, Toast.LENGTH_SHORT).show());
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Bağlantı hatası", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+    private void performLogout() {
+        authToken = null;
+        authUsername = null;
+        authPrefs.edit().clear().apply();
+        imgTopProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+        imgTopProfile.setColorFilter(Color.WHITE);
+        imgMainProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+        imgMainProfile.setColorFilter(Color.WHITE);
+        updateAccountUI();
+        Toast.makeText(this, "Çıkış yapıldı", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -956,7 +1426,14 @@ public class MainActivity extends Activity {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-        conn.setRequestProperty("x-api-key", "test");
+
+        // Kimlik Doğrulama
+        if (authToken != null) {
+            conn.setRequestProperty("Authorization", "Bearer " + authToken);
+        } else {
+            conn.setRequestProperty("x-api-key", "test");
+        }
+
         conn.setDoOutput(true);
 
         JSONObject payload = new JSONObject();
@@ -2067,6 +2544,40 @@ public class MainActivity extends Activity {
                 btnWebSearch.setAlpha(0.5f);
             }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            Uri imageUri = data.getData();
+            try {
+                Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+                
+                // Resmi makul bir boyuta küçült (Örn: 512x512)
+                int width = bitmap.getWidth();
+                int height = bitmap.getHeight();
+                float scale = Math.min(512f / width, 512f / height);
+                if (scale < 1) {
+                    Matrix matrix = new Matrix();
+                    matrix.postScale(scale, scale);
+                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true);
+                }
+                
+                imgMainProfile.setImageBitmap(bitmap);
+                imgMainProfile.clearColorFilter(); // Yeni seçilen resimdeki filtreyi temizle
+                
+                // Base64'e çevir
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos);
+                byte[] imageBytes = baos.toByteArray();
+                selectedImageBase64 = "data:image/jpeg;base64," + Base64.encodeToString(imageBytes, Base64.NO_WRAP);
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(this, "Fotoğraf seçilemedi", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override
