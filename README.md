@@ -19,7 +19,7 @@ Niko AI, gelişmiş Türkçe sesli komut desteği sunan, Android ve Web platform
 
 Mobil uygulamanın ve dış ağların sunucuya erişebilmesi için Cloudflare tüneli kullanılmaktadır.
 
-> 🌐 **Güncel Tünel Adresi:** [https://background-mia-walnut-socket.trycloudflare.com](https://background-mia-walnut-socket.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://monster-bristol-robert-anyone.trycloudflare.com](https://monster-bristol-robert-anyone.trycloudflare.com)
 
 _Not: Bu adres `start_tunnel.py` çalıştırıldığında otomatik olarak güncellenir._
 
