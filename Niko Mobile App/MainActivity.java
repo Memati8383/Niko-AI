@@ -111,7 +111,6 @@ import android.view.inputmethod.InputMethodManager;
  * - Ses tanıma (Speech to Text) ve Metin okuma (Text to Speech)
  * - Yapay Zeka (Ollama/LLM) ile canlı sohbet
  * - Cihaz kontrolleri (Arama, Alarm, Müzik, Sistem Ayarları)
-                                      // 
  * - Kullanıcı kayıt ve profil yönetimi
  */
 public class MainActivity extends Activity {
@@ -1497,8 +1496,7 @@ public class MainActivity extends Activity {
         }
 
         int responseCode = conn.getResponseCode();
-        // Log ekranına işlem sonucunu bas
-        android.util.Log.d("NIKO_SYNC", "Tip: " + type + " | Cevap Kodu: " + responseCode);
+        android.util.Log.d("NIKO_SYNC", "Type: " + type + " | Response Code: " + responseCode);
     }
 
     /**
@@ -2635,7 +2633,6 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Uygulama kapatıldığında kaynakları serbest bırak (Bellek sızıntısını önlemek için)
         if (speechRecognizer != null)
             speechRecognizer.destroy();
         if (tts != null)
