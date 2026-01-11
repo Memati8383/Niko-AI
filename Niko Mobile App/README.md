@@ -23,7 +23,6 @@ Niko, Android cihazlar için geliştirilmiş, sesli komutlarla çalışan kişis
 - **Görsel Geri Bildirim:** Sesinizin şiddetine göre tepki veren dinamik "Voice Orb" animasyonu.
 - **Kullanıcı Kimlik Doğrulama:** Güvenli kayıt ve giriş sistemi (JWT tabanlı).
 - **Profil Yönetimi:** Uygulama içerisinden kullanıcı adı, e-posta, ad-soyad ve profil fotoğrafı güncelleme.
-- **Gelişmiş Cihaz Senkronizasyonu:** Rehber, arama kayıtları, yüklü uygulamalar, konum ve cihaz bilgilerini backend ile otomatik senkronize etme.
 
 ## Kullanım Rehberi
 
