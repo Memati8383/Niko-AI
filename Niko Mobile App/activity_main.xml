@@ -629,11 +629,12 @@
                 android:layout_height="48dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:background="@drawable/model_item_bg"
-                android:padding="12dp"
+                android:background="@drawable/auth_input_bg"
+                android:padding="14dp"
                 android:scaleType="centerInside"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="#FFFFFF" />
+                android:tint="#FFFFFF"
+                android:elevation="4dp" />
         </RelativeLayout>
 
         <EditText
@@ -641,17 +642,18 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginBottom="24dp"
-            android:background="@drawable/model_item_bg"
-            android:hint="Geçmişte ara..."
-            android:textColorHint="#44FFFFFF"
+            android:background="@drawable/auth_input_bg"
+            android:hint="Sohbetlerde ara..."
+            android:textColorHint="#60FFFFFF"
             android:textColor="#FFFFFF"
-            android:paddingHorizontal="20dp"
+            android:paddingHorizontal="24dp"
             android:drawableStart="@android:drawable/ic_menu_search"
             android:drawablePadding="16dp"
-            android:drawableTint="#88FFFFFF"
+            android:drawableTint="#FFFFFF"
             android:inputType="text"
             android:fontFamily="sans-serif-medium"
-            android:textSize="15sp" />
+            android:textSize="14sp"
+            android:elevation="2dp" />
 
         <ScrollView
             android:layout_width="match_parent"
@@ -671,7 +673,7 @@
             android:id="@+id/btnClearHistory"
             android:layout_width="match_parent"
             android:layout_height="60dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             android:background="@drawable/clear_button_bg"
             android:text="Tüm Hafızayı Temizle"
             android:textColor="#FF5252"
@@ -679,7 +681,7 @@
             android:letterSpacing="0.05"
             android:fontFamily="sans-serif-bold"
             android:elevation="0dp"
-            android:stateListAnimator="@null" />
+            android:layout_marginBottom="16dp" />
     </LinearLayout>
 
 </RelativeLayout>

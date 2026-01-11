@@ -1977,7 +1977,7 @@ public class MainActivity extends Activity {
                     int visibleCount = 0;
                     String finalFilter = filter.toLowerCase(Locale.getDefault());
 
-                    for (int i = historyArray.length() - 1; i >= 0; i--) {
+                    for (int i = 0; i < historyArray.length(); i++) {
                         JSONObject entry = historyArray.getJSONObject(i);
                         String sender = entry.getString("sender");
                         String message = entry.getString("message");
@@ -2100,8 +2100,8 @@ public class MainActivity extends Activity {
 
         TextView dateHeader = new TextView(this);
         dateHeader.setText(formatDateHeader(date));
-        dateHeader.setTextColor(Color.parseColor("#44FFFFFF"));
-        dateHeader.setTextSize(11);
+        dateHeader.setTextColor(Color.parseColor("#88FFFFFF"));
+        dateHeader.setTextSize(12);
         dateHeader.setGravity(android.view.Gravity.CENTER);
         dateHeader.setAllCaps(true);
         dateHeader.setLetterSpacing(0.2f);
@@ -2154,11 +2154,11 @@ public class MainActivity extends Activity {
     private void addHistoryItemToUI(String sender, String message, String time, int index, String filter) {
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cardParams.setMargins(0, 0, 0, 12);
+        cardParams.setMargins(0, 0, 0, 16);
 
         LinearLayout itemLayout = new LinearLayout(this);
         itemLayout.setOrientation(LinearLayout.VERTICAL);
-        itemLayout.setPadding(24, 20, 24, 20);
+        itemLayout.setPadding(28, 22, 28, 22);
         itemLayout.setBackgroundResource(R.drawable.model_item_bg);
         itemLayout.setLayoutParams(cardParams);
         itemLayout.setClickable(true);
@@ -2186,13 +2186,13 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView txtSender = new TextView(this);
-        boolean isUser = sender.toLowerCase().contains("ben");
+        boolean isUser = sender.toLowerCase().contains("ben") || sender.toLowerCase().contains("siz");
         txtSender.setText(isUser ? "Siz" : "Niko");
-        txtSender.setTextColor(isUser ? Color.parseColor("#00E5FF") : Color.parseColor("#FFCC00"));
-        txtSender.setTextSize(11);
+        txtSender.setTextColor(isUser ? Color.parseColor("#00FBFF") : Color.parseColor("#FFD700"));
+        txtSender.setTextSize(12);
         txtSender.setAllCaps(true);
-        txtSender.setLetterSpacing(0.1f);
-        txtSender.setTypeface(null, android.graphics.Typeface.BOLD);
+        txtSender.setLetterSpacing(0.12f);
+        txtSender.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.NORMAL));
 
         TextView txtTime = new TextView(this);
         txtTime.setText(time);
@@ -2225,9 +2225,9 @@ public class MainActivity extends Activity {
 
         txtMsg.setTextColor(Color.WHITE);
         txtMsg.setTextSize(15);
-        txtMsg.setPadding(0, 12, 0, 0);
-        txtMsg.setLineSpacing(6, 1.2f);
-        txtMsg.setAlpha(0.95f);
+        txtMsg.setPadding(0, 14, 0, 0);
+        txtMsg.setLineSpacing(8, 1.1f);
+        txtMsg.setAlpha(1.0f);
 
         itemLayout.addView(header);
         itemLayout.addView(txtMsg);
