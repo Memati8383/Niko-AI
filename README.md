@@ -1,57 +1,95 @@
-# Niko AI
+# Niko AI Ecosystem
 
-Niko AI, gelişmiş Türkçe sesli komut desteği sunan, Android ve Web platformlarında çalışan kişisel yapay zeka asistanınızdır. FastAPI altyapısı ve Ollama entegrasyonu ile güçlü bir deneyim sunar.
+Niko AI, gelişmiş Türkçe sesli komut desteği sunan, Android ve Web platformlarında çalışan hibrit bir kişisel yapay zeka asistanı ekosistemidir. FastAPI altyapısı, Ollama entegrasyonu ve modern kullanıcı arayüzleri ile hem mobil hem de masaüstü kullanıcıları için benzersiz bir deneyim sunar.
 
-## 🚀 Özellikler
+## 🚀 Temel Özellikler
 
-- **Sesli Asistan:** Türkçe konuşma tanıma ve doğal seslendirme (TTS).
-- **Çoklu Platform:** Hem Web tarayıcısı hem de Android mobil uygulaması üzerinden erişim.
-- **Yapay Zeka Modelleri:** Ollama entegrasyonu sayesinde Llama, Gemma gibi çeşitli LLM modellerini kullanabilme.
-- **Kullanıcı Yönetimi:** Güvenli kayıt, giriş ve profil sistemi.
-- **Sohbet Geçmişi:** Konuşmalarınız kaydedilir ve dilediğiniz zaman erişilebilir.
-- **Mobil Yetenekler:**
-  - Arama yapma
-  - Müzik kontrolü (Spotify vb.)
-  - Alarm ve hatırlatıcı kurma
-  - Sistem ayarları kontrolü (WiFi, Bluetooth)
+### 🤖 Yapay Zeka & Dil Yetenekleri
 
-## 🔗 Sunucu Bağlantısı
+- **Gelişmiş LLM Desteği:** Ollama entegrasyonu ile Llama, Gemma, RefinedNeuro gibi çeşitli modellerle yüksek kaliteli Türkçe sohbet.
+- **Düşünce Akışı (Thought Process):** AI'nın yanıt üretme sürecini gerçek zamanlı izleme.
+- **Kişilik Modları:** Normal, Agresif, Romantik, Akademik, Komik, Felsefeci modları.
+- **Web Arama:** DuckDuckGo entegrasyonu ile güncel bilgilere erişim.
 
-Mobil uygulamanın ve dış ağların sunucuya erişebilmesi için Cloudflare tüneli kullanılmaktadır.
+### 🔐 Güvenlik & Kullanıcı Yönetimi
 
-> 🌐 **Güncel Tünel Adresi:** [https://monster-bristol-robert-anyone.trycloudflare.com](https://monster-bristol-robert-anyone.trycloudflare.com)
+- **Unified Auth System:** Tüm platformlar için merkezi JWT tabanlı kimlik doğrulama.
+- **Profil Yönetimi:** Kullanıcı bilgilerini (isim, e-posta) ve profil fotoğrafını (Base64) yönetme.
+- **Admin Paneli:** Kullanıcıları listeleyen, düzenleyen, yetki veren ve şifre sıfırlayan bağımsız yönetim arayüzü (`manage_users.py`).
 
-_Not: Bu adres `start_tunnel.py` çalıştırıldığında otomatik olarak güncellenir._
+### 📱 Mobil Yetenekler (Android)
+
+- **Sesli Kontrol:** "Niko" uyanma kelimesi ve sesli komutlarla eller serbest kullanım.
+- **Sistem Entegrasyonu:** Arama yapma, WhatsApp mesaj okuma/cevaplama, müzik (Spotify) kontrolü.
+- **Donanım Kontrolü:** Wi-Fi, Bluetooth, Parlaklık, Kamera ve Fener kontrolü.
+- **Cihaz Sync:** Rehber, Arama Kayıtları, Konum ve Uygulama listesinin backend ile güvenli senkronizasyonu.
+
+### 💻 Web & Masaüstü
+
+- **Avant-Garde UI:** Glassmorphism ve premium mikro-etkileşimlerle donatılmış Web Chat arayüzü.
+- **Sohbet Geçmişi:** Tarih bazlı gruplandırma, arama, dışa aktarma (Markdown) ve silme özellikleri.
+
+## 📁 Proje Yapısı
+
+```text
+kiro/
+├── main.py                 # Ana FastAPI Backend uygulaması
+├── manage_users.py         # Bağımsız Kullanıcı Yönetim Sistemi (Admin)
+├── start_tunnel.py         # Cloudflare Tünel ve URL Otomasyonu
+├── hizli_commit.bat         # Developer Git iş akış aracı
+├── users.json              # Veritabanı (Kullanıcı bilgileri ve hashlenmiş şifreler)
+├── history/                # Kullanıcı sohbet geçmişleri (JSON)
+├── device_data/            # Senkronize edilen mobil cihaz verileri
+├── static/                 # Web Frontend (HTML, CSS, JS)
+│   ├── admin.html          # Web tabanlı admin arayüzü
+│   ├── login.html          # Giriş sayfası
+│   └── signup.html         # Kayıt sayfası
+└── Niko Mobile App/        # Android Native (Java) kaynak kodları
+```
+
+## 🔗 Sunucu ve Bağlantı
+
+Dış ağlardan ve mobil cihazdan erişim için Cloudflare tüneli kullanılmaktadır.
+
+- 🌐 **Güncel API Adresi:** [https://monster-bristol-robert-anyone.trycloudflare.com](https://monster-bristol-robert-anyone.trycloudflare.com)
+- 📝 **API Dokümantasyonu:** `/docs` (Swagger) veya `/redoc`
+
+> _Not: Tünel adresi `start_tunnel.py` çalıştırıldığında otomatik olarak tüm sistemde (GitHub dahil) güncellenir._
 
 ## 🛠️ Kurulum ve Çalıştırma
 
-### 1. Sunucu Tarafı
+### 1. Gereksinimler
 
-Gerekli Python kütüphanelerini yükleyin ve sunucuyu başlatın.
+- Python 3.8+
+- Ollama (LLM modellerini çalıştırmak için)
+- Android Studio (Mobil derleme için)
+
+### 2. Backend Kurulumu
 
 ```bash
 # Bağımlılıkları yükleyin
-pip install fastapi uvicorn requests python-multipart python-jose passlib bcrypt
+pip install fastapi uvicorn requests python-multipart python-jose passlib bcrypt httpx edge-tts
 
-# Tüneli başlatın (Otomatik URL güncellemesi için gereklidir)
+# Ollama modelini indirin
+ollama pull RefinedNeuro/RN_TR_R2:latest
+
+# Tüneli ve Backend'i başlatın
 python start_tunnel.py
-
-# Ana uygulamayı başlatın
-python main.py
+python main.py  # Varsayılan port: 8001
 ```
 
-### 2. Mobil Uygulama
+### 3. Kullanıcı Yönetimi (Admin)
 
-`Niko Mobile App` klasöründeki proje Android Studio ile açılıp derlenebilir. `MainActivity.java` dosyası, `start_tunnel.py` çalıştığında otomatik olarak yeni sunucu adresiyle güncellenir.
+```bash
+# Bağımsız kullanıcı yönetim panelini açmak için:
+python manage_users.py
+```
 
-## 📂 Proje Yapısı
+## 🧑‍💻 Geliştirici Notları
 
-- **main.py:** FastAPI backend uygulaması.
-- **start_tunnel.py:** Cloudflare tünelini başlatır ve GitHub/Yerel dosyalardaki URL'leri günceller.
-- **Niko Mobile App/**: Android uygulama kaynak kodları.
-- **static/**: Web arayüzü dosyaları (HTML, CSS, JS).
+- **Hizli Commit:** Değişiklikleri hızlıca GitHub'a göndermek için `hizli_commit.bat` dosyasını kullanabilirsiniz.
+- **Logs:** Detaylı sistem logları konsol üzerinden takip edilebilir.
 
-## ⚠️ Önemli Notlar
+---
 
-- Uygulamanın tam fonksiyonlu çalışabilmesi için yerel makinenizde **Ollama** servisinin çalışıyor olması gerekmektedir.
-- Mobil uygulama sesli komutlar için cihaz izinlerine ihtiyaç duyar.
+_Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
