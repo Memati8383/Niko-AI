@@ -497,16 +497,38 @@
         }
 
         function getErrorMessage(error) {
+            if (!error) return 'Bilinmeyen bir hata';
             if (typeof error === 'string') return error;
+            
+            // Handle FastAPI validation errors (detail is often a list of objects)
             if (error.detail) {
                 if (Array.isArray(error.detail)) {
-                    return error.detail.map(err => err.msg).join(', ');
+                    return error.detail.map(err => {
+                        if (typeof err === 'string') return err;
+                        return err.msg || JSON.stringify(err);
+                    }).join(', ');
+                }
+                if (typeof error.detail === 'object') {
+                    return JSON.stringify(error.detail);
                 }
                 return error.detail;
             }
-            if (error.error) return error.error;
+            
+            if (error.error) {
+                if (typeof error.error === 'object') return JSON.stringify(error.error);
+                return error.error;
+            }
+            
             if (error.message) return error.message;
-            return 'Bir hata oluştu';
+            
+            // Fallback: try to stringify the whole error object
+            try {
+                const str = JSON.stringify(error);
+                if (str === '{}' && error.toString) return error.toString();
+                return str;
+            } catch (e) {
+                return 'Bir hata oluştu';
+            }
         }
 
         // ============================================================================
