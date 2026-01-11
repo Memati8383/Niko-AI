@@ -30,15 +30,22 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
+            android:layout_toEndOf="@id/btnModel"
+            android:layout_toStartOf="@id/imgTopProfile"
+            android:layout_marginHorizontal="8dp"
             android:fontFamily="sans-serif-medium"
             android:text="Llama 3.2"
-            android:textColor="#88FFFFFF"
-            android:textSize="12sp"
+            android:textColor="#CCFFFFFF"
+            android:textSize="11sp"
             android:textAllCaps="true"
             android:letterSpacing="0.1"
             android:background="@drawable/ai_response_bg"
             android:paddingHorizontal="12dp"
-            android:paddingVertical="4dp" />
+            android:paddingVertical="6dp"
+            android:gravity="center"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:maxLines="1" />
 
         <ImageButton
             android:id="@+id/btnHistory"
@@ -118,14 +125,15 @@
             android:elevation="4dp" />
     </ScrollView>
 
-    <!-- BOTTOM CONTROL HUB -->
     <LinearLayout
+        android:id="@+id/bottomControlArea"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:gravity="center"
         android:orientation="vertical"
-        android:paddingBottom="40dp">
+        android:paddingBottom="48dp"
+        android:clipToPadding="false">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -141,32 +149,33 @@
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:padding="14dp"
+                android:padding="16dp"
                 android:scaleType="centerInside"
                 android:src="@android:drawable/ic_menu_search"
-                android:tint="#44FFFFFF" />
+                android:alpha="0.5"
+                android:tint="#FFFFFF" />
 
             <View
                 android:layout_width="1dp"
-                android:layout_height="32dp"
-                android:layout_marginHorizontal="8dp"
+                android:layout_height="24dp"
+                android:layout_marginHorizontal="12dp"
                 android:background="#1AFFFFFF" />
 
             <ImageButton
                 android:id="@+id/btnMic"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
                 android:background="@drawable/mic_button"
-                android:elevation="6dp"
-                android:padding="14dp"
+                android:elevation="8dp"
+                android:padding="16dp"
                 android:scaleType="centerInside"
                 android:src="@android:drawable/ic_btn_speak_now"
                 android:tint="#FFFFFF" />
 
             <View
                 android:layout_width="1dp"
-                android:layout_height="32dp"
-                android:layout_marginHorizontal="8dp"
+                android:layout_height="24dp"
+                android:layout_marginHorizontal="12dp"
                 android:background="#1AFFFFFF" />
 
             <ImageButton
@@ -174,10 +183,11 @@
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:padding="14dp"
+                android:padding="16dp"
                 android:scaleType="centerInside"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="#44FFFFFF" />
+                android:alpha="0.5"
+                android:tint="#FFFFFF" />
 
         </LinearLayout>
     </LinearLayout>

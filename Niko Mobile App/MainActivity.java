@@ -98,6 +98,9 @@ import android.view.animation.Animation;
 import android.view.animation.TranslateAnimation;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.AnimationSet;
+import android.view.animation.ScaleAnimation;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.WindowInsets;
 import android.view.inputmethod.InputMethodManager;
 
 /**
@@ -369,6 +372,17 @@ public class MainActivity extends Activity {
         // Orb Animasyonunu Başlat
         startBreathingAnimation();
 
+        // Safe Area (WindowInsets) Ayarı - Alt barın navigasyon çubuğuyla çakışmasını önler
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            findViewById(R.id.mainLayout).setOnApplyWindowInsetsListener((view, insets) -> {
+                int navBarHeight = insets.getInsets(WindowInsets.Type.systemBars()).bottom;
+                float density = getResources().getDisplayMetrics().density;
+                int extraPadding = (int) (40 * density); // 40dp standart boşluk
+                findViewById(R.id.bottomControlArea).setPadding(0, 0, 0, navBarHeight + extraPadding);
+                return insets;
+            });
+        }
+
         // Başlangıçta hesap durumunu kontrol et (Giriş yapılmışsa profil fotosunu yükler)
         updateAccountUI();
     }
@@ -380,13 +394,21 @@ public class MainActivity extends Activity {
     private void startBreathingAnimation() {
         View orbSection = findViewById(R.id.orbSection);
         AnimationSet animSet = new AnimationSet(true);
+        animSet.setInterpolator(new AccelerateDecelerateInterpolator());
 
-        AlphaAnimation alpha = new AlphaAnimation(0.7f, 1.0f);
-        alpha.setDuration(2500);
+        AlphaAnimation alpha = new AlphaAnimation(0.6f, 1.0f);
+        alpha.setDuration(3000);
         alpha.setRepeatMode(Animation.REVERSE);
         alpha.setRepeatCount(Animation.INFINITE);
 
+        ScaleAnimation scale = new ScaleAnimation(0.95f, 1.05f, 0.95f, 1.05f,
+                Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        scale.setDuration(3000);
+        scale.setRepeatMode(Animation.REVERSE);
+        scale.setRepeatCount(Animation.INFINITE);
+
         animSet.addAnimation(alpha);
+        animSet.addAnimation(scale);
         orbSection.startAnimation(animSet);
     }
 

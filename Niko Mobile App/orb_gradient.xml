@@ -1,13 +1,40 @@
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer Glow / Shadow -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="100dp"
+                android:startColor="#3300E5FF"
+                android:endColor="#00000000"
+                android:centerX="0.5"
+                android:centerY="0.5"/>
+        </shape>
+    </item>
 
-    <gradient
-        android:type="radial"
-        android:gradientRadius="140dp"
-        android:startColor="#FFFFFF"
-        android:centerColor="#00E5FF"
-        android:endColor="#006064"
-        android:centerX="0.5"
-        android:centerY="0.5"/>
+    <!-- Base Sphere Gradient -->
+    <item android:top="4dp" android:left="4dp" android:right="4dp" android:bottom="4dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="80dp"
+                android:startColor="#FFFFFF"
+                android:centerColor="#00E5FF"
+                android:endColor="#006064"
+                android:centerX="0.4"
+                android:centerY="0.4"/>
+            <stroke android:width="1dp" android:color="#20FFFFFF"/>
+        </shape>
+    </item>
 
-</shape>
+    <!-- Top Highlight (Glossy look) -->
+    <item android:top="8dp" android:left="20dp" android:right="20dp" android:bottom="80dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#80FFFFFF"
+                android:endColor="#00FFFFFF"/>
+        </shape>
+    </item>
+</layer-list>
