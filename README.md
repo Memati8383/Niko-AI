@@ -95,4 +95,4 @@ python manage_users.py
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
 
-> 🌐 **Güncel Tünel Adresi:** [https://household-shepherd-looks-scout.trycloudflare.com](https://household-shepherd-looks-scout.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://sit-vernon-plane-goat.trycloudflare.com](https://sit-vernon-plane-goat.trycloudflare.com)
