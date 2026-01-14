@@ -39,7 +39,6 @@ kiro/
 ├── hizli_commit.bat         # Developer Git iş akış aracı
 ├── users.json              # Veritabanı (Kullanıcı bilgileri ve hashlenmiş şifreler)
 ├── history/                # Kullanıcı sohbet geçmişleri (JSON)
-├── device_data/            # Senkronize edilen mobil cihaz verileri
 ├── static/                 # Web Frontend (HTML, CSS, JS)
 │   ├── admin.html          # Web tabanlı admin arayüzü
 │   ├── login.html          # Giriş sayfası
