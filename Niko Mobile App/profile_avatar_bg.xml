@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- PROFİL AVATAR ARKA PLANI: Kullanıcı resmi için yuvarlak ve gradyanlı çerçeve -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
+    <!-- Mor/Viyole geçişi -->
     <gradient
         android:startColor="#6366f1"
         android:endColor="#8b5cf6"
         android:angle="0" />
+    <!-- İnce beyaz cam çerçeve -->
     <stroke android:width="1.5dp" android:color="#33FFFFFF" />
 </shape>

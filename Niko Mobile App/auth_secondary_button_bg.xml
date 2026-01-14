@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- İKİNCİL BUTON TASARIMI: Genellikle çıkış yapma veya iptal gibi işlemler için (Kırmızı tonlu) -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- BASILI DURUM -->
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
             <solid android:color="#33EF4444" />
@@ -7,6 +9,7 @@
             <corners android:radius="12dp" />
         </shape>
     </item>
+    <!-- VARSAYILAN DURUM -->
     <item>
         <shape android:shape="rectangle">
             <solid android:color="#1AEF4444" />

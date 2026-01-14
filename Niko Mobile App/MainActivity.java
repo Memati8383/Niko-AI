@@ -106,9 +106,12 @@ import android.view.inputmethod.InputMethodManager;
 /**
  * Niko Mobil Uygulaması Ana Aktivitesi
  * 
- * Bu sınıf, uygulamanın merkezi kontrol noktasıdır. Sesli komutları dinler,
- * işler ve uygun eylemleri (arama yapma, müzik kontrolü, yapay zeka sohbeti
- * vb.) gerçekleştirir.
+ * Bu sınıf, uygulamanın çekirdek bileşenidir. Android Wear tarzı bir sesli asistan
+ * arayüzü sunar. Temel özellikleri:
+ * - Ses tanıma (Speech to Text) ve Metin okuma (Text to Speech)
+ * - Yapay Zeka (Ollama/LLM) ile canlı sohbet
+ * - Cihaz kontrolleri (Arama, Alarm, Müzik, Sistem Ayarları)
+ * - Kullanıcı kayıt ve profil yönetimi
  */
 public class MainActivity extends Activity {
 
@@ -126,9 +129,9 @@ public class MainActivity extends Activity {
     private Intent speechIntent;
     private TextToSpeech tts; // Yazıyı sese çevirmek için
 
-    // Durum değişkenleri
-    private boolean isListening = false; // Şu an dinliyor mu?
-    private final Queue<String> ttsQueue = new LinkedList<>(); // Okunacak metin kuyruğu
+    // Durum ve Kontrol Değişkenleri
+    private boolean isListening = false; // Uygulamanın mikrofonu dinleyip dinlemediğini takip eder
+    private final Queue<String> ttsQueue = new LinkedList<>(); // TTS motorunun sırayla okuması için metin kuyruğu
 
     // Geçmiş bileşenleri
     private ImageButton btnHistory;
@@ -141,10 +144,11 @@ public class MainActivity extends Activity {
     private EditText edtHistorySearch;
     private final Object historyLock = new Object();
     private static final int MAX_HISTORY_ITEMS = 100; // Artırıldı
-    private String sessionId = null; // AI Oturum ID'si
-    private SharedPreferences sessionPrefs;
-    private SharedPreferences modelPrefs;
-    private String selectedModel = null;
+    // Oturum ve Model Ayarları
+    private String sessionId = null; // AI ile süregelen sohbetin benzersiz oturum kimliği
+    private SharedPreferences sessionPrefs; // Oturum bilgilerini kalıcı tutmak için
+    private SharedPreferences modelPrefs; // Seçilen AI modelini kalıcı tutmak için
+    private String selectedModel = null; // Şu an aktif olan yapay zeka modeli
 
     // Arama modu durumu
     private boolean isWebSearchEnabled = false;
@@ -174,7 +178,7 @@ public class MainActivity extends Activity {
     private ImageView imgTopProfile, imgMainProfile;
     private View layoutAccount;
     private ImageButton btnCloseAccount;
-    private TextView txtAccountTitle, txtAccountSubtitle;
+    private TextView txtAccountTitle;
     private EditText edtUsername, edtPassword, edtEmail, edtFullName;
     private View layoutRegisterExtras, layoutAccountFields;
     private Button btnSubmitAccount;
@@ -182,6 +186,10 @@ public class MainActivity extends Activity {
     private View layoutLoggedIn;
     private TextView txtLoginStatus;
     private Button btnLogout, btnEditProfile;
+    // Yeni profil kartı bileşenleri
+    private TextView txtProfileUsername, txtProfileEmail, txtProfileFullName;
+    private TextView txtProfileDisplayName, txtProfileUsernameSmall;
+    private ImageView imgProfileAvatar;
     private EditText edtCurrentPassword;
     private TextView txtCurrentPasswordLabel, txtPasswordLabel;
     private SharedPreferences authPrefs;
@@ -198,7 +206,7 @@ public class MainActivity extends Activity {
     public static PendingIntent lastReplyIntent; // Cevap vermek için intent
     public static RemoteInput lastRemoteInput; // Cevap girişi için referans
 
-    // API URL
+    // API URL - Backend servisinin adresi (Cloudflare Tunnel üzerinden)
     private static final String API_BASE_URL = "https://bizrate-custody-reuters-loving.trycloudflare.com";
 
     @Override
@@ -249,7 +257,6 @@ public class MainActivity extends Activity {
         layoutAccount = findViewById(R.id.layoutAccount);
         btnCloseAccount = findViewById(R.id.btnCloseAccount);
         txtAccountTitle = findViewById(R.id.txtAccountTitle);
-        txtAccountSubtitle = findViewById(R.id.txtAccountSubtitle);
         edtUsername = findViewById(R.id.edtUsername);
         edtPassword = findViewById(R.id.edtPassword);
         edtEmail = findViewById(R.id.edtEmail);
@@ -265,6 +272,15 @@ public class MainActivity extends Activity {
         edtCurrentPassword = findViewById(R.id.edtCurrentPassword);
         txtCurrentPasswordLabel = findViewById(R.id.txtCurrentPasswordLabel);
         txtPasswordLabel = findViewById(R.id.txtPasswordLabel);
+        
+        // Yeni profil kartı bileşenlerini bağla
+        txtProfileUsername = findViewById(R.id.txtProfileUsername);
+        txtProfileEmail = findViewById(R.id.txtProfileEmail);
+        txtProfileFullName = findViewById(R.id.txtProfileFullName);
+        imgProfileAvatar = findViewById(R.id.imgProfileAvatar);
+        // Premium profil paneli ek bileşenleri
+        txtProfileDisplayName = findViewById(R.id.txtProfileDisplayName);
+        txtProfileUsernameSmall = findViewById(R.id.txtProfileUsernameSmall);
 
         authPrefs = getSharedPreferences("auth_settings", MODE_PRIVATE);
         authToken = authPrefs.getString("access_token", null);
@@ -412,10 +428,14 @@ public class MainActivity extends Activity {
         orbSection.startAnimation(animSet);
     }
 
+    /**
+     * Kullanıcıya fiziksel bir geri bildirim vermek için cihazı kısa süreli titreştirir.
+     */
     private void vibrateFeedback() {
         try {
             android.os.Vibrator v = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             if (v != null) {
+                // Android 8.0 (Oreo) ve üzeri için yeni titreşim API'si kullanılır
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     v.vibrate(android.os.VibrationEffect.createOneShot(20, 50));
                 } else {
@@ -423,6 +443,7 @@ public class MainActivity extends Activity {
                 }
             }
         } catch (Exception ignored) {
+            // Titreşim motoru yoksa veya hata oluşursa sessizce geç
         }
     }
 
@@ -721,7 +742,7 @@ public class MainActivity extends Activity {
             }
         }
 
-        return false; // Komut algılanmadıysa AI'ya devret
+        return false; // Hiçbir yerel komut eşleşmediyse, soruyu Yapay Zeka'ya (AI) devret
     }
 
     // ================= ARAMA (CALL) FONKSİYONLARI =================
@@ -905,6 +926,9 @@ public class MainActivity extends Activity {
         });
     }
 
+    /**
+     * Giriş yapma ve Kayıt olma ekranları arasında geçiş yapar.
+     */
     private void toggleAccountMode() {
         isRegisterMode = !isRegisterMode;
         isEditProfileMode = false;
@@ -933,11 +957,10 @@ public class MainActivity extends Activity {
         btnSwitchMode.setVisibility(View.VISIBLE);
 
         if (authToken != null) {
-            imgMainProfile.setVisibility(View.VISIBLE);
             if (isEditProfileMode) {
-                // Edit mode
+                // Edit mode - imgMainProfile görünsün (fotoğraf seçmek için)
+                imgMainProfile.setVisibility(View.VISIBLE);
                 txtAccountTitle.setText("Profili Düzenle");
-                txtAccountSubtitle.setText("Değiştirmek için fotoğrafın üzerine dokunun");
                 layoutLoggedIn.setVisibility(View.GONE);
                 layoutAccountFields.setVisibility(View.VISIBLE);
                 layoutRegisterExtras.setVisibility(View.VISIBLE);
@@ -954,13 +977,11 @@ public class MainActivity extends Activity {
                     updateAccountUI();
                 });
             } else {
-                // Fotoğrafa tıklama özelliğini sadece düzenleme modunda tut
+                // Profile view mode - imgMainProfile gizle (imgProfileAvatar kullanılıyor)
+                imgMainProfile.setVisibility(View.GONE);
                 imgMainProfile.setOnClickListener(null);
-                // Profile view mode
                 txtAccountTitle.setText("Profilim");
-                txtAccountSubtitle.setText("Niko AI Üyesi");
                 layoutLoggedIn.setVisibility(View.VISIBLE);
-                txtLoginStatus.setText("Bilgileriniz yükleniyor...");
                 fetchProfile();
                 layoutAccountFields.setVisibility(View.GONE);
             }
@@ -971,14 +992,12 @@ public class MainActivity extends Activity {
 
             if (isRegisterMode) {
                 txtAccountTitle.setText("Yeni Hesap");
-                txtAccountSubtitle.setText("Niko dünyasına katılın");
                 layoutRegisterExtras.setVisibility(View.VISIBLE);
                 btnSubmitAccount.setText("Kayıt Ol");
                 btnSwitchMode.setText("Zaten hesabınız var mı? Giriş Yapın");
                 btnSwitchMode.setOnClickListener(v -> toggleAccountMode());
             } else {
                 txtAccountTitle.setText("Giriş Yap");
-                txtAccountSubtitle.setText("Niko AI'ya hoş geldiniz");
                 layoutRegisterExtras.setVisibility(View.GONE);
                 btnSubmitAccount.setText("Giriş Yap");
                 btnSwitchMode.setText("Hesabınız yok mu? Kayıt Olun");
@@ -1010,13 +1029,20 @@ public class MainActivity extends Activity {
                     String plainPass = resp.optString("plain_password", resp.optString("_plain_password", ""));
                     String profileImgBase64 = resp.optString("profile_image", "");
                     
-                    String displayInfo = "Kullanıcı: " + authUsername + "\n" +
-                                       "E-posta: " + (email.isEmpty() ? "Belirtilmedi" : email) + "\n" +
-                                       "Ad Soyad: " + (fullName.isEmpty() ? "Belirtilmedi" : fullName) + "\n" +
-                                       "Şifre: " + (plainPass.isEmpty() ? "Özel" : plainPass);
+                    // Kart bilgileri için final değişkenler
+                    final String fEmail = email.isEmpty() ? "Belirtilmedi" : email;
+                    final String fFullName = fullName.isEmpty() ? authUsername : fullName;
+                    final String fDisplayName = fullName.isEmpty() ? authUsername : fullName;
                                        
                     runOnUiThread(() -> {
-                        txtLoginStatus.setText(displayInfo);
+                        // Yeni profil kartı bilgilerini güncelle
+                        if (txtProfileUsername != null) txtProfileUsername.setText(authUsername);
+                        if (txtProfileEmail != null) txtProfileEmail.setText(fEmail);
+                        if (txtProfileFullName != null) txtProfileFullName.setText(fFullName);
+                        
+                        // Premium profil paneli ek bilgileri
+                        if (txtProfileDisplayName != null) txtProfileDisplayName.setText(fDisplayName);
+                        if (txtProfileUsernameSmall != null) txtProfileUsernameSmall.setText("@" + authUsername);
                         
                         // Profil fotoğrafını yükle
                         if (!profileImgBase64.isEmpty()) {
@@ -1029,6 +1055,11 @@ public class MainActivity extends Activity {
                                     imgMainProfile.clearColorFilter();
                                     imgTopProfile.setImageBitmap(decodedByte);
                                     imgMainProfile.setImageBitmap(decodedByte);
+                                    // Yeni profil kartı avatarına da yükle
+                                    if (imgProfileAvatar != null) {
+                                        imgProfileAvatar.clearColorFilter();
+                                        imgProfileAvatar.setImageBitmap(decodedByte);
+                                    }
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -1039,6 +1070,10 @@ public class MainActivity extends Activity {
                             imgTopProfile.setColorFilter(Color.WHITE);
                             imgMainProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
                             imgMainProfile.setColorFilter(Color.WHITE);
+                            if (imgProfileAvatar != null) {
+                                imgProfileAvatar.setImageResource(android.R.drawable.ic_menu_myplaces);
+                                imgProfileAvatar.setColorFilter(Color.WHITE);
+                            }
                         }
 
                         if (isEditProfileMode) {
@@ -1054,8 +1089,13 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    /**
+     * Kullanıcının o anki moduna göre (Kayıt, Giriş veya Profil Düzenleme)
+     * ilgili işlemi tetikler.
+     */
     private void performAccountAction() {
         if (isEditProfileMode) {
+            // Profil düzenleme modundaysa bilgileri güncelle
             String username = edtUsername.getText().toString().trim();
             String fullName = edtFullName.getText().toString().trim();
             String email = edtEmail.getText().toString().trim();
@@ -1075,10 +1115,12 @@ public class MainActivity extends Activity {
         }
 
         if (isRegisterMode) {
+            // Kayıt modundaysa yeni hesap oluştur
             String email = edtEmail.getText().toString().trim();
             String fullName = edtFullName.getText().toString().trim();
             registerRequest(username, password, email, fullName);
         } else {
+            // Giriş modundaysa oturum aç
             loginRequest(username, password);
         }
     }
@@ -1134,6 +1176,9 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    /**
+     * Kullanıcıdan alınan bilgilerle yeni bir hesap oluşturmak için sunucuya istek gönderir.
+     */
     private void registerRequest(String username, String password, String email, String fullName) {
         new Thread(() -> {
             try {
@@ -1156,15 +1201,16 @@ public class MainActivity extends Activity {
                 }
 
                 int code = conn.getResponseCode();
-                if (code == 200 || code == 201) { // 201 Created support
+                if (code == 200 || code == 201) { // 201 Başarıyla Oluşturuldu
                     runOnUiThread(() -> {
                         Toast.makeText(this, "Kayıt başarılı! Şimdi giriş yapabilirsiniz.", Toast.LENGTH_LONG).show();
                         isRegisterMode = false;
                         updateAccountUI();
-                        // Clear password field for security
+                        // Güvenlik için şifre alanını temizle
                         edtPassword.setText("");
                     });
                 } else {
+                    // Hata detaylarını oku
                     InputStream es = conn.getErrorStream();
                     if (es != null) {
                         BufferedReader br = new BufferedReader(new InputStreamReader(es, "utf-8"));
@@ -1174,7 +1220,6 @@ public class MainActivity extends Activity {
                             sb.append(line);
 
                         JSONObject resp = new JSONObject(sb.toString());
-                        // FastAPI typically returns errors in 'detail' or 'error' key
                         String err = resp.optString("detail", resp.optString("error", "Kayıt başarısız"));
 
                         runOnUiThread(() -> Toast.makeText(this, "Hata: " + err, Toast.LENGTH_LONG).show());
@@ -1271,14 +1316,20 @@ public class MainActivity extends Activity {
             }
         }).start();
     }
+    /**
+     * Mevcut oturumu kapatır ve kullanıcı bilgilerini cihazdan siler.
+     */
     private void performLogout() {
         authToken = null;
         authUsername = null;
-        authPrefs.edit().clear().apply();
+        authPrefs.edit().clear().apply(); // Tüm kayıtlı verileri temizle
+        
+        // Profil resimlerini varsayılana döndür
         imgTopProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
         imgTopProfile.setColorFilter(Color.WHITE);
         imgMainProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
         imgMainProfile.setColorFilter(Color.WHITE);
+        
         updateAccountUI();
         Toast.makeText(this, "Çıkış yapıldı", Toast.LENGTH_SHORT).show();
     }
@@ -2342,7 +2393,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Model seçim panelini gizler.
+     * Model seçim panelini ekrandan yavaşça (fade-out) gizler.
      */
     private void hideModels() {
         runOnUiThread(() -> {

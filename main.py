@@ -1603,12 +1603,14 @@ async def root():
 
 
 @app.get("/login.html")
+@app.get("/login")
 async def login_page():
     """Serve the login page"""
     return FileResponse("static/login.html")
 
 
 @app.get("/signup.html")
+@app.get("/signup")
 async def signup_page():
     """Serve the signup page"""
     return FileResponse("static/signup.html")
@@ -1646,6 +1648,14 @@ async def script_js():
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    """Serve the favicon or a 204 No Content to stop console errors"""
+    # Simply returning a 204 No Content is enough to stop the browser from complaining
+    # or we could serve a small 1x1 transparent pixel.
+    return PlainTextResponse("", status_code=204)
 
 
 # ============================================================================
@@ -1973,6 +1983,7 @@ async def get_search_status(current_user: str = Depends(get_current_user)):
 # ============================================================================
 
 @app.get("/admin")
+@app.get("/admin.html")
 async def admin_page():
     """
     Serve the admin panel page.

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PREMIUM PROFİL KARTI: Gradient çerçeveli glassmorphism efekti -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- DIŞ GRADIENT ÇERÇEVE -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#336366f1"
+                android:centerColor="#228b5cf6"
+                android:endColor="#3300E5FF"
+                android:angle="135" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+    <!-- İÇ KOYU ARKA PLAN (1dp kenar boşluğu ile gradient çerçeve görünsün) -->
+    <item
+        android:top="1dp"
+        android:bottom="1dp"
+        android:left="1dp"
+        android:right="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#1A1A2E" />
+            <corners android:radius="19dp" />
+        </shape>
+    </item>
+    <!-- ÜST IŞIK YANSIMASI (cam efekti için) -->
+    <item
+        android:top="1dp"
+        android:left="1dp"
+        android:right="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#15FFFFFF"
+                android:endColor="#00FFFFFF"
+                android:angle="270" />
+            <corners android:topLeftRadius="19dp" android:topRightRadius="19dp" />
+            <size android:height="40dp" />
+        </shape>
+    </item>
+</layer-list>
