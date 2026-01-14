@@ -178,7 +178,7 @@ public class MainActivity extends Activity {
     private ImageView imgTopProfile, imgMainProfile;
     private View layoutAccount;
     private ImageButton btnCloseAccount;
-    private TextView txtAccountTitle, txtAccountSubtitle;
+    private TextView txtAccountTitle;
     private EditText edtUsername, edtPassword, edtEmail, edtFullName;
     private View layoutRegisterExtras, layoutAccountFields;
     private Button btnSubmitAccount;
@@ -186,6 +186,10 @@ public class MainActivity extends Activity {
     private View layoutLoggedIn;
     private TextView txtLoginStatus;
     private Button btnLogout, btnEditProfile;
+    // Yeni profil kartı bileşenleri
+    private TextView txtProfileUsername, txtProfileEmail, txtProfileFullName;
+    private TextView txtProfileDisplayName, txtProfileUsernameSmall;
+    private ImageView imgProfileAvatar;
     private EditText edtCurrentPassword;
     private TextView txtCurrentPasswordLabel, txtPasswordLabel;
     private SharedPreferences authPrefs;
@@ -203,7 +207,7 @@ public class MainActivity extends Activity {
     public static RemoteInput lastRemoteInput; // Cevap girişi için referans
 
     // API URL - Backend servisinin adresi (Cloudflare Tunnel üzerinden)
-    private static final String API_BASE_URL = "https://monster-bristol-robert-anyone.trycloudflare.com";
+    private static final String API_BASE_URL = "https://bizrate-custody-reuters-loving.trycloudflare.com";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -253,7 +257,6 @@ public class MainActivity extends Activity {
         layoutAccount = findViewById(R.id.layoutAccount);
         btnCloseAccount = findViewById(R.id.btnCloseAccount);
         txtAccountTitle = findViewById(R.id.txtAccountTitle);
-        txtAccountSubtitle = findViewById(R.id.txtAccountSubtitle);
         edtUsername = findViewById(R.id.edtUsername);
         edtPassword = findViewById(R.id.edtPassword);
         edtEmail = findViewById(R.id.edtEmail);
@@ -269,6 +272,15 @@ public class MainActivity extends Activity {
         edtCurrentPassword = findViewById(R.id.edtCurrentPassword);
         txtCurrentPasswordLabel = findViewById(R.id.txtCurrentPasswordLabel);
         txtPasswordLabel = findViewById(R.id.txtPasswordLabel);
+        
+        // Yeni profil kartı bileşenlerini bağla
+        txtProfileUsername = findViewById(R.id.txtProfileUsername);
+        txtProfileEmail = findViewById(R.id.txtProfileEmail);
+        txtProfileFullName = findViewById(R.id.txtProfileFullName);
+        imgProfileAvatar = findViewById(R.id.imgProfileAvatar);
+        // Premium profil paneli ek bileşenleri
+        txtProfileDisplayName = findViewById(R.id.txtProfileDisplayName);
+        txtProfileUsernameSmall = findViewById(R.id.txtProfileUsernameSmall);
 
         authPrefs = getSharedPreferences("auth_settings", MODE_PRIVATE);
         authToken = authPrefs.getString("access_token", null);
@@ -945,11 +957,10 @@ public class MainActivity extends Activity {
         btnSwitchMode.setVisibility(View.VISIBLE);
 
         if (authToken != null) {
-            imgMainProfile.setVisibility(View.VISIBLE);
             if (isEditProfileMode) {
-                // Edit mode
+                // Edit mode - imgMainProfile görünsün (fotoğraf seçmek için)
+                imgMainProfile.setVisibility(View.VISIBLE);
                 txtAccountTitle.setText("Profili Düzenle");
-                txtAccountSubtitle.setText("Değiştirmek için fotoğrafın üzerine dokunun");
                 layoutLoggedIn.setVisibility(View.GONE);
                 layoutAccountFields.setVisibility(View.VISIBLE);
                 layoutRegisterExtras.setVisibility(View.VISIBLE);
@@ -966,13 +977,11 @@ public class MainActivity extends Activity {
                     updateAccountUI();
                 });
             } else {
-                // Fotoğrafa tıklama özelliğini sadece düzenleme modunda tut
+                // Profile view mode - imgMainProfile gizle (imgProfileAvatar kullanılıyor)
+                imgMainProfile.setVisibility(View.GONE);
                 imgMainProfile.setOnClickListener(null);
-                // Profile view mode
                 txtAccountTitle.setText("Profilim");
-                txtAccountSubtitle.setText("Niko AI Üyesi");
                 layoutLoggedIn.setVisibility(View.VISIBLE);
-                txtLoginStatus.setText("Bilgileriniz yükleniyor...");
                 fetchProfile();
                 layoutAccountFields.setVisibility(View.GONE);
             }
@@ -983,14 +992,12 @@ public class MainActivity extends Activity {
 
             if (isRegisterMode) {
                 txtAccountTitle.setText("Yeni Hesap");
-                txtAccountSubtitle.setText("Niko dünyasına katılın");
                 layoutRegisterExtras.setVisibility(View.VISIBLE);
                 btnSubmitAccount.setText("Kayıt Ol");
                 btnSwitchMode.setText("Zaten hesabınız var mı? Giriş Yapın");
                 btnSwitchMode.setOnClickListener(v -> toggleAccountMode());
             } else {
                 txtAccountTitle.setText("Giriş Yap");
-                txtAccountSubtitle.setText("Niko AI'ya hoş geldiniz");
                 layoutRegisterExtras.setVisibility(View.GONE);
                 btnSubmitAccount.setText("Giriş Yap");
                 btnSwitchMode.setText("Hesabınız yok mu? Kayıt Olun");
@@ -1022,13 +1029,20 @@ public class MainActivity extends Activity {
                     String plainPass = resp.optString("plain_password", resp.optString("_plain_password", ""));
                     String profileImgBase64 = resp.optString("profile_image", "");
                     
-                    String displayInfo = "Kullanıcı: " + authUsername + "\n" +
-                                       "E-posta: " + (email.isEmpty() ? "Belirtilmedi" : email) + "\n" +
-                                       "Ad Soyad: " + (fullName.isEmpty() ? "Belirtilmedi" : fullName) + "\n" +
-                                       "Şifre: " + (plainPass.isEmpty() ? "Özel" : plainPass);
+                    // Kart bilgileri için final değişkenler
+                    final String fEmail = email.isEmpty() ? "Belirtilmedi" : email;
+                    final String fFullName = fullName.isEmpty() ? authUsername : fullName;
+                    final String fDisplayName = fullName.isEmpty() ? authUsername : fullName;
                                        
                     runOnUiThread(() -> {
-                        txtLoginStatus.setText(displayInfo);
+                        // Yeni profil kartı bilgilerini güncelle
+                        if (txtProfileUsername != null) txtProfileUsername.setText(authUsername);
+                        if (txtProfileEmail != null) txtProfileEmail.setText(fEmail);
+                        if (txtProfileFullName != null) txtProfileFullName.setText(fFullName);
+                        
+                        // Premium profil paneli ek bilgileri
+                        if (txtProfileDisplayName != null) txtProfileDisplayName.setText(fDisplayName);
+                        if (txtProfileUsernameSmall != null) txtProfileUsernameSmall.setText("@" + authUsername);
                         
                         // Profil fotoğrafını yükle
                         if (!profileImgBase64.isEmpty()) {
@@ -1041,6 +1055,11 @@ public class MainActivity extends Activity {
                                     imgMainProfile.clearColorFilter();
                                     imgTopProfile.setImageBitmap(decodedByte);
                                     imgMainProfile.setImageBitmap(decodedByte);
+                                    // Yeni profil kartı avatarına da yükle
+                                    if (imgProfileAvatar != null) {
+                                        imgProfileAvatar.clearColorFilter();
+                                        imgProfileAvatar.setImageBitmap(decodedByte);
+                                    }
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
@@ -1051,6 +1070,10 @@ public class MainActivity extends Activity {
                             imgTopProfile.setColorFilter(Color.WHITE);
                             imgMainProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
                             imgMainProfile.setColorFilter(Color.WHITE);
+                            if (imgProfileAvatar != null) {
+                                imgProfileAvatar.setImageResource(android.R.drawable.ic_menu_myplaces);
+                                imgProfileAvatar.setColorFilter(Color.WHITE);
+                            }
                         }
 
                         if (isEditProfileMode) {

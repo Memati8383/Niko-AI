@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PREMIUM PROFİL AVATAR IŞIMA: Çok katmanlı derin glow efekti -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- EN DIŞ BULANIK IŞIMA -->
+    <item
+        android:top="-20dp"
+        android:bottom="-20dp"
+        android:left="-20dp"
+        android:right="-20dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="100%"
+                android:centerX="50%"
+                android:centerY="50%"
+                android:startColor="#446366f1"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+    <!-- ORTA HALKA IŞIMASI (CYAN TONU) -->
+    <item
+        android:top="-12dp"
+        android:bottom="-12dp"
+        android:left="-12dp"
+        android:right="-12dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="85%"
+                android:startColor="#3300E5FF"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+    <!-- İÇ PARLAK HALKA -->
+    <item
+        android:top="-6dp"
+        android:bottom="-6dp"
+        android:left="-6dp"
+        android:right="-6dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="75%"
+                android:startColor="#558b5cf6"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+    <!-- ANA AVATAR ÇERÇEVESİ (DÖNEN GRADIENT HİSSİ) -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:startColor="#6366f1"
+                android:centerColor="#00E5FF"
+                android:endColor="#8b5cf6"
+                android:angle="135"
+                android:type="sweep" />
+            <stroke android:width="3dp" android:color="#55FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

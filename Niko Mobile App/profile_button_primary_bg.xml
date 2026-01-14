@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ULTRA PREMIUM BUTON: Çok katmanlı gradient, iç glow ve parlak çerçeve -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- BASILI DURUM -->
+    <item android:state_pressed="true">
+        <layer-list>
+            <!-- Ana buton - daha parlak -->
+            <item>
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:startColor="#7C7FF1"
+                        android:centerColor="#9B8CF6"
+                        android:endColor="#AB9BF7"
+                        android:angle="135" />
+                    <corners android:radius="16dp" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    <!-- VARSAYILAN DURUM -->
+    <item>
+        <layer-list>
+            <!-- Dış gölge/glow efekti -->
+            <item
+                android:top="4dp"
+                android:bottom="-4dp"
+                android:left="8dp"
+                android:right="8dp">
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:type="radial"
+                        android:gradientRadius="300%"
+                        android:centerX="50%"
+                        android:centerY="0%"
+                        android:startColor="#446366f1"
+                        android:endColor="#00000000" />
+                    <corners android:radius="20dp" />
+                </shape>
+            </item>
+            <!-- Gradient çerçeve -->
+            <item>
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:startColor="#6366f1"
+                        android:centerColor="#8b5cf6"
+                        android:endColor="#00E5FF"
+                        android:angle="135"
+                        android:type="sweep" />
+                    <corners android:radius="16dp" />
+                </shape>
+            </item>
+            <!-- İç koyu gradient arka plan -->
+            <item
+                android:top="1.5dp"
+                android:bottom="1.5dp"
+                android:left="1.5dp"
+                android:right="1.5dp">
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:startColor="#5558E8"
+                        android:centerColor="#6B5CF6"
+                        android:endColor="#7C6FF7"
+                        android:angle="135" />
+                    <corners android:radius="14.5dp" />
+                </shape>
+            </item>
+            <!-- Üst parlama efekti -->
+            <item
+                android:top="1.5dp"
+                android:left="1.5dp"
+                android:right="1.5dp">
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:startColor="#33FFFFFF"
+                        android:endColor="#00FFFFFF"
+                        android:angle="270" />
+                    <corners android:topLeftRadius="14.5dp" android:topRightRadius="14.5dp" />
+                    <size android:height="25dp" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+</selector>
