@@ -51,7 +51,6 @@ kiro/
 Dış ağlardan ve mobil cihazdan erişim için Cloudflare tüneli kullanılmaktadır.
 
 - 🌐 **Güncel API Adresi:** [https://monster-bristol-robert-anyone.trycloudflare.com](https://monster-bristol-robert-anyone.trycloudflare.com)
-- 📝 **API Dokümantasyonu:** `/docs` (Swagger) veya `/redoc`
 
 > _Not: Tünel adresi `start_tunnel.py` çalıştırıldığında otomatik olarak tüm sistemde (GitHub dahil) güncellenir._
 
