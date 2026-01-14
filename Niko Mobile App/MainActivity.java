@@ -199,7 +199,7 @@ public class MainActivity extends Activity {
     public static RemoteInput lastRemoteInput; // Cevap girişi için referans
 
     // API URL
-    private static final String API_BASE_URL = "https://flexibility-sustainable-investigated-henry.trycloudflare.com";
+    private static final String API_BASE_URL = "https://pontiac-transcripts-shoot-geek.trycloudflare.com";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
