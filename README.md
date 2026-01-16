@@ -93,4 +93,4 @@ python manage_users.py
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
 
-> 🌐 **Güncel Tünel Adresi:** [https://desired-acceptable-burn-gerald.trycloudflare.com](https://desired-acceptable-burn-gerald.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://folder-together-managing-graduated.trycloudflare.com](https://folder-together-managing-graduated.trycloudflare.com)
