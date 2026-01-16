@@ -207,7 +207,7 @@ public class MainActivity extends Activity {
     public static RemoteInput lastRemoteInput; // Cevap girişi için referans
 
     // API URL - Backend servisinin adresi (Cloudflare Tunnel üzerinden)
-    private static final String API_BASE_URL = "https://desired-acceptable-burn-gerald.trycloudflare.com";
+    private static final String API_BASE_URL = "https://folder-together-managing-graduated.trycloudflare.com";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
