@@ -95,7 +95,7 @@
     </div>
 
     <script>
-        // Client-side validation functions
+        // İstemci tarafı doğrulama fonksiyonları
         function validateUsername(username) {
             if (username.length < 3 || username.length > 30) {
                 return 'Kullanıcı adı 3-30 karakter arasında olmalıdır';
@@ -146,11 +146,11 @@
             const buttonText = submitBtn.querySelector('.button-text');
             const buttonLoader = submitBtn.querySelector('.button-loader');
             
-            // Hide previous messages
+            // Önceki mesajları gizle
             errorMessage.style.display = 'none';
             successMessage.style.display = 'none';
             
-            // Client-side validation
+            // İstemci tarafı doğrulama
             let error = validateUsername(username);
             if (error) {
                 errorMessage.textContent = error;
@@ -178,7 +178,7 @@
                 return;
             }
             
-            // Show loading state
+            // Yükleme durumunu göster
             submitBtn.disabled = true;
             buttonText.style.display = 'none';
             buttonLoader.style.display = 'inline-block';
@@ -200,7 +200,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    // Show success message and redirect
+                    // Başarı mesajını göster ve yönlendir
                     successMessage.textContent = 'Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...';
                     successMessage.style.display = 'block';
                     
@@ -208,7 +208,7 @@
                         window.location.href = 'login.html';
                     }, 2000);
                 } else {
-                    // Show error message
+                    // Hata mesajını göster
                     errorMessage.textContent = data.error || 'Kayıt başarısız. Lütfen tekrar deneyin.';
                     errorMessage.style.display = 'block';
                 }
@@ -216,14 +216,14 @@
                 errorMessage.textContent = 'Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.';
                 errorMessage.style.display = 'block';
             } finally {
-                // Reset button state
+                // Buton durumunu sıfırla
                 submitBtn.disabled = false;
                 buttonText.style.display = 'inline';
                 buttonLoader.style.display = 'none';
             }
         });
         
-        // Real-time validation feedback
+        // Gerçek zamanlı doğrulama geri bildirimi
         document.getElementById('username').addEventListener('blur', function() {
             const error = validateUsername(this.value.trim());
             this.classList.toggle('input-error', !!error);
@@ -245,7 +245,7 @@
             this.classList.toggle('input-error', !!error);
         });
         
-        // Check if already logged in
+        // Zaten giriş yapılmışsa kontrol et
         if (localStorage.getItem('token')) {
             window.location.href = '/';
         }

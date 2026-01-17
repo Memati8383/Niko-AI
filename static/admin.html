@@ -7,7 +7,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Admin Panel Specific Styles */
+        /* Admin Paneli Özel Stilleri */
         .admin-container {
             min-height: 100vh;
             padding: var(--spacing-lg);
@@ -91,7 +91,7 @@
             font-size: var(--font-size-xs);
         }
 
-        /* Table Controls */
+        /* Tablo Kontrolleri */
         .table-controls {
             display: flex;
             align-items: center;
@@ -127,7 +127,7 @@
             border-color: var(--border-focus);
         }
 
-        /* Users Table */
+        /* Kullanıcılar Tablosu */
         .users-table-container {
             background: var(--bg-card);
             backdrop-filter: blur(20px);
@@ -212,7 +212,7 @@
             gap: var(--spacing-xs);
         }
 
-        /* Empty State */
+        /* Boş Durum */
         .empty-state {
             text-align: center;
             padding: var(--spacing-2xl);
@@ -224,7 +224,7 @@
             margin-bottom: var(--spacing-md);
         }
 
-        /* Loading State */
+        /* Yükleniyor Durumu */
         .loading-state {
             text-align: center;
             padding: var(--spacing-2xl);
@@ -241,7 +241,7 @@
             margin: 0 auto var(--spacing-md);
         }
 
-        /* Modal Styles */
+        /* Modal Stilleri */
         .admin-modal .modal {
             max-width: 500px;
         }
@@ -276,7 +276,7 @@
             cursor: pointer;
         }
 
-        /* Responsive */
+        /* Duyarlı Tasarım (Responsive) */
         @media (max-width: 768px) {
             .admin-header {
                 flex-direction: column;
@@ -431,16 +431,16 @@
 
     <script>
         // ============================================================================
-        // Admin Panel JavaScript
-        // Requirements: 2.3, 2.4, 3.4
+        // Admin Paneli JavaScript
+        // Gereksinimler: 2.3, 2.4, 3.4
         // ============================================================================
 
-        // State
+        // Durum (State)
         let users = [];
         let currentEditUser = null;
         let userToDelete = null;
 
-        // DOM Elements
+        // DOM Elemanları
         const usersTableBody = document.getElementById('usersTableBody');
         const loadingState = document.getElementById('loadingState');
         const emptyState = document.getElementById('emptyState');
@@ -455,7 +455,7 @@
         const toastContainer = document.getElementById('toastContainer');
 
         // ============================================================================
-        // Utility Functions
+        // Yardımcı Fonksiyonlar
         // ============================================================================
 
         function getToken() {
@@ -500,7 +500,7 @@
             if (!error) return 'Bilinmeyen bir hata';
             if (typeof error === 'string') return error;
             
-            // Handle FastAPI validation errors (detail is often a list of objects)
+            // FastAPI doğrulama hatalarını işle (detay genellikle nesnelerden oluşan bir listedir)
             if (error.detail) {
                 if (Array.isArray(error.detail)) {
                     return error.detail.map(err => {
@@ -521,7 +521,7 @@
             
             if (error.message) return error.message;
             
-            // Fallback: try to stringify the whole error object
+            // Yedek: tüm hata nesnesini metne dönüştürmeyi dene
             try {
                 const str = JSON.stringify(error);
                 if (str === '{}' && error.toString) return error.toString();
@@ -532,7 +532,7 @@
         }
 
         // ============================================================================
-        // API Functions
+        // API Fonksiyonları
         // ============================================================================
 
         async function fetchUsers() {
@@ -666,7 +666,7 @@
         }
 
         // ============================================================================
-        // Render Functions
+        // Render Fonksiyonları
         // ============================================================================
 
         function renderUsers() {
@@ -711,7 +711,7 @@
         }
 
         // ============================================================================
-        // Modal Functions
+        // Modal Fonksiyonları
         // ============================================================================
 
         function openCreateModal() {
@@ -768,23 +768,23 @@
         }
 
         // ============================================================================
-        // Event Handlers
+        // Olay İşleyicileri (Event Handlers)
         // ============================================================================
 
-        // New User Button
+        // Yeni Kullanıcı Butonu
         document.getElementById('newUserBtn').addEventListener('click', openCreateModal);
 
-        // Back to App Button
+        // Uygulamaya Dön Butonu
         document.getElementById('backToAppBtn').addEventListener('click', () => {
             window.location.href = '/';
         });
 
-        // Filter and Sort Changes
+        // Filtre ve Sıralama Değişiklikleri
         filterAdmin.addEventListener('change', fetchUsers);
         sortBy.addEventListener('change', fetchUsers);
         sortOrder.addEventListener('change', fetchUsers);
 
-        // User Form Submit
+        // Kullanıcı Formu Gönderimi
         userForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -797,7 +797,7 @@
 
             try {
                 if (currentEditUser) {
-                    // Update existing user
+                    // Mevcut kullanıcıyı güncelle
                     const userData = {
                         email: document.getElementById('formEmail').value || null,
                         full_name: document.getElementById('formFullName').value || null,
@@ -808,7 +808,7 @@
                     await updateUser(currentEditUser, userData);
                     showToast('Kullanıcı güncellendi', 'success');
                 } else {
-                    // Create new user
+                    // Yeni kullanıcı oluştur
                     const userData = {
                         username: document.getElementById('formUsername').value,
                         password: document.getElementById('formPassword').value,
@@ -833,10 +833,10 @@
             }
         });
 
-        // Cancel User Modal
+        // Kullanıcı Modalını İptal Et
         document.getElementById('cancelUserBtn').addEventListener('click', closeUserModal);
 
-        // Delete Confirmation
+        // Silme Onayı
         document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
             if (!userToDelete) return;
             
@@ -858,10 +858,10 @@
             }
         });
 
-        // Cancel Delete Modal
+        // Silme Modalını İptal Et
         document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
 
-        // Close modals on overlay click
+        // Overlay tıklamasında modalları kapat
         userModal.addEventListener('click', (e) => {
             if (e.target === userModal) closeUserModal();
         });
@@ -870,7 +870,7 @@
             if (e.target === deleteModal) closeDeleteModal();
         });
 
-        // Close modals on Escape key
+        // Escape tuşuna basıldığında modalları kapat
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeUserModal();
@@ -879,10 +879,10 @@
         });
 
         // ============================================================================
-        // Initialization
+        // Başlatma
         // ============================================================================
 
-        // Check authentication on page load
+        // Sayfa yüklendiğinde kimlik doğrulamayı kontrol et
         document.addEventListener('DOMContentLoaded', () => {
             const token = getToken();
             if (!token) {

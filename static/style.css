@@ -1,65 +1,65 @@
-/* Niko AI Chat - Styles */
-/* Dark Theme with Glassmorphism Effects */
+/* Niko AI Sohbet - Stiller */
+/* Glassmorphism Efektli Koyu Tema */
 
-/* ===== CSS Variables ===== */
+/* ===== CSS Değişkenleri ===== */
 :root {
-    /* Colors - Dark Theme */
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #12121a;
-    --bg-tertiary: #1a1a25;
-    --bg-card: rgba(26, 26, 37, 0.8);
-    --bg-glass: rgba(255, 255, 255, 0.05);
-    --bg-glass-hover: rgba(255, 255, 255, 0.08);
+    /* Renkler - Koyu Tema */
+    --bg-primary: #0a0a0f; /* Ana arka plan rengi */
+    --bg-secondary: #12121a; /* İkincil arka plan rengi (kenar çubuğu vb.) */
+    --bg-tertiary: #1a1a25; /* Üçüncül arka plan rengi (kod blokları vb.) */
+    --bg-card: rgba(26, 26, 37, 0.8); /* Kart arka planı (yarı saydam) */
+    --bg-glass: rgba(255, 255, 255, 0.05); /* Cam efekti için arka plan */
+    --bg-glass-hover: rgba(255, 255, 255, 0.08); /* Cam efekti üzerine gelince */
     
-    /* Text Colors */
-    --text-primary: #ffffff;
-    --text-secondary: #a0a0b0;
-    --text-muted: #6b6b7b;
-    --text-hint: #505060;
+    /* Metin Renkleri */
+    --text-primary: #ffffff; /* Ana metin rengi */
+    --text-secondary: #a0a0b0; /* İkincil metin rengi */
+    --text-muted: #6b6b7b; /* Soluk metin rengi */
+    --text-hint: #505060; /* İpucu metin rengi */
     
-    /* Accent Colors */
-    --accent-primary: #6366f1;
-    --accent-primary-hover: #818cf8;
-    --accent-secondary: #8b5cf6;
-    --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    /* Vurgu Renkleri */
+    --accent-primary: #6366f1; /* Ana vurgu rengi */
+    --accent-primary-hover: #818cf8; /* Vurgu rengi (hover) */
+    --accent-secondary: #8b5cf6; /* İkincil vurgu rengi */
+    --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); /* Vurgu gradyanı */
     
-    /* Status Colors */
-    --success: #22c55e;
-    --success-bg: rgba(34, 197, 94, 0.1);
-    --error: #ef4444;
-    --error-bg: rgba(239, 68, 68, 0.1);
-    --warning: #f59e0b;
-    --warning-bg: rgba(245, 158, 11, 0.1);
-    --info: #3b82f6;
-    --info-bg: rgba(59, 130, 246, 0.1);
+    /* Durum Renkleri */
+    --success: #22c55e; /* Başarı rengi (yeşil) */
+    --success-bg: rgba(34, 197, 94, 0.1); /* Başarı arka planı */
+    --error: #ef4444; /* Hata rengi (kırmızı) */
+    --error-bg: rgba(239, 68, 68, 0.1); /* Hata arka planı */
+    --warning: #f59e0b; /* Uyarı rengi (turuncu) */
+    --warning-bg: rgba(245, 158, 11, 0.1); /* Uyarı arka planı */
+    --info: #3b82f6; /* Bilgi rengi (mavi) */
+    --info-bg: rgba(59, 130, 246, 0.1); /* Bilgi arka planı */
     
-    /* Border Colors */
-    --border-primary: rgba(255, 255, 255, 0.1);
-    --border-secondary: rgba(255, 255, 255, 0.05);
-    --border-focus: rgba(99, 102, 241, 0.5);
+    /* Kenarlık Renkleri */
+    --border-primary: rgba(255, 255, 255, 0.1); /* Ana kenarlık */
+    --border-secondary: rgba(255, 255, 255, 0.05); /* İkincil kenarlık */
+    --border-focus: rgba(99, 102, 241, 0.5); /* Odaklanma kenarlığı */
     
-    /* Shadows */
-    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+    /* Gölgeler */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3); /* Küçük gölge */
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4); /* Orta gölge */
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5); /* Büyük gölge */
+    --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3); /* Parlama efekti */
     
-    /* Spacing */
-    --spacing-xs: 0.25rem;
-    --spacing-sm: 0.5rem;
-    --spacing-md: 1rem;
-    --spacing-lg: 1.5rem;
-    --spacing-xl: 2rem;
-    --spacing-2xl: 3rem;
+    /* Boşluklar */
+    --spacing-xs: 0.25rem; /* Çok küçük boşluk */
+    --spacing-sm: 0.5rem; /* Küçük boşluk */
+    --spacing-md: 1rem; /* Orta boşluk */
+    --spacing-lg: 1.5rem; /* Geniş boşluk */
+    --spacing-xl: 2rem; /* Ekstra geniş boşluk */
+    --spacing-2xl: 3rem; /* En geniş boşluk */
     
-    /* Border Radius */
+    /* Köşe Yuvarlama (Border Radius) */
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
-    --radius-full: 9999px;
+    --radius-full: 9999px; /* Tam yuvarlak */
     
-    /* Typography */
+    /* Tipografi */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
@@ -69,18 +69,18 @@
     --font-size-2xl: 1.5rem;
     --font-size-3xl: 2rem;
     
-    /* Transitions */
+    /* Geçişler (Transitions) */
     --transition-fast: 150ms ease;
     --transition-normal: 250ms ease;
     --transition-slow: 350ms ease;
     
-    /* Z-Index */
+    /* Z-Index Katmanları */
     --z-dropdown: 100;
     --z-modal: 200;
     --z-toast: 300;
 }
 
-/* ===== Reset & Base ===== */
+/* ===== Sıfırlama ve Temel Ayarlar ===== */
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -89,7 +89,7 @@
 
 html {
     font-size: 16px;
-    scroll-behavior: smooth;
+    scroll-behavior: smooth; /* Yumuşak kaydırma */
 }
 
 body {
@@ -99,11 +99,11 @@ body {
     color: var(--text-primary);
     background: var(--bg-primary);
     min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
+    -webkit-font-smoothing: antialiased; /* Font yumuşatma */
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Background gradient effect */
+/* Arka plan gradyan efekti */
 body::before {
     content: '';
     position: fixed;
@@ -114,8 +114,8 @@ body::before {
     background: 
         radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: -1;
+    pointer-events: none; /* Tıklamaları engelle */
+    z-index: -1; /* İçeriğin arkasında kalmasını sağla */
 }
 
 a {
@@ -128,7 +128,7 @@ a:hover {
     color: var(--accent-primary-hover);
 }
 
-/* ===== Auth Pages (Login/Signup) ===== */
+/* ===== Yetkilendirme Sayfaları (Giriş/Kayıt) ===== */
 .auth-container {
     min-height: 100vh;
     display: flex;
@@ -141,7 +141,7 @@ a:hover {
     width: 100%;
     max-width: 420px;
     background: var(--bg-card);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px); /* Arka plan bulanıklığı */
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--border-primary);
     border-radius: var(--radius-xl);
@@ -169,7 +169,7 @@ a:hover {
     font-size: var(--font-size-md);
 }
 
-/* ===== Form Styles ===== */
+/* ===== Form Stilleri ===== */
 .auth-form {
     display: flex;
     flex-direction: column;
@@ -220,7 +220,7 @@ a:hover {
     color: var(--text-hint);
 }
 
-/* ===== Messages ===== */
+/* ===== Mesajlar ===== */
 .error-message {
     padding: var(--spacing-md);
     background: var(--error-bg);
@@ -241,7 +241,7 @@ a:hover {
     text-align: center;
 }
 
-/* ===== Buttons ===== */
+/* ===== Butonlar ===== */
 .auth-button {
     width: 100%;
     padding: var(--spacing-md) var(--spacing-lg);
@@ -274,7 +274,7 @@ a:hover {
     cursor: not-allowed;
 }
 
-/* Button Loader */
+/* Buton Yükleniyor Göstergesi */
 .button-loader {
     width: 20px;
     height: 20px;
@@ -290,7 +290,7 @@ a:hover {
     }
 }
 
-/* ===== Auth Footer ===== */
+/* ===== Yetkilendirme Alt Bilgi ===== */
 .auth-footer {
     margin-top: var(--spacing-xl);
     text-align: center;
@@ -303,14 +303,14 @@ a:hover {
 }
 
 
-/* ===== Main Layout ===== */
+/* ===== Ana Düzen ===== */
 .app-container {
     display: flex;
     height: 100vh;
     overflow: hidden;
 }
 
-/* ===== Sidebar ===== */
+/* ===== Kenar Çubuğu (Sidebar) ===== */
 .sidebar {
     width: 280px;
     min-width: 0;
@@ -439,7 +439,7 @@ a:hover {
     border-top: 1px solid var(--border-primary);
 }
 
-/* ===== Main Content ===== */
+/* ===== Ana İçerik ===== */
 .main-content {
     flex: 1;
     display: flex;
@@ -447,7 +447,7 @@ a:hover {
     overflow: hidden;
 }
 
-/* ===== Chat Header ===== */
+/* ===== Sohbet Başlığı ===== */
 .chat-header {
     padding: var(--spacing-md) var(--spacing-lg);
     background: var(--bg-secondary);
@@ -473,7 +473,7 @@ a:hover {
     border-radius: var(--radius-md);
 }
 
-/* Ensure dropdown options are readable in dark theme */
+/* Dropdown seçeneklerinin koyu temada okunabilir olmasını sağla */
 option {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
@@ -547,7 +547,7 @@ option {
     border-radius: 50%;
 }
 
-/* ===== Chat Messages ===== */
+/* ===== Sohbet Mesajları ===== */
 .chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -676,7 +676,7 @@ option {
     border-color: var(--border-primary);
 }
 
-/* ===== Chat Input ===== */
+/* ===== Sohbet Giriş Alanı ===== */
 .chat-input-container {
     padding: var(--spacing-lg);
     background: var(--bg-secondary);
@@ -814,7 +814,7 @@ option {
     cursor: not-allowed;
 }
 
-/* ===== Toast Notifications ===== */
+/* ===== Bildirimler (Toast) ===== */
 .toast-container {
     position: fixed;
     bottom: var(--spacing-lg);
@@ -866,7 +866,7 @@ option {
     }
 }
 
-/* ===== Modal ===== */
+/* ===== Modal Pencereler ===== */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -951,7 +951,7 @@ option {
     background: #dc2626;
 }
 
-/* ===== Loading States ===== */
+/* ===== Yükleniyor Durumları ===== */
 .typing-indicator {
     display: flex;
     gap: 4px;
@@ -983,7 +983,7 @@ option {
     }
 }
 
-/* ===== Responsive Design ===== */
+/* ===== Duyarlı Tasarım (Responsive) ===== */
 @media (max-width: 768px) {
     .sidebar {
         position: fixed;
@@ -1035,7 +1035,7 @@ option {
     }
 }
 
-/* ===== Scrollbar Styling ===== */
+/* ===== Kaydırma Çubuğu Stili ===== */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -1054,7 +1054,7 @@ option {
     background: var(--text-muted);
 }
 
-/* ===== Selection ===== */
+/* ===== Seçim (Selection) ===== */
 ::selection {
     background: rgba(99, 102, 241, 0.3);
     color: var(--text-primary);
@@ -1066,7 +1066,7 @@ option {
     outline-offset: 2px;
 }
 
-/* ===== Utility Classes ===== */
+/* ===== Yardımcı Sınıflar ===== */
 .hidden {
     display: none !important;
 }
@@ -1084,7 +1084,7 @@ option {
 }
 
 
-/* ===== Welcome Message ===== */
+/* ===== Karşılama Mesajı ===== */
 .welcome-message {
     display: flex;
     flex-direction: column;
@@ -1115,13 +1115,13 @@ option {
     font-size: var(--font-size-lg);
 }
 
-/* ===== Search Toggle Buttons ===== */
+/* ===== Arama Geçiş Butonları ===== */
 .input-action-btn.active {
     color: var(--accent-primary);
     background: rgba(99, 102, 241, 0.2);
 }
 
-/* ===== Stop Button ===== */
+/* ===== Durdur Butonu ===== */
 .stop-btn {
     padding: var(--spacing-md);
     background: var(--error);
@@ -1140,7 +1140,7 @@ option {
     transform: scale(1.05);
 }
 
-/* ===== Empty History State ===== */
+/* ===== Boş Geçmiş Bekleme Durumu ===== */
 .empty-history {
     text-align: center;
     padding: var(--spacing-xl);
@@ -1148,12 +1148,12 @@ option {
     font-size: var(--font-size-sm);
 }
 
-/* ===== Profile Modal Adjustments ===== */
+/* ===== Profil Modalı Ayarlamaları ===== */
 #profileModal .modal {
     max-width: 450px;
 }
 
-/* ===== Code Block Styling ===== */
+/* ===== Kod Bloğu Stili ===== */
 .message-text pre {
     position: relative;
 }
@@ -1182,7 +1182,7 @@ option {
     background: var(--bg-glass-hover);
 }
 
-/* Code block container */
+/* Kod bloğu konteynerı */
 .code-block {
     position: relative;
     background: var(--bg-tertiary);
@@ -1212,7 +1212,7 @@ option {
     line-height: 1.5;
 }
 
-/* Inline code styling */
+/* Satır içi kod stili */
 .inline-code {
     background: var(--bg-tertiary);
     padding: 2px 6px;
@@ -1221,14 +1221,14 @@ option {
     font-size: 0.9em;
 }
 
-/* Override Prism.js theme for dark mode compatibility */
+/* Koyu mod uyumluluğu için Prism.js temasını geçersiz kıl */
 .message-text pre[class*="language-"],
 .message-text code[class*="language-"] {
     background: transparent;
     text-shadow: none;
 }
 
-/* ===== Markdown Styling ===== */
+/* ===== Markdown Stili ===== */
 .message-text h1,
 .message-text h2,
 .message-text h3,
@@ -1282,7 +1282,7 @@ option {
     background: var(--bg-tertiary);
 }
 
-/* ===== Sidebar Overlay for Mobile ===== */
+/* ===== Mobil için Kenar Çubuğu Katmanı ===== */
 .sidebar-overlay {
     display: none;
     position: fixed;
@@ -1300,7 +1300,7 @@ option {
     }
 }
 
-/* Social Media Floating Action Button */
+/* Sosyal Medya Yüzen Aksiyon Butonu */
 .social-fab-container {
     position: fixed;
     bottom: 20px;
@@ -1379,7 +1379,7 @@ option {
     color: white;
 }
 
-/* Profile Picture Styles */
+/* Profil Resmi Stilleri */
 .profile-pic-container {
     display: flex;
     justify-content: center;
@@ -1441,7 +1441,7 @@ option {
     border: 2px solid var(--accent-primary);
 }
 
-/* Specific colors */
+/* Özel renkler */
 .social-btn.github:hover { background: #333; }
 .social-btn.telegram:hover { background: #0088cc; }
 .social-btn.tiktok:hover { background: #000; }

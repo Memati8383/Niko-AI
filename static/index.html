@@ -6,7 +6,7 @@
     <title>Niko AI - Yapay Zeka Sohbet</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <link rel="stylesheet" href="style.css?v=1.1">
-    <!-- Prism.js for syntax highlighting -->
+    <!-- Kod renklendirme için Prism.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
@@ -20,18 +20,18 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
+        <!-- Yan Menü -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <span class="sidebar-logo">🤖 Niko AI</span>
                 <button class="new-chat-btn" id="newChatBtn" title="Yeni Sohbet">
-                    + Yeni
+                    + Yeni Sohbet
                 </button>
             </div>
             
             <div class="sidebar-content">
                 <div class="history-list" id="historyList">
-                    <!-- History items will be rendered here -->
+                    <!-- Geçmiş öğeleri burada listelenecek -->
                 </div>
             </div>
             
@@ -42,9 +42,9 @@
             </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- Ana İçerik -->
         <main class="main-content">
-            <!-- Chat Header -->
+            <!-- Sohbet Başlığı -->
             <header class="chat-header">
                 <div class="chat-header-left">
                     <button class="menu-toggle" id="menuToggle" title="Menü">
@@ -69,9 +69,9 @@
                 </div>
             </header>
 
-            <!-- Chat Messages -->
+            <!-- Sohbet Mesajları -->
             <div class="chat-messages" id="chatMessages">
-                <!-- Welcome message -->
+                <!-- Hoş Geldin Mesajı -->
                 <div class="welcome-message" id="welcomeMessage">
                     <div class="welcome-icon">🤖</div>
                     <h2>Niko AI'ya Hoş Geldiniz!</h2>
@@ -79,12 +79,12 @@
                 </div>
             </div>
 
-            <!-- Chat Input -->
+            <!-- Sohbet Giriş Alanı -->
             <div class="chat-input-container">
                 <div class="chat-input-wrapper">
                     <div class="chat-input-box">
                         <div class="image-preview-container" id="imagePreviewContainer">
-                            <!-- Image previews will be added here -->
+                            <!-- Görsel önizlemeleri buraya eklenecek -->
                         </div>
                         <div class="chat-input-row">
                             <textarea 
@@ -111,7 +111,7 @@
         </main>
     </div>
 
-    <!-- Profile Modal -->
+    <!-- Profil Penceresi -->
     <div class="modal-overlay" id="profileModal">
         <div class="modal">
             <h3 class="modal-title">Profil</h3>
@@ -144,10 +144,10 @@
                     <button type="submit" class="modal-btn confirm" style="background: var(--accent-primary);">Kaydet</button>
                 </div>
             </form>
-            <!-- Admin Panel Link (hidden by default, shown for admins) -->
+            <!-- Yönetici Paneli Bağlantısı (varsayılan olarak gizli, yöneticiler için görünür) -->
             <div id="adminPanelSection" style="display: none; margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--border-primary);">
                 <a href="/admin" class="auth-button" style="display: block; text-align: center; text-decoration: none; background: var(--accent-gradient);">
-                    👑 Admin Panel
+                    👑 Yönetici Paneli
                 </a>
             </div>
             <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--border-primary);">
@@ -158,7 +158,7 @@
         </div>
     </div>
 
-    <!-- Confirm Modal -->
+    <!-- Onay Penceresi -->
     <div class="modal-overlay" id="confirmModal">
         <div class="modal">
             <h3 class="modal-title" id="confirmTitle">Onay</h3>
@@ -170,15 +170,15 @@
         </div>
     </div>
 
-    <!-- Toast Container -->
+    <!-- Bildirim Alanı -->
     <div class="toast-container" id="toastContainer">
-        <!-- Toasts will be added here -->
+        <!-- Bildirimler buraya eklenecek -->
     </div>
 
-    <!-- Hidden file input for image upload -->
+    <!-- Görsel yükleme için gizli dosya girişi -->
     <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
 
-    <!-- Social Media FAB -->
+    <!-- Sosyal Medya Butonu -->
     <div class="social-fab-container" id="socialFabContainer">
         <div class="social-fab-options">
             <a href="https://github.com/Memati8383/niko-with-kiro" target="_blank" class="social-btn github" title="GitHub">
