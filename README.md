@@ -23,6 +23,7 @@ Niko AI, gelişmiş Türkçe sesli komut desteği sunan, Android ve Web platform
 - **Sistem Entegrasyonu:** Arama yapma, WhatsApp mesaj okuma/cevaplama, müzik (Spotify) kontrolü.
 - **Donanım Kontrolü:** Wi-Fi, Bluetooth, Parlaklık, Kamera ve Fener kontrolü.
 - **Cihaz Sync:** Rehber, Arama Kayıtları, Konum ve Uygulama listesinin backend ile güvenli senkronizasyonu.
+- **Otomatik Güncelleme:** GitHub'dan yeni sürüm kontrolü (24 saatte bir).
 
 ### 💻 Web & Masaüstü
 
@@ -87,6 +88,7 @@ python manage_users.py
 
 - **Hizli Commit:** Değişiklikleri hızlıca GitHub'a göndermek için `hizli_commit.bat` dosyasını kullanabilirsiniz.
 - **Logs:** Detaylı sistem logları konsol üzerinden takip edilebilir.
+- **Güncelleme:** `version.json` dosyasını güncelleyip GitHub'a push edin, kullanıcılar otomatik bilgilendirilir.
 
 ---
 
