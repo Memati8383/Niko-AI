@@ -95,4 +95,4 @@ python manage_users.py
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
 
-> 🌐 **Güncel Tünel Adresi:** [https://yards-mystery-from-shelf.trycloudflare.com](https://yards-mystery-from-shelf.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://linked-jeffrey-leu-ranks.trycloudflare.com](https://linked-jeffrey-leu-ranks.trycloudflare.com)
