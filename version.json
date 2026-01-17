@@ -1,4 +1,6 @@
 {
   "version": "1.0.1",
-  "description": "Test güncellemesi"
+  "description": "Yeni premium güncelleme sistemi eklendi!",
+  "changelog": "• Her uygulama açılışında güncelleme kontrolü\n• Premium tasarımlı güncelleme dialogu\n• İndirme ilerlemesi gösterimi\n• Detaylı güncelleme bilgileri",
+  "size": 15728640
 }
