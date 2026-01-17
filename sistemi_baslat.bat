@@ -32,19 +32,42 @@ echo  =============================================================
 echo.
 echo    [1] TAM BASLAT (Ollama + Backend + Tunnel)
 echo    [2] HIZLI BASLAT (Sadece Backend + Tunnel)
-echo    [3] Admin Panelini Ac
-echo    [4] Bagimliliklari Guncelle (pip install)
-echo    [5] CIKIS
+echo    [3] TEK TEK CALISTIR (Alt Menu)
+echo    [4] Admin Panelini Ac
+echo    [5] Bagimliliklari Guncelle (pip install)
+echo    [6] CIKIS
 echo.
 echo  =============================================================
-set /p "choice= Seciminiz (1-5): "
+set /p "choice= Seciminiz (1-6): "
 
 if "%choice%"=="1" goto START_FULL
 if "%choice%"=="2" goto START_SOFT
-if "%choice%"=="3" goto START_ADMIN
-if "%choice%"=="4" goto UPDATE_DEPS
-if "%choice%"=="5" exit
+if "%choice%"=="3" goto INDIVIDUAL_MENU
+if "%choice%"=="4" goto START_ADMIN
+if "%choice%"=="5" goto UPDATE_DEPS
+if "%choice%"=="6" exit
 goto MENU
+
+:INDIVIDUAL_MENU
+cls
+echo.
+echo  =============================================================
+echo    N I K O   A I   -   TEK TEK CALISTIRMA
+echo  =============================================================
+echo.
+echo    [1] Sadece Ollama'yi Baslat
+echo    [2] Sadece Backend'i Baslat
+echo    [3] Sadece Tunnel'i Baslat
+echo    [4] GERI DON
+echo.
+echo  =============================================================
+set /p "subchoice= Seciminiz (1-4): "
+
+if "%subchoice%"=="1" goto START_OLLAMA_ONLY
+if "%subchoice%"=="2" goto START_BACKEND_ONLY
+if "%subchoice%"=="3" goto START_TUNNEL_ONLY
+if "%subchoice%"=="4" goto MENU
+goto INDIVIDUAL_MENU
 
 :START_FULL
 cls
@@ -88,6 +111,41 @@ echo.
 echo [!] Tünel scripti durdu.
 pause
 goto MENU
+
+:START_OLLAMA_ONLY
+cls
+echo.
+echo [+] Ollama servisi kontrol ediliyor...
+tasklist /FI "IMAGENAME eq ollama.exe" 2>NUL | find /I /N "ollama.exe">NUL
+if "%ERRORLEVEL%"=="0" (
+    echo [i] Ollama zaten calisiyor.
+    pause
+) else (
+    echo [+] Ollama baslatiliyor...
+    start "Niko - Ollama Engine" cmd /k "ollama serve"
+    echo [i] Ollama baslatildi.
+)
+goto INDIVIDUAL_MENU
+
+:START_BACKEND_ONLY
+cls
+echo.
+echo [+] Backend Servisi baslatiliyor (Port: 8001)...
+start "Niko - Backend Server" cmd /k ""!VENV_PYTHON!" "!MAIN_SCRIPT!""
+echo [i] Backend servisi yeni pencerede acildi.
+pause
+goto INDIVIDUAL_MENU
+
+:START_TUNNEL_ONLY
+cls
+echo.
+echo [+] Tünel Servisi baslatiliyor...
+echo [i] Tünel bu pencerede calisacak.
+"!VENV_PYTHON!" "!TUNNEL_SCRIPT!"
+echo.
+echo [!] Tünel scripti durdu.
+pause
+goto INDIVIDUAL_MENU
 
 :START_ADMIN
 cls

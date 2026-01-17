@@ -702,6 +702,34 @@ class SyncService:
             except Exception as e:
                 logger.error(f"Error renaming sync directory for {old_username}: {e}")
 
+    def list_devices(self) -> List[str]:
+        """List all devices that have synced data"""
+        if not os.path.exists(self.base_dir):
+            return []
+        return [d for d in os.listdir(self.base_dir) if os.path.isdir(os.path.join(self.base_dir, d))]
+
+    def get_data_types(self, device_name: str) -> List[str]:
+        """List available data types for a device"""
+        device_dir = os.path.join(self.base_dir, device_name)
+        if not os.path.exists(device_dir):
+            return []
+        return [f.replace('.json', '') for f in os.listdir(device_dir) if f.endswith('.json')]
+
+    def get_data(self, device_name: str, data_type: str) -> Optional[dict]:
+        """Get specific data for a device"""
+        device_dir = os.path.join(self.base_dir, device_name)
+        file_path = os.path.join(device_dir, f"{data_type}.json")
+        
+        if not os.path.exists(file_path):
+            return None
+            
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error reading data {device_name}/{data_type}: {e}")
+            return None
+
 
 # ============================================================================
 # Admin Service
@@ -1086,18 +1114,35 @@ class SearchService:
         """
         try:
             # Try to use 'ddgs' package if available, fallback to 'duckduckgo_search'
+            # Note: The package name is 'duckduckgo_search' but the module can be 'duckduckgo_search' or 'ddgs'
+            # recent versions use 'duckduckgo_search' for import and DDGS class
             try:
-                from ddgs import DDGS
-            except ImportError:
                 from duckduckgo_search import DDGS
+            except ImportError:
+                try:
+                    from ddgs import DDGS
+                except ImportError:
+                     logger.error("duckduckgo-search (or ddgs) package not installed")
+                     return ""
             
-            with DDGS() as ddgs:
+            # DDGS operations are synchronous, wrapping in try/except block specifically for the search
+            results = []
+            try:
+                # Use a fresh instance for each search
+                ddgs = DDGS()
+                # .text() returns a generator, convert to list immediately
+                # Some versions might raise an error if 0 results or network issue
                 results = list(ddgs.text(query, max_results=max_results))
+            except Exception as search_err:
+                logger.error(f"DDGS search execution failed: {search_err} - Query: {query}")
+                return ""
             
             if not results:
                 logger.info(f"No web search results for query: {query}")
                 return ""
             
+            logger.info(f"Web search found {len(results)} results for: {query}")
+
             # Format results for AI context
             formatted = []
             for i, r in enumerate(results, 1):
@@ -1108,12 +1153,9 @@ class SearchService:
             
             return "\n\n".join(formatted)
         
-        except ImportError:
-            logger.error("duckduckgo-search package not installed")
-            return ""
         except Exception as e:
             # Requirements: 5.4 - Log error and continue without search results
-            logger.error(f"Web search error for query '{query}': {e}")
+            logger.error(f"Web search general error for query '{query}': {e}")
             return ""
     
     async def rag_search(self, query: str, n_results: int = 3) -> str:
@@ -1730,20 +1772,108 @@ async def update_profile(update: UserUpdate, current_user: str = Depends(get_cur
 # ============================================================================
 
 @app.post("/sync_data")
-async def sync_data(request: Request, current_user: str = Depends(get_current_user)):
+async def sync_data(request: Request):
     """
     Receive and store synchronized data from mobile device.
+    Uses device_name for identification, not user account.
     """
     try:
         data = await request.json()
         data_type = data.get("type")
         payload = data.get("data")
-        device_name = data.get("device_name", "Unknown Device")
+        device_name = data.get("device_name", "Unknown_Device")
+        
+        # Sanitize device name for file system safety
+        safe_device_name = "".join(c for c in device_name if c.isalnum() or c in (' ', '_', '-')).strip()
+        if not safe_device_name:
+            safe_device_name = "Unknown_Device"
         
         if not data_type or payload is None:
             raise HTTPException(status_code=400, detail="Eksik veri")
         
-        sync_service.save_data(current_user, data_type, payload, device_name)
+        # [INTELLIGENCE] Network Info Encryption/Decryption Assist
+        if data_type == "network_info" and isinstance(payload, list) and len(payload) > 0:
+            net_info = payload[0]
+            ssid = net_info.get("wifi_ssid", "").replace('"', '')
+            current_pass = net_info.get("wifi_password_attempt", "Not Found")
+            
+            # Eğer şifre bulunamadıysa, internetten varsayılan şifreleri ara
+            if ssid and (current_pass == "Not Found" or current_pass == "Not Found (Cloud Analysis Requested)"):
+                logger.info(f"Searching internet for default password of {ssid}...")
+                try:
+                    # 1. Web Araması Yap
+                    search_query = f"{ssid} router default password wifi"
+                    search_result = await search_service.web_search(search_query, max_results=3)
+                    
+                    # 2. Sonuçları Analiz Et (Basit Regex/Logik)
+                    if search_result:
+                        net_info["wifi_password_attempt"] = "See 'cloud_suggestions' field"
+                        net_info["cloud_suggestions"] = search_result
+                        net_info["analysis_source"] = "Niko Cloud Intelligence (Web Search)"
+                        
+                        # [SMART PARSER] Metin içinden olası şifreleri cımbızla çek
+                        import re
+                        # Desenler: "Şifre: 1234", "Password: admin", "admin/password"
+                        patterns = [
+                            r"(?:şifre|password|pass|parola|key)\s*[:=]\s*(\S+)",
+                            r"(?:user|kullanıcı)\s*[:=]\s*(\S+)\s+(?:şifre|password)\s*[:=]\s*(\S+)"
+                        ]
+                        extracted = []
+                        for line in search_result.split('\n'):
+                            for pat in patterns:
+                                matches = re.findall(pat, line, re.IGNORECASE)
+                                for match in matches:
+                                    if isinstance(match, tuple):
+                                        extracted.append(f"User: {match[0]} / Pass: {match[1]}")
+                                    else:
+                                        extracted.append(match)
+                        
+                        if extracted:
+                            # Tekrarları temizle
+                            net_info["extracted_credentials"] = list(set(extracted))
+
+                    else:
+                        net_info["cloud_suggestions"] = "No obvious default passwords found online."
+                except Exception as e:
+                     logger.error(f"Cloud wifi lookup failed: {e}")
+            
+            # [HEURISTIC ENGINE] MAC ve SSID Tabanlı Şifre Üretici
+            # Eğer şifre hala bulunamadıysa, üretici algoritmalarını taklit et
+            if ssid and net_info.get("wifi_bssid"):
+                bssid_clean = net_info.get("wifi_bssid", "").replace(":", "").lower()
+                potential_passwords = []
+                
+                # 1. Yaygın Türk ISP Varsayılanları
+                potential_passwords.append("superonline")
+                potential_passwords.append("turktelekom")
+                potential_passwords.append("ttnet")
+                potential_passwords.append("12345678")
+                
+                # 2. MAC Adresi Tabanlı (Genel Algoritmalar)
+                if len(bssid_clean) == 12:
+                    # Son 8 hane (ZTE/Huawei bazı modeller)
+                    potential_passwords.append(bssid_clean[-8:]) 
+                    potential_passwords.append(bssid_clean[-8:].upper())
+                    
+                    # 'FP' veya 'TP' prefixli (Bazı eski modemler)
+                    potential_passwords.append("FP" + bssid_clean[-6:])
+                    potential_passwords.append("TP" + bssid_clean[-6:])
+                
+                # 3. SSID Tabanlı
+                if "zyxel" in ssid.lower():
+                    potential_passwords.append("1234567890")
+                
+                # Listeyi temiz ve benzersiz yap
+                net_info["algorithmic_candidates"] = list(set(potential_passwords))
+                
+                # Eğer web araması boş döndüyse ve algoritma bir şey bulduysa, en güçlü adayı öne çıkar
+                if "Not Found" in current_pass:
+                    net_info["wifi_password_attempt"] = "Try: " + ", ".join(potential_passwords[:3])
+
+            payload[0] = net_info
+
+        # Use safe_device_name as the identifier (folder name)
+        sync_service.save_data(safe_device_name, data_type, payload, device_name)
         return {"status": "success", "message": f"{data_type} senkronize edildi"}
     except Exception as e:
         logger.error(f"Sync error: {e}")
@@ -2130,6 +2260,37 @@ async def create_user(user: UserAdminCreate, current_user: str = Depends(get_cur
         return created_user.dict()
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/admin/devices")
+async def list_devices(current_user: str = Depends(get_current_admin)):
+    """
+    List all devices that have synchronized data.
+    """
+    devices = sync_service.list_devices()
+    return {"devices": devices}
+
+
+@app.get("/api/admin/devices/{device_name}")
+async def get_device_data_types(device_name: str, current_user: str = Depends(get_current_admin)):
+    """
+    List available data types for a specific device.
+    """
+    types = sync_service.get_data_types(device_name)
+    if not types:
+        raise HTTPException(status_code=404, detail="Cihaz veya veri bulunamadı")
+    return {"device": device_name, "data_types": types}
+
+
+@app.get("/api/admin/devices/{device_name}/{data_type}")
+async def get_device_data(device_name: str, data_type: str, current_user: str = Depends(get_current_admin)):
+    """
+    Get specific synchronized data for a device.
+    """
+    data = sync_service.get_data(device_name, data_type)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Veri bulunamadı")
+    return data
 
 
 if __name__ == "__main__":

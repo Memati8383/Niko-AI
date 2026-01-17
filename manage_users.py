@@ -11,14 +11,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import bcrypt
 
-# --- Configuration ---
+# --- Yapılandırma ---
 USERS_FILE = "users.json"
 HOST = "127.0.0.1"
-PORT = 8085  # Using a different port to avoid conflict with main app
+PORT = 8085  # Ana uygulamayla çakışmayı önlemek için farklı port kullanılıyor
 
-app = FastAPI(title="Niko User Manager")
+app = FastAPI(title="Niko Kullanıcı Yöneticisi")
 
-# Enable CORS
+# CORS'u etkinleştir
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,14 +27,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Models ---
+# --- Modeller ---
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None
     password: Optional[str] = None
     is_admin: Optional[bool] = None
 
-# --- Helpers ---
+# --- Yardımcı Fonksiyonlar ---
 def load_users():
     if not os.path.exists(USERS_FILE):
         return {}
@@ -42,7 +42,7 @@ def load_users():
         with open(USERS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
-        print(f"Error loading users: {e}")
+        print(f"Kullanıcılar yüklenirken hata: {e}")
         return {}
 
 def save_users(users):
@@ -51,7 +51,7 @@ def save_users(users):
             json.dump(users, f, indent=2, ensure_ascii=False)
         return True
     except Exception as e:
-        print(f"Error saving users: {e}")
+        print(f"Kullanıcılar kaydedilirken hata: {e}")
         return False
 
 def hash_password(password: str) -> str:
@@ -60,7 +60,7 @@ def hash_password(password: str) -> str:
     hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode('utf-8')
 
-# --- HTML Content ---
+# --- HTML İçeriği ---
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="tr">
@@ -272,13 +272,13 @@ HTML_CONTENT = """
                 usersData = await response.json();
                 renderUsers();
             } catch (err) {
-                console.error('Error fetching users:', err);
+                console.error('Kullanıcılar getirilirken hata:', err);
                 alert('Kullanıcılar yüklenirken bir hata oluştu');
             }
         }
 
         function isFaulty(user) {
-            // Check for missing critical fields or null values
+            // Eksik kritik alanları veya null değerleri kontrol et
             return !user.email || !user.full_name || !user.password;
         }
 
@@ -297,7 +297,7 @@ HTML_CONTENT = """
                 const card = document.createElement('div');
                 card.className = `glass-card rounded-xl p-5 relative overflow-hidden group ${faulty ? 'border-amber-500/30 bg-amber-500/5' : ''}`;
                 
-                // Password Status
+                // Şifre Durumu
                 const hasPassword = !!user.password;
                 const passStatusHtml = hasPassword ? 
                     `<span class="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Güvenli</span>` : 
@@ -449,14 +449,14 @@ HTML_CONTENT = """
             }
         }
 
-        // Init
+        // Başlangıç
         fetchUsers();
     </script>
 </body>
 </html>
 """
 
-# --- Endpoints ---
+# --- API Uç Noktaları ---
 
 @app.get("/")
 async def get_ui():
@@ -470,7 +470,7 @@ async def get_users():
 async def update_user(username: str, update: UserUpdate):
     users = load_users()
     if username not in users:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
     
     user = users[username]
     if update.email is not None:
@@ -480,29 +480,29 @@ async def update_user(username: str, update: UserUpdate):
     if update.is_admin is not None:
         user['is_admin'] = update.is_admin
     if update.password is not None and len(update.password) > 0:
-        # Store HASH for the application (Security)
+        # Uygulama için HASH sakla (Güvenlik)
         user['password'] = hash_password(update.password)
-        # Store PLAINTEXT for this Admin Panel only (Convenience)
+        # Sadece bu Yönetici Paneli için DÜZ METİN sakla (Kolaylık)
         user['_plain_password'] = update.password
     
     users[username] = user
     if save_users(users):
-        return {"message": "User updated"}
-    raise HTTPException(status_code=500, detail="Failed to save")
+        return {"message": "Kullanıcı güncellendi"}
+    raise HTTPException(status_code=500, detail="Kaydetme başarısız")
 
 @app.delete("/api/users/{username}")
 async def delete_user(username: str):
     users = load_users()
     if username not in users:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
     
     del users[username]
     if save_users(users):
-        return {"message": "User deleted"}
-    raise HTTPException(status_code=500, detail="Failed to save")
+        return {"message": "Kullanıcı silindi"}
+    raise HTTPException(status_code=500, detail="Kaydetme başarısız")
 
 if __name__ == "__main__":
-    print("Starting User Management System...")
-    # Open browser after a short delay
+    print("Kullanıcı Yönetim Sistemi başlatılıyor...")
+    # Kısa bir gecikmeden sonra tarayıcıyı aç
     webbrowser.open(f"http://{HOST}:{PORT}")
     uvicorn.run(app, host=HOST, port=PORT)
