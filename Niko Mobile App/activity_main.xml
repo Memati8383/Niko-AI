@@ -734,87 +734,153 @@
         </ScrollView>
     </LinearLayout>
 
-    <!-- MODEL SEÇİM PANELİ: Farklı yapay zeka modelleri arasında geçiş yapma ekranı -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+    <!-- MODEL SEÇİM PANELİ: Premium Zeka Merkezi Tasarımı                              -->
+    <!-- Mevcut drawable'lar kullanılarak optimize edilmiş modern tasarım               -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/layoutModels"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#FA05070A"
+        android:background="@drawable/auth_overlay_bg"
         android:orientation="vertical"
-        android:padding="28dp"
         android:visibility="gone"
         android:clickable="true"
         android:focusable="true">
 
+        <!-- HEADER BÖLÜMÜ -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp">
+            android:paddingHorizontal="24dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="24dp">
 
+            <!-- Sol: Başlık ve Durum -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
                 android:orientation="vertical">
 
-                <TextView
+                <!-- Başlık -->
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Zeka Merkezi"
-                    android:textColor="#FFFFFF"
-                    android:textSize="32sp"
-                    android:letterSpacing="-0.02"
-                    android:fontFamily="sans-serif-black" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/txtCurrentModel"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🧠"
+                        android:textSize="26sp"
+                        android:layout_marginEnd="10dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Zeka Merkezi"
+                        android:textColor="#FFFFFF"
+                        android:textSize="28sp"
+                        android:fontFamily="sans-serif-black"
+                        android:letterSpacing="-0.02" />
+                </LinearLayout>
+
+                <!-- Aktif Model Badge -->
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Şu an aktif olan model"
-                    android:textColor="#00E5FF"
-                    android:textSize="13sp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.1"
-                    android:layout_marginTop="4dp"
-                    android:fontFamily="sans-serif-medium" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/history_date_badge_bg"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp">
+                    
+                    <View
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:background="@drawable/mic_button"
+                        android:backgroundTint="#00FBFF"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/txtCurrentModel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AKTİF: LLAMA 3.2"
+                        android:textColor="#00FBFF"
+                        android:textSize="10sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.08"
+                        android:fontFamily="sans-serif-bold" />
+                </LinearLayout>
             </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/btnCloseModels"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+            <!-- Kapat Butonu -->
+            <FrameLayout
+                android:layout_width="52dp"
+                android:layout_height="52dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:background="@drawable/model_item_bg"
-                android:padding="12dp"
-                android:scaleType="centerInside"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="#FFFFFF" />
+                android:background="@drawable/profile_icon_bg">
+                
+                <ImageButton
+                    android:id="@+id/btnCloseModels"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:scaleType="centerInside"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:tint="#FFFFFF" />
+            </FrameLayout>
         </RelativeLayout>
 
+        <!-- MODEL LİSTESİ -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:overScrollMode="never"
-            android:scrollbars="none">
+            android:scrollbars="none"
+            android:paddingHorizontal="24dp"
+            android:clipToPadding="false">
 
             <LinearLayout
                 android:id="@+id/containerModelItems"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:divider="@android:color/transparent"
-                android:showDividers="middle" />
+                android:clipToPadding="false" />
         </ScrollView>
 
-        <TextView
+        <!-- ALT BİLGİ -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Model seçimi asistanın yanıt hızını ve kalitesini etkiler."
-            android:textColor="#44FFFFFF"
-            android:textSize="12sp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="20dp"
             android:gravity="center"
-            android:layout_marginTop="16dp" />
+            android:background="@drawable/history_card_bg">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💡"
+                android:textSize="14sp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Model seçimi yanıt hızını ve kalitesini etkiler"
+                android:textColor="#60FFFFFF"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- ═══════════════════════════════════════════════════════════════════════════════ -->

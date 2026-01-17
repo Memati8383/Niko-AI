@@ -1,27 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MODEL SEÇİM ÖĞESİ TASARIMI: Liste içerisindeki her bir model kartının görseli -->
+<!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+<!-- MODEL KARTI ARKA PLANI: Ultra Premium Glassmorphism Tasarım                    -->
+<!-- Gradient geçişler, neon vurgular ve modern etkileşim efektleri                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════════════ -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- SEÇİLİ DURUM: Model aktif olduğunda turkuaz çerçeve gösterir -->
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- SEÇİLİ DURUM: Aktif model kartı - Neon turkuaz çerçeve ve gradient arka plan -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <item android:state_selected="true">
-        <shape android:shape="rectangle">
-            <solid android:color="#3300E5FF"/>
-            <corners android:radius="16dp"/>
-            <stroke android:width="2dp" android:color="#00E5FF"/>
-        </shape>
+        <layer-list>
+            <!-- Gradient arka plan -->
+            <item>
+                <shape android:shape="rectangle">
+                    <gradient
+                        android:type="linear"
+                        android:angle="135"
+                        android:startColor="#2A6366f1"
+                        android:centerColor="#1F3B3E9A"
+                        android:endColor="#2A00FBFF"/>
+                    <corners android:radius="20dp"/>
+                    <stroke android:width="2dp" android:color="#00FBFF"/>
+                </shape>
+            </item>
+        </layer-list>
     </item>
-    <!-- BASILI DURUM: Tıklandığında hafif beyaz bir parlama -->
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- BASILI DURUM: Tıklandığında gradient parlama efekti                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="#1AFFFFFF"/>
-            <corners android:radius="16dp"/>
+            <gradient
+                android:type="linear"
+                android:angle="135"
+                android:startColor="#2A6366f1"
+                android:endColor="#2000D4FF"/>
+            <corners android:radius="20dp"/>
+            <stroke android:width="1dp" android:color="#5000FBFF"/>
         </shape>
     </item>
-    <!-- VARSAYILAN DURUM: Yarı saydam gri kenarlık -->
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- VARSAYILAN DURUM: Subtle glassmorphism efekti                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#0DFFFFFF"/>
-            <corners android:radius="16dp"/>
-            <stroke android:width="1dp" android:color="#1AFFFFFF"/>
+            <gradient
+                android:type="linear"
+                android:angle="145"
+                android:startColor="#15FFFFFF"
+                android:endColor="#0AFFFFFF"/>
+            <corners android:radius="20dp"/>
+            <stroke android:width="1dp" android:color="#20FFFFFF"/>
         </shape>
     </item>
 </selector>
