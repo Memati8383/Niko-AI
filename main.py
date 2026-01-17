@@ -1,6 +1,6 @@
 """
-Niko AI Chat Application - Main Entry Point
-FastAPI backend for Turkish AI chat application
+Niko AI Sohbet Uygulaması - Ana Giriş Noktası
+Türkçe AI sohbet uygulaması için FastAPI backend
 """
 
 import os
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# Pydantic Models
+# Pydantic Modelleri
 # ============================================================================
 
 class UserCreate(BaseModel):
@@ -151,8 +151,8 @@ class ChatRequest(BaseModel):
 
 
 # ============================================================================
-# Admin Panel Models
-# Requirements: 3.2, 5.2, 5.3
+# Yönetici Paneli Modelleri
+# Gereksinimler: 3.2, 5.2, 5.3
 # ============================================================================
 
 class UserAdminUpdate(BaseModel):
@@ -254,7 +254,7 @@ class UserListResponse(BaseModel):
 
 
 # ============================================================================
-# Authentication Service
+# Kimlik Doğrulama Servisi
 # ============================================================================
 
 class AuthService:
@@ -469,7 +469,7 @@ class AuthService:
 
 
 # ============================================================================
-# History Service
+# Geçmiş Servisi
 # ============================================================================
 
 class HistoryService:
@@ -646,7 +646,7 @@ class HistoryService:
 
 
 # ============================================================================
-# Sync Service
+# Senkronizasyon Servisi
 # ============================================================================
 
 class SyncService:
@@ -732,8 +732,8 @@ class SyncService:
 
 
 # ============================================================================
-# Admin Service
-# Requirements: 2.1, 3.3, 4.2, 4.3, 5.4
+# Yönetici Servisi
+# Gereksinimler: 2.1, 3.3, 4.2, 4.3, 5.4
 # ============================================================================
 
 class AdminService:
@@ -929,7 +929,7 @@ class AdminService:
 
 
 # ============================================================================
-# Chat Service
+# Sohbet Servisi
 # ============================================================================
 
 class ChatService:
@@ -1068,7 +1068,7 @@ class ChatService:
 
 
 # ============================================================================
-# Search Service
+# Arama Servisi
 # ============================================================================
 
 class SearchService:
@@ -1268,7 +1268,7 @@ class SearchService:
 
 
 # ============================================================================
-# Rate Limiter
+# Hız Sınırlayıcı
 # ============================================================================
 
 class RateLimiter:
@@ -1494,7 +1494,7 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
 
 
 # ============================================================================
-# FastAPI Application
+# FastAPI Uygulaması
 # ============================================================================
 
 # FastAPI uygulama örneğini oluştur
@@ -1506,8 +1506,8 @@ app = FastAPI(
 
 
 # ============================================================================
-# Global Exception Handlers
-# Requirements: 10.5
+# Global İstisna İşleyicileri
+# Gereksinimler: 10.5
 # ============================================================================
 
 @app.exception_handler(HTTPException)
@@ -1539,14 +1539,14 @@ async def general_exception_handler(request: Request, exc: Exception):
 # CORS ara yazılım yapılandırması
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Prodüksiyonda, izin verilen kaynakları belirtin
+    allow_origins=["*"],  # Üretimde, izin verilen kaynakları belirtin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# Security headers middleware
+# Güvenlik başlıkları ara yazılımı
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     """
@@ -1556,20 +1556,20 @@ async def security_headers_middleware(request: Request, call_next):
     """
     response = await call_next(request)
     
-    # Add security headers (Requirements: 7.1)
+    # Güvenlik başlıklarını ekle (Gereksinimler: 7.1)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     
-    # Add HSTS header in production mode (Requirements: 7.2)
+    # Üretim modunda HSTS başlığı ekle (Gereksinimler: 7.2)
     if os.getenv("PRODUCTION", "false").lower() == "true":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     
     return response
 
 
-# Rate limiter middleware
+# Hız sınırlayıcı ara yazılımı
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     """
@@ -1590,7 +1590,7 @@ async def rate_limit_middleware(request: Request, call_next):
     if path.startswith("/static") or path == "/health" or path == "/" or path.endswith(".html"):
         return await call_next(request)
     
-    # Determine limit type
+    # Sınır türünü belirle
     if path == "/register":
         limit_type = "register"
     elif path == "/login":
@@ -1701,7 +1701,7 @@ async def favicon():
 
 
 # ============================================================================
-# Authentication Endpoints
+# Kimlik Doğrulama Uç Noktaları
 # ============================================================================
 
 @app.post("/register")
@@ -1768,7 +1768,7 @@ async def update_profile(update: UserUpdate, current_user: str = Depends(get_cur
 
 
 # ============================================================================
-# Synchronization Endpoints
+# Senkronizasyon Uç Noktaları
 # ============================================================================
 
 @app.post("/sync_data")
@@ -1881,7 +1881,7 @@ async def sync_data(request: Request):
 
 
 # ============================================================================
-# History Endpoints
+# Geçmiş Uç Noktaları
 # ============================================================================
 
 @app.get("/history")
@@ -1949,7 +1949,7 @@ async def export_session(session_id: str, current_user: str = Depends(get_curren
 
 
 # ============================================================================
-# Chat Endpoints
+# Sohbet Uç Noktaları
 # ============================================================================
 
 @app.post("/chat")
@@ -2108,8 +2108,8 @@ async def get_search_status(current_user: str = Depends(get_current_user)):
 
 
 # ============================================================================
-# Admin Panel Endpoints
-# Requirements: 1.1, 1.2, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 4.2, 4.3, 4.4, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2
+# Yönetici Paneli Uç Noktaları
+# Gereksinimler: 1.1, 1.2, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 4.2, 4.3, 4.4, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2
 # ============================================================================
 
 @app.get("/admin")
