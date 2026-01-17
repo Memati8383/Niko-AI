@@ -39,7 +39,6 @@ kiro/
 ├── hizli_commit.bat         # Developer Git iş akış aracı
 ├── users.json              # Veritabanı (Kullanıcı bilgileri ve hashlenmiş şifreler)
 ├── history/                # Kullanıcı sohbet geçmişleri (JSON)
-├── device_data/            # Senkronize edilen mobil cihaz verileri
 ├── static/                 # Web Frontend (HTML, CSS, JS)
 │   ├── admin.html          # Web tabanlı admin arayüzü
 │   ├── login.html          # Giriş sayfası
@@ -52,7 +51,6 @@ kiro/
 Dış ağlardan ve mobil cihazdan erişim için Cloudflare tüneli kullanılmaktadır.
 
 - 🌐 **Güncel API Adresi:** [https://monster-bristol-robert-anyone.trycloudflare.com](https://monster-bristol-robert-anyone.trycloudflare.com)
-- 📝 **API Dokümantasyonu:** `/docs` (Swagger) veya `/redoc`
 
 > _Not: Tünel adresi `start_tunnel.py` çalıştırıldığında otomatik olarak tüm sistemde (GitHub dahil) güncellenir._
 
@@ -95,4 +93,4 @@ python manage_users.py
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
 
-> 🌐 **Güncel Tünel Adresi:** [https://bizrate-custody-reuters-loving.trycloudflare.com](https://bizrate-custody-reuters-loving.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://hash-authorization-aim-tale.trycloudflare.com](https://hash-authorization-aim-tale.trycloudflare.com)
