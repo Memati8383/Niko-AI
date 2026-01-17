@@ -18,7 +18,6 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 REPO_OWNER = "memati8383"
 REPO_NAME = "niko-with-kiro"
 FILE_PATH = "README.md"
-JAVA_FILE_PATH = "Niko Mobile App/MainActivity.java"
 # ---------------
 
 def update_github_readme(new_url):
@@ -64,64 +63,6 @@ def update_github_readme(new_url):
     else:
         print(f"[!] GitHub güncelleme hatası: {r_put.text}")
 
-def update_github_java(new_url):
-    url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{JAVA_FILE_PATH}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-
-    # 1. Dosyanın mevcut halini al
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        content_data = r.json()
-        sha = content_data['sha']
-        current_content = base64.b64decode(content_data['content']).decode('utf-8')
-    else:
-        print(f"[!] Java dosyası GitHub'da bulunamadı: {r.status_code}")
-        return
-
-    # 2. İçeriği güncelle
-    pattern = r'(private static final String API_BASE_URL = ").*?(")'
-    replacement = f'\\1{new_url}\\2'
-    
-    if re.search(pattern, current_content):
-        updated_content = re.sub(pattern, replacement, current_content)
-    else:
-        print("[!] GitHub'daki Java dosyasında API_BASE_URL bulunamadı.")
-        return
-
-    if updated_content == current_content:
-        return
-
-    # 3. Güncellenmiş içeriği geri gönder
-    message = "API URL otomatik güncellendi (Android)"
-    encoded_content = base64.b64encode(updated_content.encode('utf-8')).decode('utf-8')
-    
-    data = {"message": message, "content": encoded_content, "sha": sha}
-    r_put = requests.put(url, json=data, headers=headers)
-    
-    if r_put.status_code in [200, 201]:
-        print(f"[+] GitHub Java dosyası güncellendi: {new_url}")
-    else:
-        print(f"[!] GitHub Java güncelleme hatası: {r_put.text}")
-
-def update_local_java(new_url):
-    local_path = os.path.join(os.getcwd(), "Niko Mobile App", "MainActivity.java")
-    if not os.path.exists(local_path):
-        print(f"[!] Yerel Java dosyası bulunamadı: {local_path}")
-        return
-
-    with open(local_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    pattern = r'(private static final String API_BASE_URL = ").*?(")'
-    replacement = f'\\1{new_url}\\2'
-    
-    if re.search(pattern, content):
-        updated_content = re.sub(pattern, replacement, content)
-        with open(local_path, "w", encoding="utf-8") as f:
-            f.write(updated_content)
-        print(f"[+] Yerel Java dosyası güncellendi: {new_url}")
-    else:
-        print("[!] Yerel Java dosyasında API_BASE_URL bulunamadı.")
 
 def main():
     cmd = ["cloudflared", "tunnel", "--url", "http://127.0.0.1:8001"]
@@ -143,8 +84,6 @@ def main():
                     found_url = match.group(0)
                     print(f"\n[!] URL Yakalandı: {found_url}")
                     update_github_readme(found_url)
-                    update_github_java(found_url)
-                    update_local_java(found_url)
                     url_found = True
                     
     except KeyboardInterrupt:

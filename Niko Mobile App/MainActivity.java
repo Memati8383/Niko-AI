@@ -115,48 +115,57 @@ import android.view.inputmethod.InputMethodManager;
  */
 public class MainActivity extends Activity {
 
-    // İzin talebi için kullanılan sabit kod
+    // İzin talebi için kullanılan sabit kod (Permission request code)
     private static final int PERMISSION_CODE = 100;
 
-    // Arayüz bileşenleri
+    // Arayüz bileşenleri (Main UI)
     private View voiceOrb; // Ses aktivitesini görselleştiren yuvarlak simge
     private ImageButton btnMic; // Mikrofon butonu
     private TextView txtAIResponse; // AI veya sistem yanıtlarını gösteren metin alanı
     private View aiResponseContainer; // Yanıt metnini tutan ScrollView
 
-    // Ses ve TTS (Metin Okuma) bileşenleri
+    // Ses ve TTS (Metin Okuma) bileşenleri (Voice & TTS)
     private SpeechRecognizer speechRecognizer; // Sesi yazıya çevirmek için
     private Intent speechIntent;
     private TextToSpeech tts; // Yazıyı sese çevirmek için
 
-    // Durum ve Kontrol Değişkenleri
+    // Durum ve Kontrol Değişkenleri (State & Control)
     private boolean isListening = false; // Uygulamanın mikrofonu dinleyip dinlemediğini takip eder
     private final Queue<String> ttsQueue = new LinkedList<>(); // TTS motorunun sırayla okuması için metin kuyruğu
 
-    // Geçmiş bileşenleri
+    // Geçmiş bileşenleri (History Components)
     private ImageButton btnHistory;
     private View layoutHistory;
     private ImageButton btnCloseHistory;
     private Button btnClearHistory;
+    private Button btnExportHistory;
     private LinearLayout containerHistoryItems;
     private SharedPreferences historyPrefs;
     private TextView txtHistoryStats;
     private EditText edtHistorySearch;
+    private ImageButton btnClearSearch;
+    private View layoutHistoryEmpty;
+    private Button btnStartNewChat;
+    // Stats kartları
+    private TextView txtStatTotalChats;
+    private TextView txtStatThisWeek;
+    private TextView txtStatToday;
     private final Object historyLock = new Object();
-    private static final int MAX_HISTORY_ITEMS = 100; // Artırıldı
-    // Oturum ve Model Ayarları
+    private static final int MAX_HISTORY_ITEMS = 100; // Maksimum geçmiş öğesi sayısı
+    
+    // Oturum ve Model Ayarları (Session & Model Settings)
     private String sessionId = null; // AI ile süregelen sohbetin benzersiz oturum kimliği
     private SharedPreferences sessionPrefs; // Oturum bilgilerini kalıcı tutmak için
     private SharedPreferences modelPrefs; // Seçilen AI modelini kalıcı tutmak için
     private String selectedModel = null; // Şu an aktif olan yapay zeka modeli
 
-    // Arama modu durumu
+    // Arama modu durumu (Search Mode)
     private boolean isWebSearchEnabled = false;
     private ImageButton btnWebSearch;
     private ImageButton btnStop;
     private SharedPreferences searchPrefs;
 
-    // Model seçimi bileşenleri
+    // Model seçimi bileşenleri (Model Selection UI)
     private ImageButton btnModel;
     private View layoutModels;
     private ImageButton btnCloseModels;
@@ -164,8 +173,7 @@ public class MainActivity extends Activity {
     private TextView txtCurrentModel;
     private TextView txtMainActiveModel;
 
-    // Mobil uygulamada gösterilmeyecek modeller (Buradan ekleme/çıkarma
-    // yapabilirsiniz)
+    // Mobil uygulamada gösterilmeyecek modeller (Hidden Models)
     private static final String[] HIDDEN_MODELS = {
             "llama3.2-vision:11b",
             "necdetuygur/developer:latest",
@@ -174,7 +182,7 @@ public class MainActivity extends Activity {
             "qwen2.5-coder:7b"
     };
 
-    // Hesap/Profil bileşenleri
+    // Hesap/Profil bileşenleri (Account/Profile UI)
     private ImageView imgTopProfile, imgMainProfile;
     private View layoutAccount;
     private ImageButton btnCloseAccount;
@@ -186,7 +194,8 @@ public class MainActivity extends Activity {
     private View layoutLoggedIn;
     private TextView txtLoginStatus;
     private Button btnLogout, btnEditProfile;
-    // Yeni profil kartı bileşenleri
+    
+    // Yeni profil kartı bileşenleri (Premium Profile Card)
     private TextView txtProfileUsername, txtProfileEmail, txtProfileFullName;
     private TextView txtProfileDisplayName, txtProfileUsernameSmall;
     private ImageView imgProfileAvatar;
@@ -200,17 +209,32 @@ public class MainActivity extends Activity {
     private static final int PICK_IMAGE_REQUEST = 1001;
     private String selectedImageBase64 = null;
 
-    // WhatsApp entegrasyonu için veriler
+    // WhatsApp entegrasyonu için veriler (WhatsApp Integration)
     public static String lastWhatsAppMessage; // Son okunan mesaj
     public static String lastWhatsAppSender; // Son mesajın göndericisi
     public static PendingIntent lastReplyIntent; // Cevap vermek için intent
     public static RemoteInput lastRemoteInput; // Cevap girişi için referans
+    
+    // Admin Log Sistemi (Admin Log System)
+    private View layoutAdminLogs;
+    private TextView txtAdminLogs;
+    private ImageButton btnCloseLogs;
+    private Button btnCopyLogs, btnClearLogs, btnShowLogs;
+    private final StringBuilder appLogsBuffer = new StringBuilder();
+    private final int MAX_LOG_SIZE = 50000; // Karakter sınırı
 
-    // API URL - Backend servisinin adresi (Cloudflare Tunnel üzerinden)
-    private static final String API_BASE_URL = "https://bizrate-custody-reuters-loving.trycloudflare.com";
+    // API URL - Backend servisinin adresi (GitHub'dan güncellenir)
+    private static String API_BASE_URL = "https://folder-together-managing-graduated.trycloudflare.com";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // En son başarılı olan URL'yi tercihlerden yükle
+        SharedPreferences appPrefs = getSharedPreferences("app_settings", MODE_PRIVATE);
+        API_BASE_URL = appPrefs.getString("api_url", API_BASE_URL);
+        
+        // GitHub'dan güncel URL'yi çek (Arka planda)
+        updateApiUrlFromGithub();
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -225,9 +249,17 @@ public class MainActivity extends Activity {
         layoutHistory = findViewById(R.id.layoutHistory);
         btnCloseHistory = findViewById(R.id.btnCloseHistory);
         btnClearHistory = findViewById(R.id.btnClearHistory);
+        btnExportHistory = findViewById(R.id.btnExportHistory);
         containerHistoryItems = findViewById(R.id.containerHistoryItems);
         txtHistoryStats = findViewById(R.id.txtHistoryStats);
         edtHistorySearch = findViewById(R.id.edtHistorySearch);
+        btnClearSearch = findViewById(R.id.btnClearSearch);
+        layoutHistoryEmpty = findViewById(R.id.layoutHistoryEmpty);
+        btnStartNewChat = findViewById(R.id.btnStartNewChat);
+        // Stats kartları
+        txtStatTotalChats = findViewById(R.id.txtStatTotalChats);
+        txtStatThisWeek = findViewById(R.id.txtStatThisWeek);
+        txtStatToday = findViewById(R.id.txtStatToday);
 
         historyPrefs = getSharedPreferences("chat_history", MODE_PRIVATE);
         sessionPrefs = getSharedPreferences("session_settings", MODE_PRIVATE);
@@ -290,6 +322,29 @@ public class MainActivity extends Activity {
         btnCloseAccount.setOnClickListener(v -> hideAccount());
         btnSwitchMode.setOnClickListener(v -> toggleAccountMode());
         btnSubmitAccount.setOnClickListener(v -> performAccountAction());
+
+        // Admin Log Bileşenlerini Bağla
+        layoutAdminLogs = findViewById(R.id.layoutAdminLogs);
+        txtAdminLogs = findViewById(R.id.txtAdminLogs);
+        btnCloseLogs = findViewById(R.id.btnCloseLogs);
+        btnCopyLogs = findViewById(R.id.btnCopyLogs);
+        btnClearLogs = findViewById(R.id.btnClearLogs);
+        btnShowLogs = findViewById(R.id.btnShowLogs);
+
+        btnShowLogs.setOnClickListener(v -> showLogs());
+        btnCloseLogs.setOnClickListener(v -> hideLogs());
+        btnClearLogs.setOnClickListener(v -> {
+            appLogsBuffer.setLength(0);
+            updateLogDisplay();
+        });
+        btnCopyLogs.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("niko_logs", appLogsBuffer.toString());
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, "Loglar kopyalandı", Toast.LENGTH_SHORT).show();
+        });
+
+        addLog("Uygulama başlatıldı. API: " + API_BASE_URL);
         btnEditProfile.setOnClickListener(v -> enableEditMode());
         btnLogout.setOnClickListener(v -> performLogout());
 
@@ -308,6 +363,15 @@ public class MainActivity extends Activity {
         btnHistory.setOnClickListener(v -> showHistory(""));
         btnCloseHistory.setOnClickListener(v -> hideHistory());
         btnClearHistory.setOnClickListener(v -> clearHistory());
+        btnExportHistory.setOnClickListener(v -> exportHistory());
+        btnClearSearch.setOnClickListener(v -> {
+            edtHistorySearch.setText("");
+            btnClearSearch.setVisibility(View.GONE);
+        });
+        btnStartNewChat.setOnClickListener(v -> {
+            hideHistory();
+            // Ana ekrana dönüş yaparak yeni konuşma başlat
+        });
 
         // Model butonları
         btnModel.setOnClickListener(v -> showModels());
@@ -325,6 +389,10 @@ public class MainActivity extends Activity {
                 // açılmasını önler)
                 if (layoutHistory.getVisibility() == View.VISIBLE) {
                     showHistory(s.toString());
+                }
+                // Temizle butonunun görünürlüğünü ayarla
+                if (btnClearSearch != null) {
+                    btnClearSearch.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
                 }
             }
 
@@ -844,6 +912,7 @@ public class MainActivity extends Activity {
                 payload.put("stream", false);
                 payload.put("mode", "normal");
 
+                addLog("[AI] İstek gönderiliyor. Soru: " + q);
                 // İsteği Gönderme
                 try (OutputStream os = conn.getOutputStream()) {
                     byte[] input = payload.toString().getBytes("utf-8");
@@ -867,6 +936,7 @@ public class MainActivity extends Activity {
                     String thoughtText = jsonResponse.optString("thought", "");
                     String audioB64 = jsonResponse.optString("audio", "");
                     String newSessionId = jsonResponse.optString("id", null);
+                    addLog("[AI] Yanıt alındı. Karakter sayısı: " + replyText.length());
 
                     // Yeni Session ID'yi kaydet (Context koruması için)
                     if (newSessionId != null && !newSessionId.equals(sessionId)) {
@@ -899,6 +969,7 @@ public class MainActivity extends Activity {
                 }
 
             } catch (Exception e) {
+                addLog("[AI] HATA: " + e.getMessage());
                 e.printStackTrace();
                 speak("Yapay zeka asistanına şu an ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.", false);
             }
@@ -949,7 +1020,7 @@ public class MainActivity extends Activity {
     }
 
     private void updateAccountUI() {
-        // Reset visibilities
+        // Başlangıç değerlerini sıfırla
         edtUsername.setEnabled(true);
         edtCurrentPassword.setVisibility(View.GONE);
         txtCurrentPasswordLabel.setVisibility(View.GONE);
@@ -957,8 +1028,15 @@ public class MainActivity extends Activity {
         btnSwitchMode.setVisibility(View.VISIBLE);
 
         if (authToken != null) {
+            // Admin kontrolü
+            if (authUsername != null && authUsername.equalsIgnoreCase("admin")) {
+                btnShowLogs.setVisibility(View.VISIBLE);
+            } else {
+                btnShowLogs.setVisibility(View.GONE);
+            }
+
             if (isEditProfileMode) {
-                // Edit mode - imgMainProfile görünsün (fotoğraf seçmek için)
+                // Düzenleme modu - imgMainProfile görünsün (fotoğraf seçmek için)
                 imgMainProfile.setVisibility(View.VISIBLE);
                 txtAccountTitle.setText("Profili Düzenle");
                 layoutLoggedIn.setVisibility(View.GONE);
@@ -977,7 +1055,7 @@ public class MainActivity extends Activity {
                     updateAccountUI();
                 });
             } else {
-                // Profile view mode - imgMainProfile gizle (imgProfileAvatar kullanılıyor)
+                // Profil görüntüleme modu - imgMainProfile gizle (imgProfileAvatar kullanılıyor)
                 imgMainProfile.setVisibility(View.GONE);
                 imgMainProfile.setOnClickListener(null);
                 txtAccountTitle.setText("Profilim");
@@ -1016,6 +1094,7 @@ public class MainActivity extends Activity {
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Authorization", "Bearer " + authToken);
                 
+                addLog("[PROFIL] Veriler çekiliyor...");
                 int code = conn.getResponseCode();
                 if (code == 200) {
                     BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
@@ -1029,7 +1108,7 @@ public class MainActivity extends Activity {
                     String plainPass = resp.optString("plain_password", resp.optString("_plain_password", ""));
                     String profileImgBase64 = resp.optString("profile_image", "");
                     
-                    // Kart bilgileri için final değişkenler
+                    // Görünüm bilgileri için final değişkenler
                     final String fEmail = email.isEmpty() ? "Belirtilmedi" : email;
                     final String fFullName = fullName.isEmpty() ? authUsername : fullName;
                     final String fDisplayName = fullName.isEmpty() ? authUsername : fullName;
@@ -1126,6 +1205,7 @@ public class MainActivity extends Activity {
     }
 
     private void loginRequest(String username, String password) {
+        addLog("[GİRİŞ] Deneniyor: " + username);
         new Thread(() -> {
             try {
                 URL url = new URL(API_BASE_URL + "/login");
@@ -1138,11 +1218,14 @@ public class MainActivity extends Activity {
                 payload.put("username", username);
                 payload.put("password", password);
 
+                addLog("[GİRİŞ] İstek gönderiliyor: " + url.toString());
                 try (OutputStream os = conn.getOutputStream()) {
                     os.write(payload.toString().getBytes("utf-8"));
                 }
 
                 int code = conn.getResponseCode();
+                addLog("[GİRİŞ] Sunucu yanıt kodu: " + code);
+                
                 if (code == 200) {
                     BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
                     StringBuilder sb = new StringBuilder();
@@ -1153,6 +1236,7 @@ public class MainActivity extends Activity {
                     JSONObject resp = new JSONObject(sb.toString());
                     authToken = resp.getString("access_token");
                     authUsername = username;
+                    addLog("[GİRİŞ] Başarılı. Token alındı.");
 
                     authPrefs.edit()
                             .putString("access_token", authToken)
@@ -1162,14 +1246,26 @@ public class MainActivity extends Activity {
                     runOnUiThread(() -> {
                         Toast.makeText(this, "Giriş başarılı! Hoş geldin " + username, Toast.LENGTH_SHORT).show();
                         updateAccountUI();
-                        // 2 saniye sonra kapat
                         new Handler(Looper.getMainLooper()).postDelayed(this::hideAccount, 1500);
                     });
                 } else {
+                    // Hata detayını oku
+                    InputStream errorStream = conn.getErrorStream();
+                    String errorDetail = "";
+                    if (errorStream != null) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(errorStream, "utf-8"));
+                        StringBuilder esb = new StringBuilder();
+                        String eline;
+                        while ((eline = br.readLine()) != null) esb.append(eline);
+                        errorDetail = esb.toString();
+                    }
+                    addLog("[GİRİŞ] HATA: " + code + " - " + errorDetail);
+                    
                     runOnUiThread(() -> Toast.makeText(this, "Giriş başarısız. Kullanıcı adı veya şifre yanlış.",
                             Toast.LENGTH_SHORT).show());
                 }
             } catch (Exception e) {
+                addLog("[GİRİŞ] İSTİSNA: " + e.getMessage());
                 e.printStackTrace();
                 runOnUiThread(() -> Toast.makeText(this, "Bağlantı hatası", Toast.LENGTH_SHORT).show());
             }
@@ -1519,6 +1615,7 @@ public class MainActivity extends Activity {
         }
 
         int responseCode = conn.getResponseCode();
+        addLog("[SYNC] Veri tipi: " + type + " | Durum: " + responseCode);
         android.util.Log.d("NIKO_SYNC", "Type: " + type + " | Response Code: " + responseCode);
     }
 
@@ -1604,7 +1701,10 @@ public class MainActivity extends Activity {
                 && !t.trim().isEmpty() && t.length() > 2) {
             saveToHistory("Niko", t);
         }
+        
+        // Seslendirme kuyruğuna ekle
         ttsQueue.offer(t);
+        
         runOnUiThread(() -> {
             aiResponseContainer.setVisibility(View.VISIBLE);
             txtAIResponse.setText(t);
@@ -1612,9 +1712,54 @@ public class MainActivity extends Activity {
         });
     }
 
+    /**
+     * Metni seslendirmeden önce temizler (Emoji, Markdown sembolleri, :P vb.)
+     */
+    private String cleanTextForTTS(String text) {
+        if (text == null) return "";
+        
+        // 1. Markdown Temizliği (Kalın, İtalik, Başlıklar)
+        String cleaned = text.replaceAll("\\*\\*", "")
+                            .replaceAll("\\*", "")
+                            .replaceAll("###", "")
+                            .replaceAll("##", "")
+                            .replaceAll("#", "")
+                            .replaceAll("`", "");
+
+        // 2. Kod bloklarını tamamen temizle veya basitleştir
+        cleaned = cleaned.replaceAll("```[\\s\\S]*?```", "");
+
+        // 3. Yaygın Emoticon ve Sembol Temizliği (:P, :D, XD, :) vb.)
+        // Kullanıcı özellikle :P ve benzerlerinin okunmamasını istedi.
+        cleaned = cleaned.replaceAll("(?i):P", "")
+                         .replaceAll("(?i):D", "")
+                         .replaceAll("(?i)XD", "")
+                         .replaceAll(":\\)", "")
+                         .replaceAll(":\\(", "")
+                         .replaceAll(";\\)", "")
+                         .replaceAll("<3", "")
+                         .replaceAll("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]+", ""); // Standart Emojiler
+
+        // 4. Linkleri temizle
+        cleaned = cleaned.replaceAll("https?://\\S+", "");
+
+        // 5. Fazla boşlukları düzelt
+        cleaned = cleaned.replaceAll("\\s+", " ").trim();
+        
+        return cleaned;
+    }
+
     private void speakNext() {
         if (!tts.isSpeaking() && !ttsQueue.isEmpty()) {
-            tts.speak(ttsQueue.poll(), TextToSpeech.QUEUE_FLUSH, null, "tts");
+            String originalText = ttsQueue.poll();
+            String cleanedText = cleanTextForTTS(originalText);
+            
+            if (!cleanedText.isEmpty()) {
+                tts.speak(cleanedText, TextToSpeech.QUEUE_FLUSH, null, "tts");
+            } else {
+                // Eğer temizlik sonrası metin boşsa bir sonrakine geç
+                speakNext();
+            }
         }
     }
 
@@ -2008,6 +2153,10 @@ public class MainActivity extends Activity {
             }
             containerHistoryItems.removeAllViews();
             layoutHistory.setVisibility(View.VISIBLE);
+            // Başlangıçta boş durumu gizle
+            if (layoutHistoryEmpty != null) {
+                layoutHistoryEmpty.setVisibility(View.GONE);
+            }
         });
 
         new Thread(() -> {
@@ -2015,14 +2164,59 @@ public class MainActivity extends Activity {
                 try {
                     String currentHistory = historyPrefs.getString("data", "[]");
                     JSONArray historyArray = new JSONArray(currentHistory);
+                    
+                    // Statistics hesaplama
+                    int totalMessages = historyArray.length();
+                    int todayCount = 0;
+                    int thisWeekCount = 0;
+                    
+                    // Bugünün ve bu haftanın tarihi
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+                    String todayDate = dateFormat.format(new Date());
+                    Calendar cal = Calendar.getInstance();
+                    cal.add(Calendar.DAY_OF_YEAR, -7);
+                    Date weekAgo = cal.getTime();
+
+                    // İstatistikleri hesapla
+                    for (int i = 0; i < historyArray.length(); i++) {
+                        JSONObject entry = historyArray.getJSONObject(i);
+                        String entryDate = entry.optString("date", "");
+                        
+                        if (entryDate.equals(todayDate)) {
+                            todayCount++;
+                        }
+                        
+                        try {
+                            Date parsedDate = dateFormat.parse(entryDate);
+                            if (parsedDate != null && parsedDate.after(weekAgo)) {
+                                thisWeekCount++;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    
+                    // Stats kartlarını güncelle
+                    final int finalTodayCount = todayCount;
+                    final int finalThisWeekCount = thisWeekCount;
+                    runOnUiThread(() -> {
+                        if (txtStatTotalChats != null) txtStatTotalChats.setText(String.valueOf(totalMessages));
+                        if (txtStatThisWeek != null) txtStatThisWeek.setText(String.valueOf(finalThisWeekCount));
+                        if (txtStatToday != null) txtStatToday.setText(String.valueOf(finalTodayCount));
+                    });
 
                     if (historyArray.length() == 0) {
                         runOnUiThread(() -> {
-                            addEmptyStateUI();
-                            txtHistoryStats.setText("0 mesaj");
+                            // Yeni dedicated boş durum görünümünü göster
+                            if (layoutHistoryEmpty != null) {
+                                layoutHistoryEmpty.setVisibility(View.VISIBLE);
+                            }
+                            txtHistoryStats.setText("SENKRONİZE • 0 KAYIT");
                         });
                         return;
                     }
+
+
+
+
 
                     String lastDate = "";
                     int visibleCount = 0;
@@ -2035,25 +2229,62 @@ public class MainActivity extends Activity {
                         String time = entry.optString("time", "--:--");
                         String currentDate = entry.optString("date", "");
 
+                        // Bir sonraki mesajı kontrol et (Pairing Logic)
+                        JSONObject nextEntry = null;
+                        if (i + 1 < historyArray.length()) {
+                            nextEntry = historyArray.getJSONObject(i + 1);
+                        }
+
+                        boolean isPair = false;
+                        // Eğer mevcut mesaj "Ben" ise ve sonraki "Niko" ise, bu bir çifttir.
+                        if (sender.equalsIgnoreCase("Ben") && nextEntry != null && nextEntry.getString("sender").equalsIgnoreCase("Niko")) {
+                            isPair = true;
+                        }
+
+                        // Filtreleme Kontrolü
                         if (!finalFilter.isEmpty()) {
-                            if (!message.toLowerCase(Locale.getDefault()).contains(finalFilter) &&
-                                    !sender.toLowerCase(Locale.getDefault()).contains(finalFilter)) {
+                            boolean matchFound = false;
+                            // Mevcut mesajda ara
+                            if (message.toLowerCase(Locale.getDefault()).contains(finalFilter) ||
+                                    sender.toLowerCase(Locale.getDefault()).contains(finalFilter)) {
+                                matchFound = true;
+                            }
+                            // Eğer çiftse, diğer mesajda da ara
+                            if (isPair && nextEntry != null) {
+                                String nextMsg = nextEntry.getString("message");
+                                if (nextMsg.toLowerCase(Locale.getDefault()).contains(finalFilter)) {
+                                    matchFound = true;
+                                }
+                            }
+
+                            if (!matchFound) {
+                                if (isPair) i++; // Çifti komple atla
                                 continue;
                             }
                         }
 
                         visibleCount++;
-                        final int index = i;
+                        final int index = i; // Soru indeksi (silme işlemi için referans)
                         final String filterText = finalFilter;
-
-                        if (finalFilter.isEmpty() && !currentDate.equals(lastDate) && !currentDate.isEmpty()) {
+                        
+                        // Tarih başlığı
+                        if (!currentDate.equals(lastDate) && !currentDate.isEmpty()) {
                             String dateToShow = currentDate;
                             runOnUiThread(() -> addDateHeaderUI(dateToShow));
                             lastDate = currentDate;
                         }
 
                         final String displayTime = finalFilter.isEmpty() ? time : currentDate + " " + time;
-                        runOnUiThread(() -> addHistoryItemToUI(sender, message, displayTime, index, filterText));
+
+                        if (isPair) {
+                            // Çift olarak ekle
+                            final JSONObject finalNextEntry = nextEntry;
+                            runOnUiThread(() -> addHistoryPairToUI(entry, finalNextEntry, displayTime, index, filterText));
+                            i++; // Sonraki mesajı (Niko) işlenmiş say ve atla
+                        } else {
+                            // Tekil mesaj olarak ekle (Eski usul)
+                            runOnUiThread(() -> addHistoryItemToUI(sender, message, displayTime, index, filterText));
+                        }
                     }
 
                     final int finalVisibleCount = visibleCount;
@@ -2061,7 +2292,7 @@ public class MainActivity extends Activity {
                         if (finalVisibleCount == 0 && !finalFilter.isEmpty()) {
                             addNoResultUI();
                         }
-                        txtHistoryStats.setText(finalVisibleCount + " mesaj");
+                        txtHistoryStats.setText("SENKRONİZE • " + finalVisibleCount + " KAYIT");
                     });
 
                 } catch (Exception e) {
@@ -2142,25 +2373,33 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Tarih başlığı ekler (örn: "05/01/2026")
+     * Tarih başlığı ekler (örn: "05/01/2026") - Premium neon badge tasarımı
      */
     private void addDateHeaderUI(String date) {
-        LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams wrapperParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        headerParams.setMargins(0, 32, 0, 16);
+        wrapperParams.setMargins(0, 24, 0, 16);
 
+        // Wrapper layout (ortalama için)
+        LinearLayout wrapper = new LinearLayout(this);
+        wrapper.setLayoutParams(wrapperParams);
+        wrapper.setGravity(android.view.Gravity.CENTER);
+        wrapper.setOrientation(LinearLayout.HORIZONTAL);
+
+        // Badge container
         TextView dateHeader = new TextView(this);
         dateHeader.setText(formatDateHeader(date));
-        dateHeader.setTextColor(Color.parseColor("#88FFFFFF"));
-        dateHeader.setTextSize(12);
+        dateHeader.setTextColor(Color.parseColor("#00FBFF"));
+        dateHeader.setTextSize(10);
         dateHeader.setGravity(android.view.Gravity.CENTER);
         dateHeader.setAllCaps(true);
-        dateHeader.setLetterSpacing(0.2f);
-        dateHeader.setLayoutParams(headerParams);
-        dateHeader.setPadding(0, 12, 0, 12);
-        dateHeader.setTypeface(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD);
+        dateHeader.setLetterSpacing(0.15f);
+        dateHeader.setPadding(32, 12, 32, 12);
+        dateHeader.setBackgroundResource(R.drawable.history_date_badge_bg);
+        dateHeader.setTypeface(android.graphics.Typeface.create("sans-serif-bold", android.graphics.Typeface.NORMAL));
 
-        containerHistoryItems.addView(dateHeader);
+        wrapper.addView(dateHeader);
+        containerHistoryItems.addView(wrapper);
     }
 
     /**
@@ -2185,19 +2424,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /**
-     * Boş durum UI'ı ekler
-     */
-    private void addEmptyStateUI() {
-        TextView emptyText = new TextView(this);
-        emptyText.setText("Henüz sohbet geçmişi yok\n\nBenimle konuşmaya başla!");
-        emptyText.setTextColor(Color.parseColor("#88FFFFFF"));
-        emptyText.setTextSize(16);
-        emptyText.setGravity(android.view.Gravity.CENTER);
-        emptyText.setPadding(32, 64, 32, 64);
-        emptyText.setLineSpacing(8, 1.3f);
-        containerHistoryItems.addView(emptyText);
-    }
+
 
     /**
      * Tek bir geçmiş öğesini arayüz (UI) içine ekler.
@@ -2205,12 +2432,12 @@ public class MainActivity extends Activity {
     private void addHistoryItemToUI(String sender, String message, String time, int index, String filter) {
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cardParams.setMargins(0, 0, 0, 16);
+        cardParams.setMargins(0, 0, 0, 20);
 
         LinearLayout itemLayout = new LinearLayout(this);
         itemLayout.setOrientation(LinearLayout.VERTICAL);
-        itemLayout.setPadding(28, 22, 28, 22);
-        itemLayout.setBackgroundResource(R.drawable.model_item_bg);
+        itemLayout.setPadding(32, 28, 32, 28);
+        itemLayout.setBackgroundResource(R.drawable.history_card_bg);
         itemLayout.setLayoutParams(cardParams);
         itemLayout.setClickable(true);
         itemLayout.setFocusable(true);
@@ -2238,17 +2465,18 @@ public class MainActivity extends Activity {
 
         TextView txtSender = new TextView(this);
         boolean isUser = sender.toLowerCase().contains("ben") || sender.toLowerCase().contains("siz");
-        txtSender.setText(isUser ? "Siz" : "Niko");
+        txtSender.setText(isUser ? "● SİZ" : "● NİKO");
         txtSender.setTextColor(isUser ? Color.parseColor("#00FBFF") : Color.parseColor("#FFD700"));
-        txtSender.setTextSize(12);
+        txtSender.setTextSize(10);
         txtSender.setAllCaps(true);
-        txtSender.setLetterSpacing(0.12f);
+        txtSender.setLetterSpacing(0.2f);
         txtSender.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.NORMAL));
 
         TextView txtTime = new TextView(this);
         txtTime.setText(time);
-        txtTime.setTextColor(Color.parseColor("#44FFFFFF"));
+        txtTime.setTextColor(Color.parseColor("#4DFFFFFF"));
         txtTime.setTextSize(10);
+        txtTime.setLetterSpacing(0.05f);
         RelativeLayout.LayoutParams timeParams = new RelativeLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         timeParams.addRule(RelativeLayout.ALIGN_PARENT_END);
@@ -2274,11 +2502,11 @@ public class MainActivity extends Activity {
             txtMsg.setText(message);
         }
 
-        txtMsg.setTextColor(Color.WHITE);
-        txtMsg.setTextSize(15);
-        txtMsg.setPadding(0, 14, 0, 0);
-        txtMsg.setLineSpacing(8, 1.1f);
-        txtMsg.setAlpha(1.0f);
+        txtMsg.setTextColor(Color.parseColor("#E6FFFFFF")); // Saf beyaz yerine hafif kırık beyaz
+        txtMsg.setTextSize(14);
+        txtMsg.setPadding(0, 12, 0, 0);
+        txtMsg.setLineSpacing(6, 1.2f);
+        txtMsg.setAlpha(0.9f);
 
         itemLayout.addView(header);
         itemLayout.addView(txtMsg);
@@ -2286,7 +2514,198 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Tek bir öğeyi indekse göre siler.
+     * Soru ve Cevabı tek bir kart (Interaction Pair) olarak ekler.
+     */
+    private void addHistoryPairToUI(JSONObject userEntry, JSONObject aiEntry, String time, int index, String filter) {
+        try {
+            String userMsg = userEntry.getString("message");
+            String aiMsg = aiEntry.getString("message");
+
+            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            cardParams.setMargins(0, 0, 0, 24); // Kartlar arası boşluk
+
+            LinearLayout itemLayout = new LinearLayout(this);
+            itemLayout.setOrientation(LinearLayout.VERTICAL);
+            itemLayout.setPadding(32, 24, 32, 24);
+            itemLayout.setBackgroundResource(R.drawable.history_card_bg);
+            itemLayout.setLayoutParams(cardParams);
+            itemLayout.setClickable(true);
+            itemLayout.setFocusable(true);
+
+            // Tıklayınca AI cevabını kopyala
+            itemLayout.setOnClickListener(v -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("niko_reply", aiMsg);
+                clipboard.setPrimaryClip(clip);
+                vibrateFeedback();
+                Toast.makeText(this, "Niko'nun cevabı kopyalandı", Toast.LENGTH_SHORT).show();
+            });
+
+            // Uzun basınca sil (Index sorunun indeksidir, silme mantığı ikisini de silmeli mi?
+            // deleteSingleHistoryItem sadece bir item siliyor.
+            // Eğer çifti silmek istiyorsak, ardışık iki item silmeliyiz.
+            // Bu yüzden custom bir silme mantığı gerekebilir veya kullanıcıya sorulabilir.
+            // Şimdilik sadece soruyu (ve dolayısıyla kaymayı) tetikleyeceği için dikkatli olunmalı.
+            // En iyisi tek tek silmek yerine "Bu konuşmayı sil" demek.
+            itemLayout.setOnLongClickListener(v -> {
+                vibrateFeedback();
+                // Çift silme onayı
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("Anıyı Sil")
+                        .setMessage("Bu konuşma geçmişten silinsin mi?")
+                        .setPositiveButton("Sil", (dialog, which) -> {
+                            deleteHistoryPair(index); // Yeni metod gerekli
+                        })
+                        .setNegativeButton("İptal", null)
+                        .show();
+                return true;
+            });
+
+            // HEADER: Zaman Damgası (Sağ Üst)
+            RelativeLayout header = new RelativeLayout(this);
+            header.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            
+            TextView txtTime = new TextView(this);
+            txtTime.setText(time);
+            txtTime.setTextColor(Color.parseColor("#4DFFFFFF"));
+            txtTime.setTextSize(10);
+            txtTime.setLetterSpacing(0.05f);
+            RelativeLayout.LayoutParams timeParams = new RelativeLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            timeParams.addRule(RelativeLayout.ALIGN_PARENT_END);
+            txtTime.setLayoutParams(timeParams);
+            header.addView(txtTime);
+            itemLayout.addView(header);
+
+            // 1. BÖLÜM: KULLANICI (SORU)
+            TextView txtUserLabel = new TextView(this);
+            txtUserLabel.setText("● SİZ");
+            txtUserLabel.setTextColor(Color.parseColor("#00FBFF")); // Cyan
+            txtUserLabel.setTextSize(10);
+            txtUserLabel.setAllCaps(true);
+            txtUserLabel.setLetterSpacing(0.2f);
+            txtUserLabel.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.NORMAL));
+            itemLayout.addView(txtUserLabel);
+
+            TextView txtUserMsg = new TextView(this);
+            // Filtreleme vurgusu
+            if (filter != null && !filter.isEmpty()) {
+                SpannableString spannable = new SpannableString(userMsg);
+                String lowerMsg = userMsg.toLowerCase(Locale.getDefault());
+                int start = lowerMsg.indexOf(filter);
+                while (start >= 0) {
+                    int end = start + filter.length();
+                    spannable.setSpan(new BackgroundColorSpan(Color.parseColor("#6600E5FF")), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    start = lowerMsg.indexOf(filter, end);
+                }
+                txtUserMsg.setText(spannable);
+            } else {
+                txtUserMsg.setText(userMsg);
+            }
+            txtUserMsg.setTextColor(Color.WHITE);
+            txtUserMsg.setTextSize(14);
+            txtUserMsg.setPadding(0, 8, 0, 0);
+            txtUserMsg.setLineSpacing(4, 1.1f);
+            itemLayout.addView(txtUserMsg);
+
+            // AYIRICI ÇİZGİ
+            View divider = new View(this);
+            LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, 1); // 1px yükseklik
+            dividerParams.setMargins(0, 24, 0, 24);
+            divider.setLayoutParams(dividerParams);
+            divider.setBackgroundColor(Color.parseColor("#1AFFFFFF")); // %10 opacity beyaz
+            itemLayout.addView(divider);
+
+            // 2. BÖLÜM: NIKO (CEVAP)
+            TextView txtAiLabel = new TextView(this);
+            txtAiLabel.setText("● NİKO");
+            txtAiLabel.setTextColor(Color.parseColor("#FFD700")); // Gold
+            txtAiLabel.setTextSize(10);
+            txtAiLabel.setAllCaps(true);
+            txtAiLabel.setLetterSpacing(0.2f);
+            txtAiLabel.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.NORMAL));
+            itemLayout.addView(txtAiLabel);
+
+            TextView txtAiMsg = new TextView(this);
+            // Filtreleme vurgusu
+            if (filter != null && !filter.isEmpty()) {
+                SpannableString spannable = new SpannableString(aiMsg);
+                String lowerMsg = aiMsg.toLowerCase(Locale.getDefault());
+                int start = lowerMsg.indexOf(filter);
+                while (start >= 0) {
+                    int end = start + filter.length();
+                    spannable.setSpan(new BackgroundColorSpan(Color.parseColor("#6600E5FF")), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    start = lowerMsg.indexOf(filter, end);
+                }
+                txtAiMsg.setText(spannable);
+            } else {
+                txtAiMsg.setText(aiMsg);
+            }
+            txtAiMsg.setTextColor(Color.parseColor("#E6FFFFFF")); // Kırık beyaz
+            txtAiMsg.setTextSize(14);
+            txtAiMsg.setPadding(0, 8, 0, 0);
+            txtAiMsg.setLineSpacing(6, 1.2f);
+            itemLayout.addView(txtAiMsg);
+
+            containerHistoryItems.addView(itemLayout);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Soru-Cevap çiftini siler (İki kayıt birden).
+     */
+    private void deleteHistoryPair(int index) {
+        synchronized (historyLock) {
+            try {
+                String currentHistory = historyPrefs.getString("data", "[]");
+                JSONArray historyArray = new JSONArray(currentHistory);
+                
+                // İndeks kontrolü
+                if (index < 0 || index + 1 >= historyArray.length()) return;
+
+                // remove metodu diziyi kaydırır, bu yüzden index'i iki kere silmek yeterli
+                // Önce ikinci elemanı (cevap - index+1) sil, sonra birinciyi (soru - index) sil.
+                // Ancak remove(int) metodu API 19 gerektirir. Android sürümleri destekliyorsa sorun yok.
+                // JSONArray.remove(int) API level 19'da eklendi.
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                    historyArray.remove(index + 1); // Cevabı sil
+                    historyArray.remove(index);     // Soruyu sil
+                } else {
+                    // API < 19 için workaround: List'e çevir
+                    // (Bu proje modern göründüğü için muhtemelen API 19+ ama yine de güvenli yol)
+                    // Basitlik için sadece showHistory'yi yenileyecek bir çözüm yapalım.
+                    // Aslında remove işlemi için yeni bir JSONArray oluşturmak daha safe olabilir.
+                    JSONArray newArray = new JSONArray();
+                    for (int i=0; i<historyArray.length(); i++) {
+                        if (i != index && i != index+1) {
+                            newArray.put(historyArray.get(i));
+                        }
+                    }
+                    historyArray = newArray;
+                }
+
+                historyPrefs.edit().putString("data", historyArray.toString()).apply();
+                
+                runOnUiThread(() -> {
+                    showHistory(edtHistorySearch.getText().toString());
+                    Toast.makeText(this, "Anı silindi", Toast.LENGTH_SHORT).show();
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Silme hatası", Toast.LENGTH_SHORT).show());
+            }
+        }
+    }
+
+    /**
+     * Tek bir geçmiş öğesini arayüz (UI) içine ekler.
      */
     private void deleteSingleHistoryItem(int index) {
         synchronized (historyLock) {
@@ -2371,15 +2790,83 @@ public class MainActivity extends Activity {
                     // Arayüzü güncelle
                     runOnUiThread(() -> {
                         containerHistoryItems.removeAllViews();
-                        addEmptyStateUI();
+                        // Yeni boş durum görünümünü göster
+                        if (layoutHistoryEmpty != null) {
+                            layoutHistoryEmpty.setVisibility(View.VISIBLE);
+                        }
+                        // Stats kartlarını sıfırla
+                        if (txtStatTotalChats != null) txtStatTotalChats.setText("0");
+                        if (txtStatThisWeek != null) txtStatThisWeek.setText("0");
+                        if (txtStatToday != null) txtStatToday.setText("0");
                         if (txtHistoryStats != null) {
-                            txtHistoryStats.setText("0 mesaj");
+                            txtHistoryStats.setText("SENKRONİZE • 0 KAYIT");
                         }
                         Toast.makeText(this, "Sohbet geçmişi tamamen temizlendi", Toast.LENGTH_SHORT).show();
                     });
                 })
                 .setNegativeButton("Vazgeç", null)
                 .show();
+    }
+
+    /**
+     * Sohbet geçmişini dışa aktarır (Panoya kopyalar ve/veya dosya olarak kaydeder).
+     */
+    private void exportHistory() {
+        new Thread(() -> {
+            synchronized (historyLock) {
+                try {
+                    String currentHistory = historyPrefs.getString("data", "[]");
+                    JSONArray historyArray = new JSONArray(currentHistory);
+
+                    if (historyArray.length() == 0) {
+                        runOnUiThread(() -> Toast.makeText(this, "Dışa aktarılacak geçmiş bulunamadı.", Toast.LENGTH_SHORT).show());
+                        return;
+                    }
+
+                    // Dışa aktarım için düzgün formatlanmış metin oluştur
+                    StringBuilder exportText = new StringBuilder();
+                    exportText.append("=== NİKO AI SOHBET GEÇMİŞİ ===\n");
+                    exportText.append("Dışa Aktarım Tarihi: ");
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+                    exportText.append(dateFormat.format(new Date())).append("\n");
+                    exportText.append("Toplam Mesaj: ").append(historyArray.length()).append("\n");
+                    exportText.append("================================\n\n");
+
+                    String lastDate = "";
+                    for (int i = 0; i < historyArray.length(); i++) {
+                        JSONObject entry = historyArray.getJSONObject(i);
+                        String sender = entry.getString("sender");
+                        String message = entry.getString("message");
+                        String time = entry.optString("time", "--:--");
+                        String entryDate = entry.optString("date", "");
+
+                        // Tarih başlığı ekle
+                        if (!entryDate.equals(lastDate) && !entryDate.isEmpty()) {
+                            exportText.append("\n--- ").append(entryDate).append(" ---\n\n");
+                            lastDate = entryDate;
+                        }
+
+                        exportText.append("[").append(time).append("] ");
+                        exportText.append(sender).append(": ");
+                        exportText.append(message).append("\n\n");
+                    }
+
+                    String exportString = exportText.toString();
+
+                    // Panoya kopyala
+                    runOnUiThread(() -> {
+                        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        ClipData clip = ClipData.newPlainText("niko_chat_export", exportString);
+                        clipboard.setPrimaryClip(clip);
+                        Toast.makeText(this, "📋 Geçmiş panoya kopyalandı! (" + historyArray.length() + " mesaj)", Toast.LENGTH_LONG).show();
+                    });
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> Toast.makeText(this, "Dışa aktarma başarısız oldu.", Toast.LENGTH_SHORT).show());
+                }
+            }
+        }).start();
     }
 
     // ================= MODEL SEÇİMİ (MODEL SELECTION) =================
@@ -2653,6 +3140,57 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * GitHub üzerindeki README dosyasından güncel API URL'sini çeker ve günceller.
+     * Bu sayede backend tünel adresi değişse bile uygulama otomatik ayak uydurur.
+     */
+    private void updateApiUrlFromGithub() {
+        new Thread(() -> {
+            try {
+                // GitHub üzerinden README dosyasının ham halini al
+                URL url = new URL("https://raw.githubusercontent.com/Memati8383/niko-with-kiro/main/README.md");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(10000);
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append("\n");
+                }
+                reader.close();
+
+                String content = sb.toString();
+                // Regex: Güncel Tünel/API Adresi satırındaki parantez içindeki URL'yi bulur
+                Pattern pattern = Pattern.compile("Güncel (?:Tünel|API) Adresi:.*?\\((https?://[^\\)]+)\\)");
+                Matcher matcher = pattern.matcher(content);
+                
+                String latestUrl = null;
+                while (matcher.find()) {
+                    latestUrl = matcher.group(1); // En son eşleşeni al (genelde en alttaki en günceldir)
+                }
+
+                if (latestUrl != null && latestUrl.startsWith("http")) {
+                    final String fetchedUrl = latestUrl;
+                    API_BASE_URL = fetchedUrl;
+                    addLog("[CONFIG] API URL güncellendi (GitHub): " + fetchedUrl);
+                    
+                    // Local belleğe kaydet ki bir sonraki açılışta internet olmasa da en son adresi bilsin
+                    getSharedPreferences("app_settings", MODE_PRIVATE)
+                            .edit()
+                            .putString("api_url", fetchedUrl)
+                            .apply();
+                            
+                    android.util.Log.d("NIKO_CONFIG", "API URL GitHub üzerinden güncellendi: " + fetchedUrl);
+                }
+            } catch (Exception e) {
+                android.util.Log.e("NIKO_CONFIG", "GitHub'dan URL çekilirken hata oluştu: " + e.getMessage());
+            }
+        }).start();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -2661,5 +3199,51 @@ public class MainActivity extends Activity {
         if (tts != null)
             tts.shutdown();
 
+    }
+
+    // ================= ADMIN LOG YÖNETİMİ =================
+
+    /**
+     * Uygulama içine bir log kaydı ekler.
+     */
+    private void addLog(String message) {
+        String time = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
+        String logEntry = "[" + time + "] " + message + "\n";
+        
+        synchronized (appLogsBuffer) {
+            appLogsBuffer.append(logEntry);
+            // Sınırı aşarsa baştan sil
+            if (appLogsBuffer.length() > MAX_LOG_SIZE) {
+                appLogsBuffer.delete(0, 1000);
+            }
+        }
+        
+        if (layoutAdminLogs != null && layoutAdminLogs.getVisibility() == View.VISIBLE) {
+            runOnUiThread(this::updateLogDisplay);
+        }
+        android.util.Log.d("NIKO_LOG", message);
+    }
+
+    private void updateLogDisplay() {
+        if (txtAdminLogs != null) {
+            txtAdminLogs.setText(appLogsBuffer.toString());
+        }
+    }
+
+    private void showLogs() {
+        runOnUiThread(() -> {
+            updateLogDisplay();
+            layoutAdminLogs.setVisibility(View.VISIBLE);
+            layoutAdminLogs.setAlpha(0f);
+            layoutAdminLogs.animate().alpha(1f).setDuration(300).start();
+        });
+    }
+
+    private void hideLogs() {
+        runOnUiThread(() -> {
+            layoutAdminLogs.animate().alpha(0f).setDuration(300).withEndAction(() -> {
+                layoutAdminLogs.setVisibility(View.GONE);
+            }).start();
+        });
     }
 }
