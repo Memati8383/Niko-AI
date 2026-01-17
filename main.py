@@ -142,7 +142,6 @@ class ChatRequest(BaseModel):
     message: str
     enable_audio: bool = True
     web_search: bool = False
-    rag_search: bool = False
     session_id: Optional[str] = None
     model: Optional[str] = None
     mode: Optional[str] = "normal"
@@ -1073,39 +1072,14 @@ class ChatService:
 
 class SearchService:
     """
-    Web ve RAG arama işlevselliği için arama servisi.
-    DuckDuckGo web aramasını ve ChromaDB RAG aramasını yönetir.
-    Gereksinimler: 5.1, 5.2, 5.3, 5.4, 5.5
+    Web arama işlevselliği için arama servisi.
+    DuckDuckGo web aramasını yönetir.
+    Gereksinimler: 5.1, 5.4
     """
     
     def __init__(self):
-        """İsteğe bağlı ChromaDB istemcisi ile arama servisini başlat."""
-        self.chroma_client = None
-        self.chroma_collection = None
-        self._init_chroma()
-    
-    def _init_chroma(self) -> None:
-        """
-        Mevcutsa ChromaDB istemcisini başlat.
-        ChromaDB isteğe bağlıdır - servis onsuz da çalışır.
-        """
-        try:
-            import chromadb
-            self.chroma_client = chromadb.Client()
-            # RAG dokümanları için koleksiyon oluştur veya getir
-            self.chroma_collection = self.chroma_client.get_or_create_collection(
-                name="niko_documents",
-                metadata={"description": "Niko AI document collection for RAG"}
-            )
-            logger.info("ChromaDB başarıyla oluşturuldu")
-        except ImportError:
-            logger.info("ChromaDB yüklü değil - RAG araması kullanılamayacak")
-            self.chroma_client = None
-            self.chroma_collection = None
-        except Exception as e:
-            logger.warning(f"ChromaDB başlatma hatası: {e}")
-            self.chroma_client = None
-            self.chroma_collection = None
+        """Arama servisini başlat."""
+        pass
     
     async def web_search(self, query: str, max_results: int = 5) -> str:
         """
@@ -1157,114 +1131,6 @@ class SearchService:
             # Gereksinimler: 5.4 - Hatayı logla ve arama sonuçları olmadan devam et
             logger.error(f"'{query}' sorgusu için genel web arama hatası: {e}")
             return ""
-    
-    async def rag_search(self, query: str, n_results: int = 3) -> str:
-        """
-        ChromaDB vektör veritabanı kullanarak RAG araması yap.
-        Gereksinimler: 5.2, 5.5
-        
-        Parametreler:
-            query: Arama sorgusu
-            n_results: Sonuç sayısı (varsayılan: 3)
-        
-        Dönüş:
-            İlgili dokümanların formatlanmış hali veya ulaşılamıyorsa bilgilendirici mesaj
-        """
-        # Check if ChromaDB is available
-        if self.chroma_client is None or self.chroma_collection is None:
-            # Requirements: 5.5 - Inform that RAG is not configured
-            return "RAG veritabanı yapılandırılmamış."
-        
-        try:
-            # Query the collection
-            results = self.chroma_collection.query(
-                query_texts=[query],
-                n_results=n_results
-            )
-            
-            # Check if we have any documents
-            if not results or not results.get("documents") or not results["documents"][0]:
-                # Requirements: 5.5 - Inform AI that no relevant documents were found
-                return "İlgili doküman bulunamadı."
-            
-            # Format results for AI context
-            documents = results["documents"][0]
-            metadatas = results.get("metadatas", [[]])[0]
-            
-            formatted = []
-            for i, (doc, meta) in enumerate(zip(documents, metadatas or [{}] * len(documents)), 1):
-                source = meta.get("source", "Bilinmeyen kaynak") if meta else "Bilinmeyen kaynak"
-                formatted.append(f"Doküman {i} ({source}):\n{doc}")
-            
-            return "\n\n---\n\n".join(formatted)
-        
-        except Exception as e:
-            logger.error(f"'{query}' için RAG arama hatası: {e}")
-            # Gereksinimler: 5.5 - Hata durumunda bilgilendirici mesaj döndür
-            return "RAG araması sırasında bir hata oluştu."
-    
-    async def hybrid_search(self, query: str, web_max_results: int = 5, rag_n_results: int = 3) -> str:
-        """
-        Web ve RAG sonuçlarını birleştiren hibrit arama yap.
-        Gereksinimler: 5.3
-        
-        Parametreler:
-            query: Arama sorgusu
-            web_max_results: Maksimum web arama sonucu (varsayılan: 5)
-            rag_n_results: RAG sonuç sayısı (varsayılan: 3)
-        
-        Dönüş:
-            Web ve RAG arama sonuçlarının birleştirilmiş formatlı hali
-        """
-        # Perform both searches
-        web_results = await self.web_search(query, web_max_results)
-        rag_results = await self.rag_search(query, rag_n_results)
-        
-        # Combine results
-        combined = []
-        
-        if web_results:
-            combined.append("=== Web Arama Sonuçları ===\n" + web_results)
-        
-        if rag_results and rag_results not in ["RAG veritabanı yapılandırılmamış.", "İlgili doküman bulunamadı.", "RAG araması sırasında bir hata oluştu."]:
-            combined.append("=== Doküman Sonuçları ===\n" + rag_results)
-        elif rag_results:
-            # Include informative messages about RAG status
-            combined.append("=== Doküman Sonuçları ===\n" + rag_results)
-        
-        return "\n\n".join(combined) if combined else ""
-    
-    def add_document(self, document: str, doc_id: str, metadata: dict = None) -> bool:
-        """
-        RAG koleksiyonuna bir doküman ekle.
-        
-        Parametreler:
-            document: Doküman metin içeriği
-            doc_id: Benzersiz doküman tanımlayıcısı
-            metadata: İsteğe bağlı metadata sözlüğü
-        
-        Dönüş:
-            Doküman başarıyla eklendiyse True, aksi halde False
-        """
-        if self.chroma_collection is None:
-            logger.warning("Doküman eklenemiyor - ChromaDB mevcut değil")
-            return False
-        
-        try:
-            self.chroma_collection.add(
-                documents=[document],
-                ids=[doc_id],
-                metadatas=[metadata] if metadata else None
-            )
-            logger.info(f"'{doc_id}' dokümanı RAG koleksiyonuna eklendi")
-            return True
-        except Exception as e:
-            logger.error(f"'{doc_id}' dokümanı eklenirken hata: {e}")
-            return False
-    
-    def is_rag_available(self) -> bool:
-        """RAG aramasının kullanılabilir olup olmadığını kontrol et."""
-        return self.chroma_client is not None and self.chroma_collection is not None
 
 
 # ============================================================================
@@ -1979,13 +1845,9 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
     
     # Etkinse aramadan bağlam oluştur
     web_results = ""
-    rag_results = ""
     
     if request.web_search:
         web_results = await search_service.web_search(request.message)
-    
-    if request.rag_search:
-        rag_results = await search_service.rag_search(request.message)
     
     # Kişiselleştirme için kullanıcı profilini al
     user_info = None
@@ -1999,7 +1861,6 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
     full_prompt = build_full_prompt(
         request.message,
         web_results=web_results,
-        rag_results=rag_results,
         user_info=user_info
     )
     
@@ -2093,7 +1954,7 @@ async def get_search_status(current_user: str = Depends(get_current_user)):
         web_search_available = False
     
     # RAG arama kullanılabilirliğini kontrol et
-    rag_search_available = search_service.is_rag_available()
+    rag_search_available = False
     
     return {
         "web_search": {
@@ -2102,7 +1963,7 @@ async def get_search_status(current_user: str = Depends(get_current_user)):
         },
         "rag_search": {
             "available": rag_search_available,
-            "provider": "ChromaDB" if rag_search_available else None
+            "provider": None
         }
     }
 

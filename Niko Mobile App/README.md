@@ -23,6 +23,7 @@ Niko, Android cihazlar için geliştirilmiş, sesli komutlarla çalışan kişis
 - **Görsel Geri Bildirim:** Sesinizin şiddetine göre tepki veren dinamik "Voice Orb" animasyonu.
 - **Kullanıcı Kimlik Doğrulama:** Güvenli kayıt ve giriş sistemi (JWT tabanlı).
 - **Profil Yönetimi:** Uygulama içerisinden kullanıcı adı, e-posta, ad-soyad ve profil fotoğrafı güncelleme.
+- **Yönetici (Admin) Modu:** "admin" kullanıcı adıyla giriş yapıldığında, uygulama içi hata ve sistem loglarını görüntüleyebileceğiniz gizli bir panel aktif olur.
 
 ## Kullanım Rehberi
 
@@ -65,7 +66,6 @@ Niko aşağıdaki sesli komutları anlayabilir ve yerine getirebilir:
 - **Ayarlar:** "Ayarları aç", "Sistem ayarları"
 - **Wi-Fi:** "Wifi aç/kapat", "İnterneti aç/kapat"
 - **Bluetooth:** "Bluetooth aç/kapat", "Bluetooth'u devre dışı bırak"
-- **Parlaklık:** "Parlaklığı arttır/azalt", "Işığı kıs/aç", "Parlaklığı yükselt/düşür"
 
 ### 🎵 Medya ve Müzik (Spotify vb.)
 
@@ -89,6 +89,10 @@ Niko aşağıdaki sesli komutları anlayabilir ve yerine getirebilir:
 - **Görüntüleme:** "Geçmişi aç/göster", "Sohbet geçmişini oku"
 - **Yönetim:** "Geçmişi temizle/sil", "Geçmişi kapat"
 - **İşlemler:** Mesajlara tıklayarak kopyalayabilir, uzun basarak tek tek silebilirsiniz.
+
+### 🔄 Güncelleme ve Sürüm
+
+- **Kontrol:** "Güncelleme kontrol", "Sürüm var mı", "Güncellemeye bak"
 
 ## Kullanılan Teknolojiler
 
@@ -138,12 +142,11 @@ Proje içerisindeki temel dosyalar ve görevleri şunlardır:
 - [x] Spotify ve diğer müzik çalarlar için kontrol desteği.
 - [x] Çevrimdışı (Offline) basit komut desteği.
 - [x] Hatırlatıcı ve alarm kurma özellikleri.
-- [x] Sistem ayarları kontrolü (Wi-Fi, Bluetooth, Parlaklık vb. aç/kapa).
+- [x] Sistem ayarları kontrolü (Wi-Fi, Bluetooth vb. aç/kapa).
 - [x] Sohbet Geçmişi ve mesaj yönetimi.
 - [x] Modern Chat arayüzü ve model seçici.
 - [x] Otomatik uygulama içi güncelleme sistemi (In-app updates).
 - [ ] Çoklu dil desteği (İngilizce, Almanca vb.).
-- [ ] Hava durumu ve güncel haberler için sesli özet.
 - [ ] Gelişmiş Görüntü İşleme (Vision) entegrasyonu.
 - [ ] Kişiselleştirilmiş ses modelleri.
 

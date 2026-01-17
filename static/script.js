@@ -14,7 +14,7 @@ const state = {
     isGenerating: false,
     abortController: null,
     webSearchEnabled: false,
-    ragSearchEnabled: false,
+
     attachedImages: [],
     models: [],
     selectedModel: null,
@@ -43,7 +43,7 @@ const elements = {
     
     // Search toggles
     webSearchBtn: document.getElementById('webSearchBtn'),
-    ragSearchBtn: document.getElementById('ragSearchBtn'),
+
     
     // Images
     imageBtn: document.getElementById('imageBtn'),
@@ -477,10 +477,7 @@ function setupEventListeners() {
         elements.webSearchBtn.classList.toggle('active', state.webSearchEnabled);
     });
     
-    elements.ragSearchBtn.addEventListener('click', () => {
-        state.ragSearchEnabled = !state.ragSearchEnabled;
-        elements.ragSearchBtn.classList.toggle('active', state.ragSearchEnabled);
-    });
+
     
     // Image upload
     elements.imageBtn.addEventListener('click', () => {
@@ -1020,7 +1017,7 @@ async function sendMessage() {
                 session_id: state.currentSessionId,
                 model: state.selectedModel,
                 web_search: state.webSearchEnabled,
-                rag_search: state.ragSearchEnabled,
+
                 images: images.length > 0 ? images : null
             }),
             signal: state.abortController.signal
