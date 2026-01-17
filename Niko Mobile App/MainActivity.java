@@ -224,7 +224,7 @@ public class MainActivity extends Activity {
     private final int MAX_LOG_SIZE = 50000; // Karakter sınırı
 
     // API URL - Backend servisinin adresi (GitHub'dan güncellenir)
-    private static String API_BASE_URL = "https://folder-together-managing-graduated.trycloudflare.com";
+    private static String API_BASE_URL = "https://hash-authorization-aim-tale.trycloudflare.com";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
