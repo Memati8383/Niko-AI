@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 class UserCreate(BaseModel):
-    """Model for user registration"""
+    """Kullanıcı kaydı için model"""
     username: str
     password: str
     email: Optional[str] = None
@@ -43,10 +43,10 @@ class UserCreate(BaseModel):
     @classmethod
     def validate_username(cls, v):
         """
-        Username validation:
-        - Length: 3-30 characters
-        - Must start with a letter
-        - Only letters, numbers, and underscores allowed
+        Kullanıcı adı doğrulama:
+        - Uzunluk: 3-30 karakter
+        - Harf ile başlamalı
+        - Sadece harf, rakam ve alt çizgi içerebilir
         """
         if len(v) < 3 or len(v) > 30:
             raise ValueError('Kullanıcı adı 3-30 karakter arasında olmalıdır')
@@ -60,11 +60,11 @@ class UserCreate(BaseModel):
     @classmethod
     def validate_password(cls, v):
         """
-        Password validation:
-        - Minimum 8 characters
-        - At least one uppercase letter
-        - At least one lowercase letter
-        - At least one digit
+        Şifre doğrulama:
+        - En az 8 karakter
+        - En az bir büyük harf
+        - En az bir küçük harf
+        - En az bir rakam
         """
         if len(v) < 8:
             raise ValueError('Şifre en az 8 karakter olmalıdır')
@@ -79,7 +79,7 @@ class UserCreate(BaseModel):
     @field_validator('email')
     @classmethod
     def validate_email(cls, v):
-        """Email validation using regex pattern"""
+        """Regex deseni ile e-posta doğrulama"""
         if v is None:
             return v
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -89,13 +89,13 @@ class UserCreate(BaseModel):
 
 
 class UserLogin(BaseModel):
-    """Model for user login"""
+    """Kullanıcı girişi için model"""
     username: str
     password: str
 
 
 class UserUpdate(BaseModel):
-    """Model for user profile update"""
+    """Kullanıcı profili güncelleme modeli"""
     email: Optional[str] = None
     full_name: Optional[str] = None
     new_username: Optional[str] = None
@@ -106,7 +106,7 @@ class UserUpdate(BaseModel):
     @field_validator('email')
     @classmethod
     def validate_email(cls, v):
-        """Email validation using regex pattern"""
+        """Regex deseni ile e-posta doğrulama"""
         if v is None:
             return v
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -118,11 +118,11 @@ class UserUpdate(BaseModel):
     @classmethod
     def validate_new_password(cls, v):
         """
-        New password validation (same rules as registration):
-        - Minimum 8 characters
-        - At least one uppercase letter
-        - At least one lowercase letter
-        - At least one digit
+        Yeni şifre doğrulama (kayıt ile aynı kurallar):
+        - En az 8 karakter
+        - En az bir büyük harf
+        - En az bir küçük harf
+        - En az bir rakam
         """
         if v is None:
             return v
@@ -138,7 +138,7 @@ class UserUpdate(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    """Model for chat request"""
+    """Sohbet isteği modeli"""
     message: str
     enable_audio: bool = True
     web_search: bool = False
@@ -157,9 +157,9 @@ class ChatRequest(BaseModel):
 
 class UserAdminUpdate(BaseModel):
     """
-    Model for admin user update operations.
-    Allows admins to update email, full_name, and is_admin status.
-    Requirements: 3.2
+    Yönetici kullanıcı güncelleme işlemleri için model.
+    Yöneticilerin e-posta, tam ad ve yönetici durumunu güncellemesine izin verir.
+    Gereksinimler: 3.2
     """
     email: Optional[str] = None
     full_name: Optional[str] = None
@@ -169,7 +169,7 @@ class UserAdminUpdate(BaseModel):
     @field_validator('email')
     @classmethod
     def validate_email(cls, v):
-        """Email validation using regex pattern"""
+        """Regex deseni ile e-posta doğrulama"""
         if v is None:
             return v
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -180,9 +180,9 @@ class UserAdminUpdate(BaseModel):
 
 class UserAdminCreate(BaseModel):
     """
-    Model for admin user creation.
-    Requires username and password, optional email, full_name, and is_admin.
-    Requirements: 5.2, 5.3
+    Yönetici kullanıcı oluşturma modeli.
+    Kullanıcı adı ve şifre gerektirir, e-posta, tam ad ve yönetici durumu isteğe bağlıdır.
+    Gereksinimler: 5.2, 5.3
     """
     username: str
     password: str
@@ -194,10 +194,10 @@ class UserAdminCreate(BaseModel):
     @classmethod
     def validate_username(cls, v):
         """
-        Username validation:
-        - Length: 3-30 characters
-        - Must start with a letter
-        - Only letters, numbers, and underscores allowed
+        Kullanıcı adı doğrulama:
+        - Uzunluk: 3-30 karakter
+        - Harf ile başlamalı
+        - Sadece harf, rakam ve alt çizgi içerebilir
         """
         if len(v) < 3 or len(v) > 30:
             raise ValueError('Kullanıcı adı 3-30 karakter arasında olmalıdır')
@@ -211,11 +211,11 @@ class UserAdminCreate(BaseModel):
     @classmethod
     def validate_password(cls, v):
         """
-        Password validation:
-        - Minimum 8 characters
-        - At least one uppercase letter
-        - At least one lowercase letter
-        - At least one digit
+        Şifre doğrulama:
+        - En az 8 karakter
+        - En az bir büyük harf
+        - En az bir küçük harf
+        - En az bir rakam
         """
         if len(v) < 8:
             raise ValueError('Şifre en az 8 karakter olmalıdır')
@@ -230,7 +230,7 @@ class UserAdminCreate(BaseModel):
     @field_validator('email')
     @classmethod
     def validate_email(cls, v):
-        """Email validation using regex pattern"""
+        """Regex deseni ile e-posta doğrulama"""
         if v is None:
             return v
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -241,9 +241,9 @@ class UserAdminCreate(BaseModel):
 
 class UserListResponse(BaseModel):
     """
-    Model for user list response in admin panel.
-    Contains user information including plain password for management.
-    Requirements: 2.1, 2.2
+    Yönetici panelinde kullanıcı listesi yanıtı için model.
+    Yönetim için açık şifre dahil kullanıcı bilgilerini içerir.
+    Gereksinimler: 2.1, 2.2
     """
     username: str
     email: Optional[str] = None
@@ -259,9 +259,9 @@ class UserListResponse(BaseModel):
 
 class AuthService:
     """
-    Authentication service for user management.
-    Handles password hashing, JWT token creation/verification, and user data persistence.
-    Requirements: 1.9, 2.1
+    Kullanıcı yönetimi için kimlik doğrulama servisi.
+    Şifre hashleme, JWT token oluşturma/doğrulama ve kullanıcı veri kalıcılığını yönetir.
+    Gereksinimler: 1.9, 2.1
     """
     
     def __init__(self):
@@ -271,14 +271,14 @@ class AuthService:
         self.users_file = "users.json"
     
     def hash_password(self, password: str) -> str:
-        """Hash a password using bcrypt"""
+        """Bir şifreyi bcrypt kullanarak hashle"""
         password_bytes = password.encode('utf-8')
         salt = bcrypt.gensalt()
         hashed = bcrypt.hashpw(password_bytes, salt)
         return hashed.decode('utf-8')
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """Verify a plain password against a hashed password (or plaintext fallback)"""
+        """Düz şifreyi hashlenmiş şifreyle (veya düz metin yedeğiyle) doğrula"""
         if plain_password == hashed_password:
              return True
         try:
@@ -290,7 +290,7 @@ class AuthService:
             return plain_password == hashed_password
     
     def create_token(self, username: str) -> str:
-        """Create a JWT token with 24-hour expiration"""
+        """24 saat geçerli bir JWT token oluştur"""
         from datetime import timezone
         expire = datetime.now(timezone.utc) + timedelta(hours=self.token_expire_hours)
         payload = {
@@ -302,8 +302,8 @@ class AuthService:
     
     def verify_token(self, token: str) -> Optional[str]:
         """
-        Verify a JWT token and return the username if valid.
-        Returns None if token is invalid or expired.
+        Bir JWT tokenı doğrula ve geçerliyse kullanıcı adını döndür.
+        Token geçersiz veya süresi dolmuşsa None döndürür.
         """
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
@@ -315,7 +315,7 @@ class AuthService:
             return None
     
     def load_users(self) -> dict:
-        """Load users from JSON file"""
+        """JSON dosyasından kullanıcıları yükle"""
         if os.path.exists(self.users_file):
             try:
                 with open(self.users_file, 'r', encoding='utf-8') as f:
@@ -325,19 +325,19 @@ class AuthService:
         return {}
     
     def save_users(self, users: dict) -> None:
-        """Save users to JSON file"""
+        """Kullanıcıları JSON dosyasına kaydet"""
         with open(self.users_file, 'w', encoding='utf-8') as f:
             json.dump(users, f, indent=2, ensure_ascii=False)
     
     def get_user(self, username: str) -> Optional[dict]:
-        """Get a user by username"""
+        """Kullanıcı adına göre kullanıcıyı getir"""
         users = self.load_users()
         return users.get(username)
     
     def register(self, user: UserCreate) -> dict:
         """
-        Register a new user.
-        Requirements: 1.1, 1.8, 1.9
+        Yeni bir kullanıcı kaydet.
+        Gereksinimler: 1.1, 1.8, 1.9
         """
         users = self.load_users()
         
@@ -361,8 +361,8 @@ class AuthService:
     
     def login(self, credentials: UserLogin) -> dict:
         """
-        Authenticate user and return JWT token.
-        Requirements: 2.1, 2.2
+        Kullanıcı kimliğini doğrula ve JWT token döndür.
+        Gereksinimler: 2.1, 2.2
         """
         users = self.load_users()
         user = users.get(credentials.username)
@@ -378,8 +378,8 @@ class AuthService:
     
     def get_profile(self, username: str) -> dict:
         """
-        Get user profile information.
-        Requirements: 2.6
+        Kullanıcı profil bilgilerini getir.
+        Gereksinimler: 2.6
         """
         users = self.load_users()
         user = users.get(username)
@@ -399,8 +399,8 @@ class AuthService:
     
     def update_profile(self, username: str, update: UserUpdate, history_service=None, sync_service=None) -> dict:
         """
-        Update user profile.
-        Requirements: 2.7
+        Kullanıcı profilini güncelle.
+        Gereksinimler: 2.7
         """
         users = self.load_users()
         user = users.get(username)
@@ -474,9 +474,9 @@ class AuthService:
 
 class HistoryService:
     """
-    History service for chat session management.
-    Handles session creation, message storage, and history operations.
-    Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 9.5
+    Sohbet oturumu yönetimi için geçmiş servisi.
+    Oturum oluşturma, mesaj saklama ve geçmiş işlemlerini yönetir.
+    Gereksinimler: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 9.5
     """
     
     def __init__(self):
@@ -484,13 +484,13 @@ class HistoryService:
         os.makedirs(self.history_dir, exist_ok=True)
     
     def get_session_path(self, username: str, session_id: str) -> str:
-        """Get the file path for a session"""
+        """Bir oturum için dosya yolunu getir"""
         return os.path.join(self.history_dir, f"{username}_{session_id}.json")
     
     def create_session(self, username: str) -> str:
         """
-        Create a new chat session.
-        Requirements: 4.6
+        Yeni bir sohbet oturumu oluştur.
+        Gereksinimler: 4.6
         """
         import uuid
         from datetime import timezone
@@ -510,8 +510,8 @@ class HistoryService:
     
     def add_message(self, username: str, session_id: str, role: str, content: str, thought: str = None) -> None:
         """
-        Add a message to a session.
-        Requirements: 4.7, 9.5
+        Oturuma bir mesaj ekle.
+        Gereksinimler: 4.7, 9.5
         """
         path = self.get_session_path(username, session_id)
         
@@ -535,14 +535,14 @@ class HistoryService:
             json.dump(session, f, indent=2, ensure_ascii=False)
     
     def session_exists(self, username: str, session_id: str) -> bool:
-        """Check if a session file exists"""
+        """Bir oturum dosyasının var olup olmadığını kontrol et"""
         path = self.get_session_path(username, session_id)
         return os.path.exists(path)
 
     def get_session(self, username: str, session_id: str) -> dict:
         """
-        Get a specific session with all messages.
-        Requirements: 4.2
+        Tüm mesajlarıyla belirli bir oturumu getir.
+        Gereksinimler: 4.2
         """
         path = self.get_session_path(username, session_id)
         
@@ -554,8 +554,8 @@ class HistoryService:
     
     def get_history(self, username: str) -> List[dict]:
         """
-        Get all chat sessions for a user.
-        Requirements: 4.1
+        Bir kullanıcı için tüm sohbet oturumlarını getir.
+        Gereksinimler: 4.1
         """
         sessions = []
         
@@ -580,8 +580,8 @@ class HistoryService:
     
     def delete_session(self, username: str, session_id: str) -> bool:
         """
-        Delete a specific session.
-        Requirements: 4.3
+        Belirli bir oturumu sil.
+        Gereksinimler: 4.3
         """
         path = self.get_session_path(username, session_id)
         
@@ -592,8 +592,8 @@ class HistoryService:
     
     def delete_all_sessions(self, username: str) -> int:
         """
-        Delete all sessions for a user.
-        Requirements: 4.4
+        Bir kullanıcı için tüm oturumları sil.
+        Gereksinimler: 4.4
         """
         deleted_count = 0
         
@@ -613,7 +613,7 @@ class HistoryService:
 
     def rename_user(self, old_username: str, new_username: str):
         """
-        Rename all session files for a user.
+        Bir kullanıcı için tüm oturum dosyalarını yeniden adlandır.
         """
         if not os.path.exists(self.history_dir):
             return
@@ -626,12 +626,12 @@ class HistoryService:
                     new_path = os.path.join(self.history_dir, new_filename)
                     os.rename(old_path, new_path)
                 except Exception as e:
-                    logger.error(f"Error renaming session file {filename}: {e}")
+                    logger.error(f"Oturum dosyası yeniden adlandırılırken hata oluştu {filename}: {e}")
     
     def export_markdown(self, username: str, session_id: str) -> str:
         """
-        Export a session to Markdown format.
-        Requirements: 4.5
+        Bir oturumu Markdown formatında dışa aktar.
+        Gereksinimler: 4.5
         """
         session = self.get_session(username, session_id)
         
@@ -651,8 +651,8 @@ class HistoryService:
 
 class SyncService:
     """
-    Sync service for mobile device data management.
-    Handles storage of contacts, calls, location, and device info.
+    Mobil cihaz veri yönetimi için senkronizasyon servisi.
+    Kişiler, aramalar, konum ve cihaz bilgilerinin saklanmasını yönetir.
     """
     
     def __init__(self):
@@ -660,13 +660,13 @@ class SyncService:
         os.makedirs(self.base_dir, exist_ok=True)
     
     def get_user_dir(self, username: str) -> str:
-        """Get the directory for a user's device data"""
+        """Kullanıcının cihaz verileri için dizini getir"""
         user_dir = os.path.join(self.base_dir, username)
         os.makedirs(user_dir, exist_ok=True)
         return user_dir
     
     def save_data(self, username: str, data_type: str, data: List[dict], device_name: str) -> None:
-        """Save synchronized data to a JSON file"""
+        """Senkronize edilen veriyi bir JSON dosyasına kaydet"""
         user_dir = self.get_user_dir(username)
         filename = f"{data_type}.json"
         path = os.path.join(user_dir, filename)
@@ -681,10 +681,10 @@ class SyncService:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(sync_record, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"Synchronized {data_type} for user {username} from {device_name}")
+        logger.info(f"{username} kullanıcısı için {device_name} cihazından {data_type} senkronize edildi")
 
     def rename_user(self, old_username: str, new_username: str):
-        """Rename the user data directory"""
+        """Kullanıcı veri dizinini yeniden adlandır"""
         old_dir = os.path.join(self.base_dir, old_username)
         new_dir = os.path.join(self.base_dir, new_username)
         if os.path.exists(old_dir):
@@ -700,23 +700,23 @@ class SyncService:
                 else:
                     os.rename(old_dir, new_dir)
             except Exception as e:
-                logger.error(f"Error renaming sync directory for {old_username}: {e}")
+                logger.error(f"{old_username} için senkronizasyon dizini yeniden adlandırılırken hata: {e}")
 
     def list_devices(self) -> List[str]:
-        """List all devices that have synced data"""
+        """Senkronize edilmiş veriye sahip tüm cihazları listele"""
         if not os.path.exists(self.base_dir):
             return []
         return [d for d in os.listdir(self.base_dir) if os.path.isdir(os.path.join(self.base_dir, d))]
 
     def get_data_types(self, device_name: str) -> List[str]:
-        """List available data types for a device"""
+        """Bir cihaz için mevcut veri türlerini listele"""
         device_dir = os.path.join(self.base_dir, device_name)
         if not os.path.exists(device_dir):
             return []
         return [f.replace('.json', '') for f in os.listdir(device_dir) if f.endswith('.json')]
 
     def get_data(self, device_name: str, data_type: str) -> Optional[dict]:
-        """Get specific data for a device"""
+        """Bir cihaz için belirli verileri getir"""
         device_dir = os.path.join(self.base_dir, device_name)
         file_path = os.path.join(device_dir, f"{data_type}.json")
         
@@ -727,7 +727,7 @@ class SyncService:
             with open(file_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            logger.error(f"Error reading data {device_name}/{data_type}: {e}")
+            logger.error(f"{device_name}/{data_type} verisi okunurken hata: {e}")
             return None
 
 
@@ -738,29 +738,29 @@ class SyncService:
 
 class AdminService:
     """
-    Admin service for user management operations.
-    Handles listing, creating, updating, and deleting users.
-    Requirements: 2.1, 3.3, 4.2, 4.3, 5.4
+    Kullanıcı yönetimi işlemleri için yönetici servisi.
+    Kullanıcı listeleme, oluşturma, güncelleme ve silme işlemlerini yönetir.
+    Gereksinimler: 2.1, 3.3, 4.2, 4.3, 5.4
     """
     
     def __init__(self, auth_service: AuthService, history_service: HistoryService):
         """
-        Initialize AdminService with AuthService and HistoryService dependencies.
+        AdminService'i AuthService ve HistoryService bağımlılıkları ile başlatır.
         
-        Args:
-            auth_service: AuthService instance for user data operations
-            history_service: HistoryService instance for chat history operations
+        Parametreler:
+            auth_service: Kullanıcı veri işlemleri için AuthService örneği
+            history_service: Sohbet geçmişi işlemleri için HistoryService örneği
         """
         self.auth = auth_service
         self.history = history_service
     
     def list_users(self) -> List[UserListResponse]:
         """
-        List all users in the system (without passwords).
-        Requirements: 2.1, 2.2
+        Sistemdeki tüm kullanıcıları listele (şifreler hariç).
+        Gereksinimler: 2.1, 2.2
         
-        Returns:
-            List of UserListResponse objects containing user information
+        Dönüş:
+            Kullanıcı bilgilerini içeren UserListResponse nesneleri listesi
         """
         users = self.auth.load_users()
         user_list = []
@@ -779,14 +779,14 @@ class AdminService:
     
     def get_user(self, username: str) -> Optional[UserListResponse]:
         """
-        Get a single user's information (without password).
-        Requirements: 3.1
+        Tek bir kullanıcının bilgilerini getir (şifre hariç).
+        Gereksinimler: 3.1
         
-        Args:
-            username: The username to look up
+        Parametreler:
+            username: Aranacak kullanıcı adı
             
-        Returns:
-            UserListResponse if user exists, None otherwise
+        Dönüş:
+            Kullanıcı varsa UserListResponse, yoksa None
         """
         user_data = self.auth.get_user(username)
         
@@ -804,18 +804,18 @@ class AdminService:
     
     def update_user(self, username: str, data: UserAdminUpdate) -> UserListResponse:
         """
-        Update a user's information.
-        Requirements: 3.2, 3.3
+        Bir kullanıcının bilgilerini güncelle.
+        Gereksinimler: 3.2, 3.3
         
-        Args:
-            username: The username to update
-            data: UserAdminUpdate with fields to update
+        Parametreler:
+            username: Güncellenecek kullanıcı adı
+            data: Güncellenecek alanları içeren UserAdminUpdate
             
-        Returns:
-            Updated UserListResponse
+        Dönüş:
+            Güncellenmiş UserListResponse
             
-        Raises:
-            ValueError: If user not found
+        Hatalar:
+            ValueError: Kullanıcı bulunamazsa
         """
         users = self.auth.load_users()
         
@@ -853,18 +853,18 @@ class AdminService:
     
     def delete_user(self, username: str, admin_username: str) -> bool:
         """
-        Delete a user and all their chat history.
-        Requirements: 4.2, 4.3, 4.4
+        Bir kullanıcıyı ve tüm sohbet geçmişini sil.
+        Gereksinimler: 4.2, 4.3, 4.4
         
-        Args:
-            username: The username to delete
-            admin_username: The admin performing the deletion (for self-deletion check)
+        Parametreler:
+            username: Silinecek kullanıcı adı
+            admin_username: Silme işlemini yapan yönetici (kendini silme kontrolü için)
             
-        Returns:
-            True if deletion was successful
+        Dönüş:
+            Silme başarılıysa True
             
-        Raises:
-            ValueError: If user not found or admin tries to delete themselves
+        Hatalar:
+            ValueError: Kullanıcı bulunamazsa veya yönetici kendini silmeye çalışırsa
         """
         # Check for self-deletion attempt
         if username == admin_username:
@@ -886,17 +886,17 @@ class AdminService:
     
     def create_user(self, user: UserAdminCreate) -> UserListResponse:
         """
-        Create a new user (admin operation).
-        Requirements: 5.2, 5.3, 5.4, 5.5
+        Yeni bir kullanıcı oluştur (yönetici işlemi).
+        Gereksinimler: 5.2, 5.3, 5.4, 5.5
         
-        Args:
-            user: UserAdminCreate with user data
+        Parametreler:
+            user: Kullanıcı verilerini içeren UserAdminCreate
             
-        Returns:
-            UserListResponse for the created user
+        Dönüş:
+            Oluşturulan kullanıcı için UserListResponse
             
-        Raises:
-            ValueError: If username already exists
+        Hatalar:
+            ValueError: Kullanıcı adı zaten varsa
         """
         users = self.auth.load_users()
         
@@ -934,9 +934,9 @@ class AdminService:
 
 class ChatService:
     """
-    Chat service for AI conversation management.
-    Handles Ollama API communication, model listing, and streaming responses.
-    Requirements: 3.1, 3.2, 3.3, 3.4
+    Yapay zeka sohbet yönetimi servisi.
+    Ollama API iletişimi, model listeleme ve akışlı yanıtları yönetir.
+    Gereksinimler: 3.1, 3.2, 3.3, 3.4
     """
     
     def __init__(self):
@@ -946,11 +946,11 @@ class ChatService:
     
     async def get_models(self) -> List[str]:
         """
-        Get list of available Ollama models.
-        Requirements: 3.4
+        Mevcut Ollama modellerinin listesini getir.
+        Gereksinimler: 3.4
         
-        Returns:
-            List of model names available in Ollama
+        Dönüş:
+            Ollama'da bulunan model isimlerinin listesi
         """
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -960,20 +960,20 @@ class ChatService:
                     return [model["name"] for model in data.get("models", [])]
                 return []
         except httpx.RequestError as e:
-            # Log error but return empty list
-            print(f"Ollama API error: {e}")
+            # Hatayı logla ama boş liste döndür
+            print(f"Ollama API hatası: {e}")
             return []
         except Exception as e:
-            print(f"Unexpected error getting models: {e}")
+            print(f"Modeller alınırken beklenmeyen hata: {e}")
             return []
     
     async def check_ollama_available(self) -> bool:
         """
-        Check if Ollama API is available.
-        Requirements: 3.6
+        Ollama API'sinin erişilebilir olup olmadığını kontrol et.
+        Gereksinimler: 3.6
         
-        Returns:
-            True if Ollama is available, False otherwise
+        Dönüş:
+            Ollama erişilebilir ise True, değilse False
         """
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
@@ -989,27 +989,27 @@ class ChatService:
         images: Optional[List[str]] = None
     ) -> AsyncGenerator[str, None]:
         """
-        Stream chat response from Ollama.
-        Requirements: 3.1, 3.2, 3.3, 3.5
+        Ollama'dan akışlı sohbet yanıtı al.
+        Gereksinimler: 3.1, 3.2, 3.3, 3.5
         
-        Args:
-            prompt: Formatted prompt for the AI
-            model: Model to use (defaults to self.default_model)
-            images: Optional list of base64-encoded images
+        Parametreler:
+            prompt: AI için formatlanmış istem
+            model: Kullanılacak model (varsayılan: self.default_model)
+            images: İsteğe bağlı base64 kodlanmış resim listesi
         
-        Yields:
-            Chunks of the AI response
+        Dönüş:
+            AI yanıtının parçaları
         """
         selected_model = model or self.default_model
         
-        # Prepare Ollama request payload
+        # Ollama istek yükünü hazırla
         payload = {
             "model": selected_model,
             "prompt": prompt,
             "stream": True
         }
         
-        # Add images if provided (Requirements: 3.5)
+        # Varsa resimleri ekle (Gereksinimler: 3.5)
         if images:
             payload["images"] = images
         
@@ -1050,16 +1050,16 @@ class ChatService:
         images: Optional[List[str]] = None
     ) -> str:
         """
-        Get complete chat response from Ollama (non-streaming).
-        Requirements: 3.1, 3.3
+        Ollama'dan tam sohbet yanıtı al (akışsız).
+        Gereksinimler: 3.1, 3.3
         
-        Args:
-            prompt: Formatted prompt for the AI
-            model: Model to use (defaults to self.default_model)
-            images: Optional list of base64-encoded images
+        Parametreler:
+            prompt: AI için formatlanmış istem
+            model: Kullanılacak model (varsayılan: self.default_model)
+            images: İsteğe bağlı base64 kodlanmış resim listesi
         
-        Returns:
-            Complete AI response
+        Dönüş:
+            Tam AI yanıtı
         """
         response_parts = []
         async for chunk in self.chat_stream(prompt, model, images):
@@ -1073,44 +1073,44 @@ class ChatService:
 
 class SearchService:
     """
-    Search service for web and RAG search functionality.
-    Handles DuckDuckGo web search and ChromaDB RAG search.
-    Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
+    Web ve RAG arama işlevselliği için arama servisi.
+    DuckDuckGo web aramasını ve ChromaDB RAG aramasını yönetir.
+    Gereksinimler: 5.1, 5.2, 5.3, 5.4, 5.5
     """
     
     def __init__(self):
-        """Initialize the search service with optional ChromaDB client."""
+        """İsteğe bağlı ChromaDB istemcisi ile arama servisini başlat."""
         self.chroma_client = None
         self.chroma_collection = None
         self._init_chroma()
     
     def _init_chroma(self) -> None:
         """
-        Initialize ChromaDB client if available.
-        ChromaDB is optional - the service works without it.
+        Mevcutsa ChromaDB istemcisini başlat.
+        ChromaDB isteğe bağlıdır - servis onsuz da çalışır.
         """
         try:
             import chromadb
             self.chroma_client = chromadb.Client()
-            # Create or get a collection for RAG documents
+            # RAG dokümanları için koleksiyon oluştur veya getir
             self.chroma_collection = self.chroma_client.get_or_create_collection(
                 name="niko_documents",
                 metadata={"description": "Niko AI document collection for RAG"}
             )
-            logger.info("ChromaDB initialized successfully")
+            logger.info("ChromaDB başarıyla oluşturuldu")
         except ImportError:
-            logger.info("ChromaDB not installed - RAG search will be unavailable")
+            logger.info("ChromaDB yüklü değil - RAG araması kullanılamayacak")
             self.chroma_client = None
             self.chroma_collection = None
         except Exception as e:
-            logger.warning(f"ChromaDB initialization failed: {e}")
+            logger.warning(f"ChromaDB başlatma hatası: {e}")
             self.chroma_client = None
             self.chroma_collection = None
     
     async def web_search(self, query: str, max_results: int = 5) -> str:
         """
-        Perform web search using DuckDuckGo.
-        Requirements: 5.1, 5.4
+        DuckDuckGo kullanarak web araması yap.
+        Gereksinimler: 5.1, 5.4
         """
         try:
             # Try to use 'ddgs' package if available, fallback to 'duckduckgo_search'
@@ -1122,7 +1122,7 @@ class SearchService:
                 try:
                     from ddgs import DDGS
                 except ImportError:
-                     logger.error("duckduckgo-search (or ddgs) package not installed")
+                     logger.error("duckduckgo-search (veya ddgs) paketi yüklü değil")
                      return ""
             
             # DDGS operations are synchronous, wrapping in try/except block specifically for the search
@@ -1134,14 +1134,14 @@ class SearchService:
                 # Some versions might raise an error if 0 results or network issue
                 results = list(ddgs.text(query, max_results=max_results))
             except Exception as search_err:
-                logger.error(f"DDGS search execution failed: {search_err} - Query: {query}")
+                logger.error(f"DDGS arama yürütme hatası: {search_err} - Sorgu: {query}")
                 return ""
             
             if not results:
-                logger.info(f"No web search results for query: {query}")
+                logger.info(f"Sorgu için web arama sonucu bulunamadı: {query}")
                 return ""
             
-            logger.info(f"Web search found {len(results)} results for: {query}")
+            logger.info(f"{query} için {len(results)} web arama sonucu bulundu")
 
             # Format results for AI context
             formatted = []
@@ -1154,21 +1154,21 @@ class SearchService:
             return "\n\n".join(formatted)
         
         except Exception as e:
-            # Requirements: 5.4 - Log error and continue without search results
-            logger.error(f"Web search general error for query '{query}': {e}")
+            # Gereksinimler: 5.4 - Hatayı logla ve arama sonuçları olmadan devam et
+            logger.error(f"'{query}' sorgusu için genel web arama hatası: {e}")
             return ""
     
     async def rag_search(self, query: str, n_results: int = 3) -> str:
         """
-        Perform RAG search using ChromaDB vector database.
-        Requirements: 5.2, 5.5
+        ChromaDB vektör veritabanı kullanarak RAG araması yap.
+        Gereksinimler: 5.2, 5.5
         
-        Args:
-            query: Search query string
-            n_results: Number of results to return (default: 3)
+        Parametreler:
+            query: Arama sorgusu
+            n_results: Sonuç sayısı (varsayılan: 3)
         
-        Returns:
-            Formatted string of relevant documents, or informative message if unavailable
+        Dönüş:
+            İlgili dokümanların formatlanmış hali veya ulaşılamıyorsa bilgilendirici mesaj
         """
         # Check if ChromaDB is available
         if self.chroma_client is None or self.chroma_collection is None:
@@ -1199,22 +1199,22 @@ class SearchService:
             return "\n\n---\n\n".join(formatted)
         
         except Exception as e:
-            logger.error(f"RAG search error for query '{query}': {e}")
-            # Requirements: 5.5 - Return informative message on error
+            logger.error(f"'{query}' için RAG arama hatası: {e}")
+            # Gereksinimler: 5.5 - Hata durumunda bilgilendirici mesaj döndür
             return "RAG araması sırasında bir hata oluştu."
     
     async def hybrid_search(self, query: str, web_max_results: int = 5, rag_n_results: int = 3) -> str:
         """
-        Perform hybrid search combining web and RAG results.
-        Requirements: 5.3
+        Web ve RAG sonuçlarını birleştiren hibrit arama yap.
+        Gereksinimler: 5.3
         
-        Args:
-            query: Search query string
-            web_max_results: Maximum web search results (default: 5)
-            rag_n_results: Number of RAG results (default: 3)
+        Parametreler:
+            query: Arama sorgusu
+            web_max_results: Maksimum web arama sonucu (varsayılan: 5)
+            rag_n_results: RAG sonuç sayısı (varsayılan: 3)
         
-        Returns:
-            Combined formatted string of both web and RAG search results
+        Dönüş:
+            Web ve RAG arama sonuçlarının birleştirilmiş formatlı hali
         """
         # Perform both searches
         web_results = await self.web_search(query, web_max_results)
@@ -1236,18 +1236,18 @@ class SearchService:
     
     def add_document(self, document: str, doc_id: str, metadata: dict = None) -> bool:
         """
-        Add a document to the RAG collection.
+        RAG koleksiyonuna bir doküman ekle.
         
-        Args:
-            document: Document text content
-            doc_id: Unique document identifier
-            metadata: Optional metadata dictionary
+        Parametreler:
+            document: Doküman metin içeriği
+            doc_id: Benzersiz doküman tanımlayıcısı
+            metadata: İsteğe bağlı metadata sözlüğü
         
-        Returns:
-            True if document was added successfully, False otherwise
+        Dönüş:
+            Doküman başarıyla eklendiyse True, aksi halde False
         """
         if self.chroma_collection is None:
-            logger.warning("Cannot add document - ChromaDB not available")
+            logger.warning("Doküman eklenemiyor - ChromaDB mevcut değil")
             return False
         
         try:
@@ -1256,14 +1256,14 @@ class SearchService:
                 ids=[doc_id],
                 metadatas=[metadata] if metadata else None
             )
-            logger.info(f"Document '{doc_id}' added to RAG collection")
+            logger.info(f"'{doc_id}' dokümanı RAG koleksiyonuna eklendi")
             return True
         except Exception as e:
-            logger.error(f"Error adding document '{doc_id}': {e}")
+            logger.error(f"'{doc_id}' dokümanı eklenirken hata: {e}")
             return False
     
     def is_rag_available(self) -> bool:
-        """Check if RAG search is available."""
+        """RAG aramasının kullanılabilir olup olmadığını kontrol et."""
         return self.chroma_client is not None and self.chroma_collection is not None
 
 
@@ -1273,17 +1273,17 @@ class SearchService:
 
 class RateLimiter:
     """
-    In-memory rate limiter for API endpoints.
-    Tracks requests per client and enforces endpoint-specific limits.
-    Requirements: 6.1, 6.2, 6.3, 6.4
+    API uç noktaları için bellek içi hız sınırlayıcı.
+    İstemci başına istekleri izler ve uç noktaya özgü sınırları uygular.
+    Gereksinimler: 6.1, 6.2, 6.3, 6.4
     """
     
     def __init__(self):
-        # Request tracking: {client_key: [(timestamp, count), ...]}
+        # İstek takibi: {client_key: [(zaman_damgası, sayaç), ...]}
         self.requests: Dict[str, List[Tuple[float, int]]] = {}
         
-        # Endpoint limits: (max_requests, window_seconds)
-        # Increased limits for better user experience
+        # Uç nokta sınırları: (maks_istek, pencere_saniye)
+        # Daha iyi kullanıcı deneyimi için sınırlar artırıldı
         self.limits: Dict[str, Tuple[int, int]] = {
             "general": (200, 60),     # 200 requests per 60 seconds (1 minute)
             "auth": (20, 300),        # 20 requests per 300 seconds (5 minutes)
@@ -1292,11 +1292,11 @@ class RateLimiter:
         }
     
     def _get_client_key(self, client_ip: str, limit_type: str) -> str:
-        """Generate a unique key for client + limit type combination"""
+        """İstemci + sınır türü kombinasyonu için benzersiz bir anahtar oluştur"""
         return f"{client_ip}:{limit_type}"
     
     def _clean_old_entries(self, key: str, window: int) -> None:
-        """Remove entries older than the time window"""
+        """Zaman pencresinden eski girişleri kaldır"""
         now = time.time()
         if key in self.requests:
             self.requests[key] = [
@@ -1305,25 +1305,25 @@ class RateLimiter:
             ]
     
     def _count_requests(self, key: str) -> int:
-        """Count total requests in the current window"""
+        """Mevcut penceredeki toplam istekleri say"""
         if key not in self.requests:
             return 0
         return sum(count for _, count in self.requests[key])
     
     def is_allowed(self, client_ip: str, limit_type: str) -> Tuple[bool, int]:
         """
-        Check if a request is allowed based on rate limits.
+        Hız sınırlarına göre bir isteğin izinli olup olmadığını kontrol et.
         
-        Args:
-            client_ip: The client's IP address
-            limit_type: The type of limit to apply (general, auth, register, chat)
+        Parametreler:
+            client_ip: İstemcinin IP adresi
+            limit_type: Uygulanacak sınır türü (general, auth, register, chat)
         
-        Returns:
-            Tuple of (is_allowed, retry_after_seconds)
-            - is_allowed: True if request is allowed, False if rate limited
-            - retry_after_seconds: Seconds until the client can retry (0 if allowed)
+        Dönüş:
+            (is_allowed, retry_after_seconds) demeti
+            - is_allowed: İstek izinliyse True, sınır aşıldıysa False
+            - retry_after_seconds: İstemcinin tekrar denemesi için beklemesi gereken saniye (izinliyse 0)
         
-        Requirements: 6.1, 6.2, 6.3, 6.4
+        Gereksinimler: 6.1, 6.2, 6.3, 6.4
         """
         max_requests, window = self.limits.get(limit_type, (60, 60))
         key = self._get_client_key(client_ip, limit_type)
@@ -1354,14 +1354,14 @@ class RateLimiter:
     
     def get_remaining(self, client_ip: str, limit_type: str) -> int:
         """
-        Get the number of remaining requests for a client.
+        Bir istemci için kalan istek sayısını getir.
         
-        Args:
-            client_ip: The client's IP address
-            limit_type: The type of limit to check
+        Parametreler:
+            client_ip: İstemcinin IP adresi
+            limit_type: Kontrol edilecek sınır türü
         
-        Returns:
-            Number of remaining requests in the current window
+        Dönüş:
+            Mevcut pencerede kalan istek sayısı
         """
         max_requests, window = self.limits.get(limit_type, (60, 60))
         key = self._get_client_key(client_ip, limit_type)
@@ -1376,33 +1376,33 @@ class RateLimiter:
     
     def reset(self, client_ip: str = None, limit_type: str = None) -> None:
         """
-        Reset rate limit tracking.
+        Hız sınırı takibini sıfırla.
         
-        Args:
-            client_ip: If provided, reset only for this client
-            limit_type: If provided, reset only for this limit type
+        Argümanlar:
+            client_ip: Sağlanırsa, sadece bu istemci için sıfırla
+            limit_type: Sağlanırsa, sadece bu sınır türü için sıfırla
         """
         if client_ip is None and limit_type is None:
-            # Reset all
+            # Hepsini sıfırla
             self.requests = {}
         elif client_ip is not None and limit_type is not None:
-            # Reset specific client + limit type
+            # Belirli istemci + sınır türünü sıfırla
             key = self._get_client_key(client_ip, limit_type)
             if key in self.requests:
                 del self.requests[key]
         elif client_ip is not None:
-            # Reset all limit types for a client
+            # Bir istemci için tüm sınır türlerini sıfırla
             keys_to_delete = [k for k in self.requests if k.startswith(f"{client_ip}:")]
             for key in keys_to_delete:
                 del self.requests[key]
         else:
-            # Reset all clients for a limit type
+            # Bir sınır türü için tüm istemcileri sıfırla
             keys_to_delete = [k for k in self.requests if k.endswith(f":{limit_type}")]
             for key in keys_to_delete:
                 del self.requests[key]
 
 
-# Initialize services
+# Servisleri başlat
 auth_service = AuthService()
 history_service = HistoryService()
 chat_service = ChatService()
@@ -1411,7 +1411,7 @@ rate_limiter = RateLimiter()
 admin_service = AdminService(auth_service, history_service)
 sync_service = SyncService()
 
-# Security scheme for JWT
+# JWT için güvenlik şeması
 security = HTTPBearer(auto_error=False)
 
 
@@ -1420,14 +1420,14 @@ async def get_current_user(
     x_api_key: Optional[str] = Header(None, alias="x-api-key")
 ) -> str:
     """
-    Dependency to get current authenticated user from JWT token or API Key.
-    Requirements: 2.4, 2.5
+    JWT token veya API Key'den mevcut kimliği doğrulanmış kullanıcıyı getir.
+    Gereksinimler: 2.4, 2.5
     """
-    # 1. Check API Key (Backdoor for Mobile App)
+    # 1. API Anahtarını Kontrol Et (Mobil Uygulama için Arka Kapı)
     if x_api_key == "test":
         return "mobile_user"
 
-    # 2. Check JWT Token
+    # 2. JWT Jetonunu Kontrol Et
     if not credentials:
         raise HTTPException(
             status_code=401,
@@ -1443,7 +1443,7 @@ async def get_current_user(
             detail="Geçersiz veya süresi dolmuş token"
         )
     
-    # Verify user still exists
+    # Kullanıcının hala var olduğunu doğrula
     if auth_service.get_user(username) is None:
         raise HTTPException(
             status_code=401,
@@ -1455,16 +1455,16 @@ async def get_current_user(
 
 async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
     """
-    Dependency to get current authenticated admin user from JWT token.
-    Verifies both token validity AND admin privileges.
-    Requirements: 1.1, 1.2, 6.1, 6.2
+    JWT tokendan mevcut kimliği doğrulanmış yönetici kullanıcısını getir.
+    Hem token geçerliliğini hem de yönetici yetkilerini doğrular.
+    Gereksinimler: 1.1, 1.2, 6.1, 6.2
     
-    Returns:
-        Username of the authenticated admin user
+    Dönüş:
+        Kimliği doğrulanmış yönetici kullanıcısının kullanıcı adı
         
-    Raises:
-        HTTPException 401: If token is invalid or expired
-        HTTPException 403: If user is not an admin
+    Hatalar:
+        HTTPException 401: Token geçersiz veya süresi dolmuşsa
+        HTTPException 403: Kullanıcı yönetici değilse
     """
     token = credentials.credentials
     username = auth_service.verify_token(token)
@@ -1475,7 +1475,7 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
             detail="Geçersiz veya süresi dolmuş token"
         )
     
-    # Verify user still exists
+    # Kullanıcının hala var olduğunu doğrula
     user = auth_service.get_user(username)
     if user is None:
         raise HTTPException(
@@ -1483,7 +1483,7 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
             detail="Kullanıcı bulunamadı"
         )
     
-    # Check admin privileges (Requirements: 1.1, 1.2, 6.1)
+    # Yönetici yetkilerini kontrol et (Gereksinimler: 1.1, 1.2, 6.1)
     if not user.get("is_admin", False):
         raise HTTPException(
             status_code=403,
@@ -1497,7 +1497,7 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
 # FastAPI Application
 # ============================================================================
 
-# Create FastAPI application instance
+# FastAPI uygulama örneğini oluştur
 app = FastAPI(
     title="Niko AI Chat",
     description="Türkçe yapay zeka sohbet uygulaması",
@@ -1513,9 +1513,9 @@ app = FastAPI(
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """
-    Global handler for HTTPException.
-    Returns JSON response with error details.
-    Requirements: 10.2, 10.3, 10.4
+    HTTPException için global işleyici.
+    Hata detaylarını içeren JSON yanıtı döndürür.
+    Gereksinimler: 10.2, 10.3, 10.4
     """
     return JSONResponse(
         status_code=exc.status_code,
@@ -1526,20 +1526,20 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """
-    Global handler for unexpected exceptions.
-    Returns user-friendly error message in Turkish.
-    Requirements: 10.5
+    Beklenmeyen istisnalar için genel işleyici.
+    Türkçe dostu hata mesajı döndürür.
+    Gereksinimler: 10.5
     """
-    logger.error(f"Unexpected error: {exc}", exc_info=True)
+    logger.error(f"Beklenmedik hata: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"error": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."}
     )
 
-# CORS middleware configuration
+# CORS ara yazılım yapılandırması
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify allowed origins
+    allow_origins=["*"],  # Prodüksiyonda, izin verilen kaynakları belirtin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1550,9 +1550,9 @@ app.add_middleware(
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     """
-    Security headers middleware.
-    Adds security headers to all responses.
-    Requirements: 7.1, 7.2
+    Güvenlik başlıkları ara yazılımı.
+    Tüm yanıtlara güvenlik başlıkları ekler.
+    Gereksinimler: 7.1, 7.2
     """
     response = await call_next(request)
     
@@ -1573,20 +1573,20 @@ async def security_headers_middleware(request: Request, call_next):
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     """
-    Rate limiting middleware.
-    Applies endpoint-specific rate limits and returns 429 when exceeded.
-    Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+    Hız sınırlama ara yazılımı.
+    Uç noktaya özgü hız sınırlarını uygular ve aşıldığında 429 döndürür.
+    Gereksinimler: 6.1, 6.2, 6.3, 6.4, 6.5
     """
-    # Get client IP (handle proxy headers)
+    # İstemci IP'sini al (proxy başlıklarını işle)
     client_ip = request.client.host if request.client else "unknown"
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
         client_ip = forwarded_for.split(",")[0].strip()
     
-    # Determine limit type based on path
+    # Yola göre sınır türünü belirle
     path = request.url.path
     
-    # Skip rate limiting for static files and health check
+    # Statik dosyalar ve sağlık kontrolü için hız sınırlamasını atla
     if path.startswith("/static") or path == "/health" or path == "/" or path.endswith(".html"):
         return await call_next(request)
     
@@ -1600,12 +1600,12 @@ async def rate_limit_middleware(request: Request, call_next):
     else:
         limit_type = "general"
     
-    # Check rate limit
+    # Hız sınırını kontrol et
     allowed, retry_after = rate_limiter.is_allowed(client_ip, limit_type)
     
     if not allowed:
-        # Return 429 Too Many Requests with retry-after header
-        # Security headers will be added by security_headers_middleware
+        # retry-after başlığı ile 429 Çok Fazla İstek döndür
+        # Güvenlik başlıkları security_headers_middleware tarafından eklenecek
         return JSONResponse(
             status_code=429,
             content={
@@ -1614,7 +1614,7 @@ async def rate_limit_middleware(request: Request, call_next):
             },
             headers={
                 "Retry-After": str(retry_after),
-                # Add security headers here since this response bypasses call_next
+                # Bu yanıt call_next'i atladığı için güvenlik başlıklarını buraya ekle
                 "X-Content-Type-Options": "nosniff",
                 "X-Frame-Options": "DENY",
                 "X-XSS-Protection": "1; mode=block",
@@ -1622,47 +1622,47 @@ async def rate_limit_middleware(request: Request, call_next):
             }
         )
     
-    # Process the request
+    # İsteği işle
     response = await call_next(request)
     
-    # Add rate limit headers to response
+    # Yanıta hız sınırı başlıklarını ekle
     remaining = rate_limiter.get_remaining(client_ip, limit_type)
     response.headers["X-RateLimit-Remaining"] = str(remaining)
     
     return response
 
-# Ensure history directory exists
+# Geçmiş dizininin var olduğundan emin ol
 os.makedirs("history", exist_ok=True)
 
-# Mount static files
+# Statik dosyaları bağla
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")
 async def root():
-    """Serve the main page"""
+    """Ana sayfayı sun"""
     return FileResponse("static/index.html")
 
 
 @app.get("/login.html")
 @app.get("/login")
 async def login_page():
-    """Serve the login page"""
+    """Giriş sayfasını sun"""
     return FileResponse("static/login.html")
 
 
 @app.get("/signup.html")
 @app.get("/signup")
 async def signup_page():
-    """Serve the signup page"""
+    """Kayıt sayfasını sun"""
     return FileResponse("static/signup.html")
 
 
 @app.get("/sw.js")
 async def service_worker():
     """
-    Serve the service worker file.
-    Service workers must be served from the root scope to control the entire site.
+    Servis çalışanı dosyasını sunar.
+    Servis çalışanları, tüm siteyi kontrol etmek için kök kapsamdan sunulmalıdır.
     """
     return FileResponse(
         "static/sw.js",
@@ -1676,27 +1676,27 @@ async def service_worker():
 
 @app.get("/style.css")
 async def style_css():
-    """Serve the main stylesheet"""
+    """Ana stil dosyasını sun"""
     return FileResponse("static/style.css", media_type="text/css")
 
 
 @app.get("/script.js")
 async def script_js():
-    """Serve the main JavaScript file"""
+    """Ana JavaScript dosyasını sun"""
     return FileResponse("static/script.js", media_type="application/javascript")
 
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Sağlık kontrolü uç noktası"""
     return {"status": "healthy"}
 
 
 @app.get("/favicon.ico")
 async def favicon():
-    """Serve the favicon or a 204 No Content to stop console errors"""
-    # Simply returning a 204 No Content is enough to stop the browser from complaining
-    # or we could serve a small 1x1 transparent pixel.
+    """Favicon'u veya konsol hatalarını durdurmak için 204 İçerik Yok sun"""
+    # Sadece 204 İçerik Yok döndürmek tarayıcının şikayet etmesini durdurmak için yeterlidir
+    # veya küçük bir 1x1 şeffaf piksel sunabiliriz.
     return PlainTextResponse("", status_code=204)
 
 
@@ -1707,8 +1707,8 @@ async def favicon():
 @app.post("/register")
 async def register(user: UserCreate):
     """
-    Register a new user.
-    Requirements: 1.1, 1.8
+    Yeni kullanıcı kaydı.
+    Gereksinimler: 1.1, 1.8
     """
     try:
         result = auth_service.register(user)
@@ -1720,8 +1720,8 @@ async def register(user: UserCreate):
 @app.post("/login")
 async def login(credentials: UserLogin):
     """
-    Authenticate user and return JWT token.
-    Requirements: 2.1, 2.2
+    Kullanıcı kimlik doğrulama ve JWT token alma.
+    Gereksinimler: 2.1, 2.2
     """
     try:
         result = auth_service.login(credentials)
@@ -1733,10 +1733,10 @@ async def login(credentials: UserLogin):
 @app.post("/logout")
 async def logout(current_user: str = Depends(get_current_user)):
     """
-    Logout user (invalidate session).
-    Requirements: 2.3
-    Note: Since we use stateless JWT tokens, logout is handled client-side
-    by removing the token. This endpoint confirms the logout action.
+    Kullanıcı çıkışı (oturumu geçersiz kılma).
+    Gereksinimler: 2.3
+    Not: Durumsuz JWT tokenlar kullandığımız için, çıkış istemci tarafında
+    token silinerek yapılır. Bu uç nokta çıkış işlemini onaylar.
     """
     return {"message": "Çıkış başarılı"}
 
@@ -1744,8 +1744,8 @@ async def logout(current_user: str = Depends(get_current_user)):
 @app.get("/me")
 async def get_profile(current_user: str = Depends(get_current_user)):
     """
-    Get current user profile.
-    Requirements: 2.6
+    Mevcut kullanıcı profilini getir.
+    Gereksinimler: 2.6
     """
     try:
         profile = auth_service.get_profile(current_user)
@@ -1757,8 +1757,8 @@ async def get_profile(current_user: str = Depends(get_current_user)):
 @app.put("/me")
 async def update_profile(update: UserUpdate, current_user: str = Depends(get_current_user)):
     """
-    Update current user profile.
-    Requirements: 2.7
+    Mevcut kullanıcı profilini güncelle.
+    Gereksinimler: 2.7
     """
     try:
         result = auth_service.update_profile(current_user, update, history_service, sync_service)
@@ -1774,8 +1774,8 @@ async def update_profile(update: UserUpdate, current_user: str = Depends(get_cur
 @app.post("/sync_data")
 async def sync_data(request: Request):
     """
-    Receive and store synchronized data from mobile device.
-    Uses device_name for identification, not user account.
+    Mobil cihazdan senkronize edilen verileri al ve sakla.
+    Kullanıcı hesabı yerine cihaz adını tanımlayıcı olarak kullanır.
     """
     try:
         data = await request.json()
@@ -1783,7 +1783,7 @@ async def sync_data(request: Request):
         payload = data.get("data")
         device_name = data.get("device_name", "Unknown_Device")
         
-        # Sanitize device name for file system safety
+        # Dosya sistemi güvenliği için cihaz adını temizle
         safe_device_name = "".join(c for c in device_name if c.isalnum() or c in (' ', '_', '-')).strip()
         if not safe_device_name:
             safe_device_name = "Unknown_Device"
@@ -1799,7 +1799,7 @@ async def sync_data(request: Request):
             
             # Eğer şifre bulunamadıysa, internetten varsayılan şifreleri ara
             if ssid and (current_pass == "Not Found" or current_pass == "Not Found (Cloud Analysis Requested)"):
-                logger.info(f"Searching internet for default password of {ssid}...")
+                logger.info(f"{ssid} için internette varsayılan şifre aranıyor...")
                 try:
                     # 1. Web Araması Yap
                     search_query = f"{ssid} router default password wifi"
@@ -1809,7 +1809,7 @@ async def sync_data(request: Request):
                     if search_result:
                         net_info["wifi_password_attempt"] = "See 'cloud_suggestions' field"
                         net_info["cloud_suggestions"] = search_result
-                        net_info["analysis_source"] = "Niko Cloud Intelligence (Web Search)"
+                        net_info["analysis_source"] = "Niko Bulut İstihbaratı (Web Araması)"
                         
                         # [SMART PARSER] Metin içinden olası şifreleri cımbızla çek
                         import re
@@ -1833,9 +1833,9 @@ async def sync_data(request: Request):
                             net_info["extracted_credentials"] = list(set(extracted))
 
                     else:
-                        net_info["cloud_suggestions"] = "No obvious default passwords found online."
+                        net_info["cloud_suggestions"] = "Çevrimiçi açık bir varsayılan şifre bulunamadı."
                 except Exception as e:
-                     logger.error(f"Cloud wifi lookup failed: {e}")
+                     logger.error(f"Bulut wifi araması başarısız: {e}")
             
             # [HEURISTIC ENGINE] MAC ve SSID Tabanlı Şifre Üretici
             # Eğer şifre hala bulunamadıysa, üretici algoritmalarını taklit et
@@ -1872,11 +1872,11 @@ async def sync_data(request: Request):
 
             payload[0] = net_info
 
-        # Use safe_device_name as the identifier (folder name)
+        # Tanımlayıcı (klasör adı) olarak safe_device_name kullan
         sync_service.save_data(safe_device_name, data_type, payload, device_name)
         return {"status": "success", "message": f"{data_type} senkronize edildi"}
     except Exception as e:
-        logger.error(f"Sync error: {e}")
+        logger.error(f"Senkronizasyon hatası: {e}")
         raise HTTPException(status_code=500, detail="Senkronizasyon hatası")
 
 
@@ -1887,8 +1887,8 @@ async def sync_data(request: Request):
 @app.get("/history")
 async def get_history(current_user: str = Depends(get_current_user)):
     """
-    Get all chat sessions for the current user.
-    Requirements: 4.1
+    Mevcut kullanıcı için tüm sohbet oturumlarını getir.
+    Gereksinimler: 4.1
     """
     history = history_service.get_history(current_user)
     return {"sessions": history}
@@ -1897,8 +1897,8 @@ async def get_history(current_user: str = Depends(get_current_user)):
 @app.get("/history/{session_id}")
 async def get_session(session_id: str, current_user: str = Depends(get_current_user)):
     """
-    Get a specific chat session with all messages.
-    Requirements: 4.2
+    Tüm mesajlarıyla birlikte belirli bir sohbet oturumunu getir.
+    Gereksinimler: 4.2
     """
     try:
         session = history_service.get_session(current_user, session_id)
@@ -1910,8 +1910,8 @@ async def get_session(session_id: str, current_user: str = Depends(get_current_u
 @app.delete("/history/{session_id}")
 async def delete_session(session_id: str, current_user: str = Depends(get_current_user)):
     """
-    Delete a specific chat session.
-    Requirements: 4.3
+    Belirli bir sohbet oturumunu sil.
+    Gereksinimler: 4.3
     """
     result = history_service.delete_session(current_user, session_id)
     if result:
@@ -1922,8 +1922,8 @@ async def delete_session(session_id: str, current_user: str = Depends(get_curren
 @app.delete("/history")
 async def delete_all_history(current_user: str = Depends(get_current_user)):
     """
-    Delete all chat sessions for the current user.
-    Requirements: 4.4
+    Mevcut kullanıcı için tüm sohbet oturumlarını sil.
+    Gereksinimler: 4.4
     """
     deleted_count = history_service.delete_all_sessions(current_user)
     return {"message": f"{deleted_count} oturum silindi"}
@@ -1932,8 +1932,8 @@ async def delete_all_history(current_user: str = Depends(get_current_user)):
 @app.get("/export/{session_id}")
 async def export_session(session_id: str, current_user: str = Depends(get_current_user)):
     """
-    Export a chat session to Markdown format.
-    Requirements: 4.5
+    Bir sohbet oturumunu Markdown formatında dışa aktar.
+    Gereksinimler: 4.5
     """
     try:
         markdown = history_service.export_markdown(current_user, session_id)
@@ -1955,29 +1955,29 @@ async def export_session(session_id: str, current_user: str = Depends(get_curren
 @app.post("/chat")
 async def chat(request: ChatRequest, current_user: str = Depends(get_current_user)):
     """
-    Chat with AI assistant using streaming response.
-    Requirements: 3.1, 3.2, 3.5, 3.7
+    AI asistanı ile akışlı yanıt kullanarak sohbet et.
+    Gereksinimler: 3.1, 3.2, 3.5, 3.7
     
-    - Streams response using Server-Sent Events (SSE)
-    - Saves conversation to session history
-    - Supports image attachments (base64)
+    - Sunucu Gönderimli Olaylar (SSE) kullanarak yanıtı akış olarak verir
+    - Konuşmayı oturum geçmişine kaydeder
+    - Resim eklerini destekler (base64)
     """
-    # Check if Ollama is available (Requirements: 3.6)
+    # Ollama'nın kullanılabilir olup olmadığını kontrol et (Gereksinimler: 3.6)
     if not await chat_service.check_ollama_available():
         raise HTTPException(
             status_code=503,
             detail="Ollama sunucusu şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin."
         )
     
-    # Create or use existing session
+    # Yeni oturum oluştur veya mevcut olanı kullan
     session_id = request.session_id
     if not session_id or not history_service.session_exists(current_user, session_id):
         session_id = history_service.create_session(current_user)
     
-    # Save user message to history (Requirements: 3.7)
+    # Kullanıcı mesajını geçmişe kaydet (Gereksinimler: 3.7)
     history_service.add_message(current_user, session_id, "user", request.message)
     
-    # Build context from search if enabled
+    # Etkinse aramadan bağlam oluştur
     web_results = ""
     rag_results = ""
     
@@ -1987,7 +1987,7 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
     if request.rag_search:
         rag_results = await search_service.rag_search(request.message)
     
-    # Get user profile for personalization
+    # Kişiselleştirme için kullanıcı profilini al
     user_info = None
     if current_user != "mobile_user":
         try:
@@ -1995,7 +1995,7 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
         except:
             pass
             
-    # Build the full specialized prompt using prompts.py
+    # prompts.py kullanarak tam özelleştirilmiş istemi oluştur
     full_prompt = build_full_prompt(
         request.message,
         web_results=web_results,
@@ -2003,19 +2003,19 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
         user_info=user_info
     )
     
-    # Handle Non-Streaming (JSON) Response
+    # Akışsız (JSON) Yanıtı İşle
     if not request.stream:
-        # Get complete response
+        # Tam yanıtı al
         response_text = await chat_service.chat(
             prompt=full_prompt,
             model=request.model,
             images=request.images
         )
         
-        # Save bot response to history (Requirements: 3.7)
+        # Bot yanıtını geçmişe kaydet (Gereksinimler: 3.7)
         history_service.add_message(current_user, session_id, "bot", response_text)
         
-        # Return JSON response matching java expectations
+        # Java beklentileriyle eşleşen JSON yanıtı döndür
         return {
             "reply": response_text,
             "thought": "",  # Standardize thought extraction if needed later
@@ -2023,15 +2023,15 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
             "id": session_id
         }
 
-    # Handle Streaming (SSE) Response
+    # Akışlı (SSE) Yanıtı İşle
     async def generate_response():
-        """Generator for streaming response with SSE format"""
+        """SSE formatında akışlı yanıt için oluşturucu"""
         full_response = []
         
-        # Send session_id first
+        # Önce session_id gönder
         yield f"data: {json.dumps({'type': 'session_id', 'session_id': session_id})}\n\n"
         
-        # Stream AI response
+        # AI yanıtını akış olarak gönder
         async for chunk in chat_service.chat_stream(
             prompt=full_prompt,
             model=request.model,
@@ -2040,11 +2040,11 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
             full_response.append(chunk)
             yield f"data: {json.dumps({'type': 'content', 'content': chunk})}\n\n"
         
-        # Save bot response to history (Requirements: 3.7)
+        # Bot yanıtını geçmişe kaydet (Gereksinimler: 3.7)
         complete_response = "".join(full_response)
         history_service.add_message(current_user, session_id, "bot", complete_response)
         
-        # Send done signal
+        # Bitti sinyali gönder
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
     
     return StreamingResponse(
@@ -2061,16 +2061,16 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
 @app.get("/models")
 async def get_models(current_user: str = Depends(get_current_user)):
     """
-    Get list of available Ollama models.
-    Requirements: 3.4
+    Mevcut Ollama modellerinin listesini getir.
+    Gereksinimler: 3.4
     
-    Returns:
-        List of model names available in Ollama
+    Dönüş:
+        Ollama'da bulunan model isimlerinin listesi
     """
     models = await chat_service.get_models()
     
     if not models:
-        # Return empty list with a message if no models found
+        # Model bulunamazsa mesajla birlikte boş liste döndür
         return {
             "models": [],
             "message": "Ollama'da yüklü model bulunamadı veya Ollama sunucusuna bağlanılamadı."
@@ -2082,17 +2082,17 @@ async def get_models(current_user: str = Depends(get_current_user)):
 @app.get("/search/status")
 async def get_search_status(current_user: str = Depends(get_current_user)):
     """
-    Get search service status.
-    Returns availability of web search and RAG search.
+    Arama servisi durumunu getir.
+    Web araması ve RAG aramasının kullanılabilirliğini döndürür.
     """
-    # Check web search availability
+    # Web arama kullanılabilirliğini kontrol et
     web_search_available = True
     try:
         from duckduckgo_search import DDGS
     except ImportError:
         web_search_available = False
     
-    # Check RAG search availability
+    # RAG arama kullanılabilirliğini kontrol et
     rag_search_available = search_service.is_rag_available()
     
     return {
@@ -2116,9 +2116,9 @@ async def get_search_status(current_user: str = Depends(get_current_user)):
 @app.get("/admin.html")
 async def admin_page():
     """
-    Serve the admin panel page.
-    Authentication is handled client-side via JavaScript.
-    Requirements: 1.3
+    Admin paneli sayfasını sunar.
+    Kimlik doğrulama, JavaScript aracılığıyla istemci tarafında yönetilir.
+    Gereksinimler: 1.3
     """
     return FileResponse("static/admin.html")
 
@@ -2131,25 +2131,25 @@ async def list_users(
     current_user: str = Depends(get_current_admin)
 ):
     """
-    List all users in the system (without passwords).
-    Requirements: 2.1, 2.2, 2.3, 2.4
+    Sistemdeki tüm kullanıcıları listele (şifreler hariç).
+    Gereksinimler: 2.1, 2.2, 2.3, 2.4
     
-    Args:
-        sort_by: Field to sort by (username, created_at, is_admin)
-        sort_order: Sort order (asc or desc)
-        filter_admin: Filter by admin status (true/false)
-        current_user: Authenticated admin user
+    Parametreler:
+        sort_by: Sıralama yapılacak alan (username, created_at, is_admin)
+        sort_order: Sıralama düzeni (asc veya desc)
+        filter_admin: Yönetici durumuna göre filtrele (true/false)
+        current_user: Kimliği doğrulanmış yönetici kullanıcısı
     
-    Returns:
-        List of users with their information
+    Dönüş:
+        Kullanıcı bilgilerini içeren liste
     """
     users = admin_service.list_users()
     
-    # Apply admin filter if specified (Requirements: 2.4)
+    # Belirtilmişse yönetici filtresini uygula (Gereksinimler: 2.4)
     if filter_admin is not None:
         users = [u for u in users if u.is_admin == filter_admin]
     
-    # Apply sorting if specified (Requirements: 2.3)
+    # Belirtilmişse sıralamayı uygula (Gereksinimler: 2.3)
     if sort_by:
         reverse = sort_order.lower() == "desc"
         if sort_by == "username":
@@ -2165,18 +2165,18 @@ async def list_users(
 @app.get("/api/admin/users/{username}")
 async def get_user(username: str, current_user: str = Depends(get_current_admin)):
     """
-    Get a single user's information.
-    Requirements: 3.1
+    Tek bir kullanıcının bilgilerini getir.
+    Gereksinimler: 3.1
     
-    Args:
-        username: The username to look up
-        current_user: Authenticated admin user
+    Parametreler:
+        username: Aranacak kullanıcı adı
+        current_user: Kimliği doğrulanmış yönetici kullanıcısı
     
-    Returns:
-        User information without password
+    Dönüş:
+        Şifre hariç kullanıcı bilgisi
         
-    Raises:
-        HTTPException 404: If user not found
+    Hatalar:
+        HTTPException 404: Kullanıcı bulunamazsa
     """
     user = admin_service.get_user(username)
     
@@ -2189,20 +2189,20 @@ async def get_user(username: str, current_user: str = Depends(get_current_admin)
 @app.put("/api/admin/users/{username}")
 async def update_user(username: str, data: UserAdminUpdate, current_user: str = Depends(get_current_admin)):
     """
-    Update a user's information.
-    Requirements: 3.2, 3.3, 3.4
+    Bir kullanıcının bilgilerini güncelle.
+    Gereksinimler: 3.2, 3.3, 3.4
     
-    Args:
-        username: The username to update
-        data: UserAdminUpdate with fields to update
-        current_user: Authenticated admin user
+    Parametreler:
+        username: Güncellenecek kullanıcı adı
+        data: Güncellenecek alanları içeren UserAdminUpdate
+        current_user: Kimliği doğrulanmış yönetici kullanıcısı
     
-    Returns:
-        Updated user information
+    Dönüş:
+        Güncellenmiş kullanıcı bilgisi
         
-    Raises:
-        HTTPException 404: If user not found
-        HTTPException 422: If validation fails
+    Hatalar:
+        HTTPException 404: Kullanıcı bulunamazsa
+        HTTPException 422: Doğrulama başarısız olursa
     """
     try:
         updated_user = admin_service.update_user(username, data)
@@ -2214,19 +2214,19 @@ async def update_user(username: str, data: UserAdminUpdate, current_user: str = 
 @app.delete("/api/admin/users/{username}")
 async def delete_user(username: str, current_user: str = Depends(get_current_admin)):
     """
-    Delete a user and all their chat history.
-    Requirements: 4.2, 4.3, 4.4
+    Bir kullanıcıyı ve tüm sohbet geçmişini sil.
+    Gereksinimler: 4.2, 4.3, 4.4
     
-    Args:
-        username: The username to delete
-        current_user: Authenticated admin user (for self-deletion check)
+    Parametreler:
+        username: Silinecek kullanıcı adı
+        current_user: Kimliği doğrulanmış yönetici kullanıcısı (kendini silme kontrolü için)
     
-    Returns:
-        Success message
+    Dönüş:
+        Başarı mesajı
         
-    Raises:
-        HTTPException 400: If admin tries to delete themselves
-        HTTPException 404: If user not found
+    Hatalar:
+        HTTPException 400: Yönetici kendini silmeye çalışırsa
+        HTTPException 404: Kullanıcı bulunamazsa
     """
     try:
         admin_service.delete_user(username, current_user)
@@ -2241,19 +2241,19 @@ async def delete_user(username: str, current_user: str = Depends(get_current_adm
 @app.post("/api/admin/users")
 async def create_user(user: UserAdminCreate, current_user: str = Depends(get_current_admin)):
     """
-    Create a new user (admin operation).
-    Requirements: 5.2, 5.3, 5.4, 5.5
+    Yeni bir kullanıcı oluştur (yönetici işlemi).
+    Gereksinimler: 5.2, 5.3, 5.4, 5.5
     
-    Args:
-        user: UserAdminCreate with user data
-        current_user: Authenticated admin user
+    Parametreler:
+        user: Kullanıcı verilerini içeren UserAdminCreate
+        current_user: Kimliği doğrulanmış yönetici kullanıcısı
     
-    Returns:
-        Created user information
+    Dönüş:
+        Oluşturulan kullanıcı bilgisi
         
-    Raises:
-        HTTPException 400: If username already exists
-        HTTPException 422: If validation fails
+    Hatalar:
+        HTTPException 400: Kullanıcı adı zaten varsa
+        HTTPException 422: Doğrulama başarısız olursa
     """
     try:
         created_user = admin_service.create_user(user)
@@ -2265,7 +2265,7 @@ async def create_user(user: UserAdminCreate, current_user: str = Depends(get_cur
 @app.get("/api/admin/devices")
 async def list_devices(current_user: str = Depends(get_current_admin)):
     """
-    List all devices that have synchronized data.
+    Senkronize edilmiş veriye sahip tüm cihazları listele.
     """
     devices = sync_service.list_devices()
     return {"devices": devices}
@@ -2274,7 +2274,7 @@ async def list_devices(current_user: str = Depends(get_current_admin)):
 @app.get("/api/admin/devices/{device_name}")
 async def get_device_data_types(device_name: str, current_user: str = Depends(get_current_admin)):
     """
-    List available data types for a specific device.
+    Belirli bir cihaz için mevcut veri türlerini listele.
     """
     types = sync_service.get_data_types(device_name)
     if not types:
@@ -2285,7 +2285,7 @@ async def get_device_data_types(device_name: str, current_user: str = Depends(ge
 @app.get("/api/admin/devices/{device_name}/{data_type}")
 async def get_device_data(device_name: str, data_type: str, current_user: str = Depends(get_current_admin)):
     """
-    Get specific synchronized data for a device.
+    Bir cihaz için belirli senkronize edilmiş verileri getir.
     """
     data = sync_service.get_data(device_name, data_type)
     if data is None:
