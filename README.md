@@ -95,4 +95,4 @@ python manage_users.py
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
 
-> 🌐 **Güncel Tünel Adresi:** [https://hash-authorization-aim-tale.trycloudflare.com](https://hash-authorization-aim-tale.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://yards-mystery-from-shelf.trycloudflare.com](https://yards-mystery-from-shelf.trycloudflare.com)
