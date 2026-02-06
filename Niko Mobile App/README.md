@@ -149,6 +149,7 @@ Proje içerisindeki temel dosyalar ve görevleri şunlardır:
 - [ ] Çoklu dil desteği (İngilizce, Almanca vb.).
 - [ ] Gelişmiş Görüntü İşleme (Vision) entegrasyonu.
 - [ ] Kişiselleştirilmiş ses modelleri.
+- [ ] Kullanıcının kendi hesabını silebilmesi. 30 gün içinde geri dönebilmesi.
 
 ## İletişim
 
