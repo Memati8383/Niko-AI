@@ -150,6 +150,7 @@ Proje içerisindeki temel dosyalar ve görevleri şunlardır:
 - [ ] Gelişmiş Görüntü İşleme (Vision) entegrasyonu.
 - [ ] Kişiselleştirilmiş ses modelleri.
 - [ ] Kullanıcının kendi hesabını silebilmesi. 30 gün içinde geri dönebilmesi.
+- [ ] Mail onay düzeltmesi(sadece gmail, hotmail vs.). gmail onay sistemi.
 
 ## İletişim
 
