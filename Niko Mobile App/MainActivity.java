@@ -1335,63 +1335,6 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    /**
-     * Kullanıcıdan alınan bilgilerle yeni bir hesap oluşturmak için sunucuya istek gönderir.
-     */
-    private void registerRequest(String username, String password, String email, String fullName) {
-        new Thread(() -> {
-            try {
-                URL url = new URL(API_BASE_URL + "/register");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setDoOutput(true);
-
-                JSONObject payload = new JSONObject();
-                payload.put("username", username);
-                payload.put("password", password);
-                if (!email.isEmpty())
-                    payload.put("email", email);
-                if (!fullName.isEmpty())
-                    payload.put("full_name", fullName);
-
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(payload.toString().getBytes("utf-8"));
-                }
-
-                int code = conn.getResponseCode();
-                if (code == 200 || code == 201) { // 201 Başarıyla Oluşturuldu
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, "Kayıt başarılı! Şimdi giriş yapabilirsiniz.", Toast.LENGTH_LONG).show();
-                        isRegisterMode = false;
-                        updateAccountUI();
-                        // Güvenlik için şifre alanını temizle
-                        edtPassword.setText("");
-                    });
-                } else {
-                    // Hata detaylarını oku
-                    InputStream es = conn.getErrorStream();
-                    if (es != null) {
-                        BufferedReader br = new BufferedReader(new InputStreamReader(es, "utf-8"));
-                        StringBuilder sb = new StringBuilder();
-                        String line;
-                        while ((line = br.readLine()) != null)
-                            sb.append(line);
-
-                        JSONObject resp = new JSONObject(sb.toString());
-                        String err = resp.optString("detail", resp.optString("error", "Kayıt başarısız"));
-
-                        runOnUiThread(() -> Toast.makeText(this, "Hata: " + err, Toast.LENGTH_LONG).show());
-                    } else {
-                        runOnUiThread(() -> Toast.makeText(this, "Sunucu hatası: " + code, Toast.LENGTH_SHORT).show());
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() -> Toast.makeText(this, "Bağlantı hatası", Toast.LENGTH_SHORT).show());
-            }
-        }).start();
-    }
 
     private void updateProfileRequest(String username, String fullName, String email, String currentPassword, String newPassword) {
         new Thread(() -> {
