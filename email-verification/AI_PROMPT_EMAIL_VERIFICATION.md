@@ -35,7 +35,7 @@ Bu proje için e-posta doğrulama sistemi kurmak istiyorum.
 Bana şunları içeren bir `email_verification.py` dosyası oluştur:
 
 **Gereksinimler:**
-- Resend API kullanmalı (API Key: re_Ejpe1U4w_9RD9ByjtPfh4hfF6kSMcwh1v)
+- Resend API kullanmalı (API Key:)
 - Sadece Python standart kütüphaneleri kullan (http.client, json, random, datetime)
 - Dış kütüphane KULLANMA (requests, resend-python vb. KULLANMA)
 - 6 haneli rastgele doğrulama kodu üret
@@ -358,7 +358,7 @@ Tüm fonksiyonları test etsin.
 ### Minimal Versiyon (Hızlı)
 
 ```
-Niko AI projem için Resend API (re_Ejpe1U4w_9RD9ByjtPfh4hfF6kSMcwh1v) 
+Niko AI projem için Resend API () 
 kullanarak e-posta doğrulama sistemi kur.
 
 Backend: Python FastAPI

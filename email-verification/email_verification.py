@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 
 class EmailVerificationService:
     def __init__(self):
-        self.api_key = "re_Ejpe1U4w_9RD9ByjtPfh4hfF6kSMcwh1v"
+        self.api_key = ""
         self.from_email = "onboarding@resend.dev"  # Resend test email
         self.from_name = "Niko AI"
         

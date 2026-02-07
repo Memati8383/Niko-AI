@@ -16,7 +16,7 @@ E-posta doğrulama sistemi **Resend API** ile başarıyla kuruldu ve test edildi
 
 ### API Bilgileri
 
-- **API Key:** `re_Ejpe1U4w_9RD9ByjtPfh4hfF6kSMcwh1v`
+- **API Key:** `buraya api key yaz`
 - **Test E-posta:** `delivered@resend.dev`
 - **Gönderen:** `Niko AI <onboarding@resend.dev>`
 

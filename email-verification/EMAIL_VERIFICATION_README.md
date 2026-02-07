@@ -27,7 +27,7 @@ Niko AI için Resend API kullanarak e-posta doğrulama sistemi.
    ```
 
 3. **API Ayarları:**
-   - Resend API Key: `re_Ejpe1U4w_9RD9ByjtPfh4hfF6kSMcwh1v`
+   - Resend API Key: ``
    - Gönderen E-posta: `onboarding@resend.dev` (Test için)
    - Production için kendi domain'inizi ekleyin: https://resend.com/domains
 
