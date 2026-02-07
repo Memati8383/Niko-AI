@@ -15,7 +15,7 @@ set "W=%ESC%[37m"
 set "RESET=%ESC%[0m"
 
 echo %B%==========================================%RESET%
-echo %B%   NIKO AI - GELISMLS COMMIT SISTEMI      %RESET%
+echo %B%   NIKO AI - GELISMIS COMMIT SISTEMI      %RESET%
 echo %B%==========================================%RESET%
 echo.
 

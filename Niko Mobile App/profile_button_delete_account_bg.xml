@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/android/res/android">
+    
+    <!-- Dış gölge efekti -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#40FF0000" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    
+    <!-- Ana buton -->
+    <item
+        android:left="2dp"
+        android:right="2dp"
+        android:top="2dp"
+        android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <!-- Gradient arka plan -->
+            <gradient
+                android:angle="135"
+                android:startColor="#2D0A0A"
+                android:centerColor="#1F0505"
+                android:endColor="#0D0000"
+                android:type="linear" />
+            
+            <!-- Yuvarlatılmış köşeler -->
+            <corners android:radius="14dp" />
+            
+            <!-- Parlak kırmızı kenarlık -->
+            <stroke
+                android:width="2dp"
+                android:color="#FF3333" />
+        </shape>
+    </item>
+    
+    <!-- İç parlama efekti -->
+    <item
+        android:left="4dp"
+        android:right="4dp"
+        android:top="4dp"
+        android:bottom="50dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="90"
+                android:startColor="#30FF0000"
+                android:endColor="#00FF0000"
+                android:type="linear" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+    
+</layer-list>

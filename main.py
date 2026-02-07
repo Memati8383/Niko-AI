@@ -361,6 +361,7 @@ class AuthService:
     def login(self, credentials: UserLogin) -> dict:
         """
         Kullanıcı kimliğini doğrula ve JWT token döndür.
+        Silinmek üzere işaretlenmiş hesapları 30 gün içinde geri aktif eder.
         Gereksinimler: 2.1, 2.2
         """
         users = self.load_users()
@@ -371,6 +372,23 @@ class AuthService:
         
         if not self.verify_password(credentials.password, user["password"]):
             raise ValueError("Geçersiz kullanıcı adı veya şifre")
+        
+        # Silinmek üzere işaretlenmiş hesabı kontrol et
+        if "deleted_at" in user:
+            from datetime import timezone
+            deleted_at = datetime.fromisoformat(user["deleted_at"])
+            now = datetime.now(timezone.utc)
+            days_since_deletion = (now - deleted_at).days
+            
+            if days_since_deletion < 30:
+                # 30 gün dolmamış, hesabı geri aktif et
+                del user["deleted_at"]
+                users[credentials.username] = user
+                self.save_users(users)
+                logger.info(f"Silinmek üzere işaretlenmiş hesap geri aktif edildi: {credentials.username}")
+            else:
+                # 30 gün dolmuş, hesabı kalıcı olarak sil
+                raise ValueError("Hesabınız kalıcı olarak silinmiştir. Lütfen yeni bir hesap oluşturun.")
         
         token = self.create_token(credentials.username)
         return {"access_token": token, "token_type": "bearer"}
@@ -465,6 +483,45 @@ class AuthService:
             response["access_token"] = self.create_token(new_username)
             
         return response
+    
+    def cleanup_deleted_accounts(self, history_service=None) -> int:
+        """
+        30 günden eski silinmiş hesapları kalıcı olarak temizler.
+        sadece hesap ve sohbet geçmişi silinir.
+        
+        Dönüş:
+            Silinen hesap sayısı
+        """
+        users = self.load_users()
+        deleted_count = 0
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+        
+        usernames_to_delete = []
+        
+        for username, user_data in users.items():
+            if "deleted_at" in user_data:
+                deleted_at = datetime.fromisoformat(user_data["deleted_at"])
+                days_since_deletion = (now - deleted_at).days
+                
+                if days_since_deletion >= 30:
+                    usernames_to_delete.append(username)
+        
+        # Hesapları ve sohbet geçmişini sil (senkronize edilmiş veriler korunur)
+        for username in usernames_to_delete:
+            # Sadece sohbet geçmişini sil
+            if history_service:
+                history_service.delete_all_sessions(username)
+            
+            # Kullanıcı hesabını sil
+            del users[username]
+            deleted_count += 1
+            logger.info(f"30 günlük süre dolduğu için hesap kalıcı olarak silindi: {username}")
+        
+        if deleted_count > 0:
+            self.save_users(users)
+        
+        return deleted_count
 
 
 # ============================================================================
@@ -1372,6 +1429,31 @@ app = FastAPI(
 
 
 # ============================================================================
+# Uygulama Başlangıç Olayları
+# ============================================================================
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Uygulama başlangıcında çalışacak işlemler.
+    30 günden eski silinmiş hesapları temizler.
+    """
+    logger.info("Uygulama başlatılıyor...")
+    
+    # Silinmiş hesapları temizle
+    try:
+        deleted_count = auth_service.cleanup_deleted_accounts(history_service)
+        if deleted_count > 0:
+            logger.info(f"{deleted_count} adet 30 günlük süresi dolmuş hesap temizlendi")
+        else:
+            logger.info("Temizlenecek silinmiş hesap bulunamadı")
+    except Exception as e:
+        logger.error(f"Silinmiş hesapları temizlerken hata oluştu: {e}")
+    
+    logger.info("Uygulama başarıyla başlatıldı")
+
+
+# ============================================================================
 # Global İstisna İşleyicileri
 # Gereksinimler: 10.5
 # ============================================================================
@@ -1631,6 +1713,66 @@ async def update_profile(update: UserUpdate, current_user: str = Depends(get_cur
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/me")
+async def delete_own_account(current_user: str = Depends(get_current_user)):
+    """
+    Mevcut kullanıcının kendi hesabını silmek için işaretler.
+    Hesap 30 gün boyunca askıya alınır ve bu süre içinde geri aktif edilebilir.
+    30 gün sonra hesap ve sohbet geçmişi kalıcı olarak silinir.
+    
+    Silinecek veriler:
+    - Kullanıcı profili (hesap bilgileri)
+    - Tüm sohbet geçmişi
+    
+    Not: Admin kullanıcıları güvenlik nedeniyle kendilerini silemez.
+    """
+    try:
+        # mobile_user özel durumu (API key ile giriş)
+        if current_user == "mobile_user":
+            raise HTTPException(
+                status_code=403,
+                detail="Anonim kullanıcılar hesap silemez. Lütfen giriş yapın."
+            )
+        
+        # Kullanıcıyı bul
+        user = auth_service.get_user(current_user)
+        if user is None:
+            raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        
+        # Admin kullanıcılarının kendini silmesini engelle (güvenlik)
+        if user.get("is_admin", False):
+            raise HTTPException(
+                status_code=403,
+                detail="Admin kullanıcıları hesaplarını silemez. Lütfen başka bir admin ile iletişime geçin."
+            )
+        
+        # Kullanıcıları yükle
+        users = auth_service.load_users()
+        
+        if current_user not in users:
+            raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        
+        # Hesabı silmek için işaretle (30 gün sonra kalıcı silinecek)
+        from datetime import timezone
+        users[current_user]["deleted_at"] = datetime.now(timezone.utc).isoformat()
+        auth_service.save_users(users)
+        
+        logger.info(f"Kullanıcı hesabı silme için işaretlendi (30 gün içinde geri alınabilir): {current_user}")
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Hesabınız silme için işaretlendi. 30 gün içinde tekrar giriş yaparak hesabınızı geri aktif edebilirsiniz. 30 gün sonra hesabınız ve sohbet geçmişiniz kalıcı olarak silinecektir."
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Hesap silme hatası ({current_user}): {e}")
+        raise HTTPException(status_code=500, detail="Hesap silinirken bir hata oluştu")
 
 
 # ============================================================================

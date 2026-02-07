@@ -203,7 +203,7 @@ public class MainActivity extends Activity {
     private TextView btnSwitchMode;
     private View layoutLoggedIn;
     private TextView txtLoginStatus;
-    private Button btnLogout, btnEditProfile;
+    private Button btnLogout, btnEditProfile, btnDeleteAccount;
     
     // Yeni profil kartı bileşenleri (Premium Profile Card)
     private TextView txtProfileUsername, txtProfileEmail, txtProfileFullName;
@@ -323,6 +323,7 @@ public class MainActivity extends Activity {
         txtLoginStatus = findViewById(R.id.txtLoginStatus);
         btnLogout = findViewById(R.id.btnLogout);
         btnEditProfile = findViewById(R.id.btnEditProfile);
+        btnDeleteAccount = findViewById(R.id.btnDeleteAccount);
         edtCurrentPassword = findViewById(R.id.edtCurrentPassword);
         txtCurrentPasswordLabel = findViewById(R.id.txtCurrentPasswordLabel);
         txtPasswordLabel = findViewById(R.id.txtPasswordLabel);
@@ -371,6 +372,7 @@ public class MainActivity extends Activity {
         addLog("Uygulama başlatıldı. API: " + API_BASE_URL);
         btnEditProfile.setOnClickListener(v -> enableEditMode());
         btnLogout.setOnClickListener(v -> performLogout());
+        btnDeleteAccount.setOnClickListener(v -> showDeleteAccountConfirmation());
 
         // Gerekli başlatma işlemleri
         requestPermissions(); // İzinleri iste
@@ -1489,6 +1491,531 @@ public class MainActivity extends Activity {
         
         updateAccountUI();
         Toast.makeText(this, "Çıkış yapıldı", Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Hesap silme işlemi için özelleştirilmiş onay diyaloğu gösterir.
+     * Kullanıcının yanlışlıkla hesabını silmesini önlemek için gereklidir.
+     */
+    private void showDeleteAccountConfirmation() {
+        // Ana container
+        LinearLayout mainLayout = new LinearLayout(this);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setBackgroundColor(Color.parseColor("#1a1a2e"));
+        
+        // İçerik container
+        LinearLayout contentLayout = new LinearLayout(this);
+        contentLayout.setOrientation(LinearLayout.VERTICAL);
+        contentLayout.setPadding(60, 50, 60, 40);
+        
+        // Başlık ikonu
+        ImageView iconView = new ImageView(this);
+        iconView.setImageResource(android.R.drawable.ic_dialog_alert);
+        iconView.setColorFilter(Color.parseColor("#ff6b6b"));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(130, 130);
+        iconParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        iconParams.setMargins(0, 0, 0, 35);
+        iconView.setLayoutParams(iconParams);
+        contentLayout.addView(iconView);
+        
+        // Başlık
+        TextView titleView = new TextView(this);
+        titleView.setText("Hesabı Sil");
+        titleView.setTextSize(26);
+        titleView.setTextColor(Color.WHITE);
+        titleView.setTypeface(null, android.graphics.Typeface.BOLD);
+        titleView.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        titleParams.setMargins(0, 0, 0, 35);
+        titleView.setLayoutParams(titleParams);
+        contentLayout.addView(titleView);
+        
+        // Ayırıcı çizgi
+        View divider1 = new View(this);
+        divider1.setBackgroundColor(Color.parseColor("#ff6b6b"));
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 4
+        );
+        dividerParams.setMargins(0, 0, 0, 30);
+        divider1.setLayoutParams(dividerParams);
+        contentLayout.addView(divider1);
+        
+        // Ana mesaj
+        TextView messageView = new TextView(this);
+        messageView.setText("⏱️ 30 Günlük Askı Süresi");
+        messageView.setTextSize(17);
+        messageView.setTextColor(Color.parseColor("#ffd93d"));
+        messageView.setTypeface(null, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams msgParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        msgParams.setMargins(0, 0, 0, 18);
+        messageView.setLayoutParams(msgParams);
+        contentLayout.addView(messageView);
+        
+        // Detay mesajı
+        TextView detailView = new TextView(this);
+        detailView.setText("Hesabınız 30 gün boyunca askıya alınacaktır. Bu süre içinde tekrar giriş yaparak hesabınızı geri aktif edebilirsiniz.");
+        detailView.setTextSize(14);
+        detailView.setTextColor(Color.parseColor("#d0d0d0"));
+        detailView.setLineSpacing(10, 1);
+        LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        detailParams.setMargins(0, 0, 0, 25);
+        detailView.setLayoutParams(detailParams);
+        contentLayout.addView(detailView);
+        
+        // Uyarı kutusu
+        LinearLayout warningBox = new LinearLayout(this);
+        warningBox.setOrientation(LinearLayout.VERTICAL);
+        warningBox.setBackgroundColor(Color.parseColor("#2d1b1b"));
+        warningBox.setPadding(35, 25, 35, 25);
+        LinearLayout.LayoutParams warningParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        warningParams.setMargins(0, 0, 0, 30);
+        warningBox.setLayoutParams(warningParams);
+        
+        // Uyarı kutusu kenarlık efekti
+        android.graphics.drawable.GradientDrawable warningBorder = new android.graphics.drawable.GradientDrawable();
+        warningBorder.setColor(Color.parseColor("#2d1b1b"));
+        warningBorder.setStroke(3, Color.parseColor("#ff6b6b"));
+        warningBorder.setCornerRadius(15);
+        warningBox.setBackground(warningBorder);
+        
+        TextView warningTitle = new TextView(this);
+        warningTitle.setText("⚠️ 30 Gün Sonra Silinecek:");
+        warningTitle.setTextSize(15);
+        warningTitle.setTextColor(Color.parseColor("#ff6b6b"));
+        warningTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        warningTitle.setPadding(0, 0, 0, 12);
+        warningBox.addView(warningTitle);
+        
+        TextView warningText = new TextView(this);
+        warningText.setText("• Hesap bilgileri\n• Sohbet geçmişi");
+        warningText.setTextSize(14);
+        warningText.setTextColor(Color.parseColor("#ffb3b3"));
+        warningText.setLineSpacing(8, 1);
+        warningBox.addView(warningText);
+        
+        contentLayout.addView(warningBox);
+        
+        // Son uyarı
+        TextView finalWarning = new TextView(this);
+        finalWarning.setText("Devam etmek istediğinizden emin misiniz?");
+        finalWarning.setTextSize(16);
+        finalWarning.setTextColor(Color.WHITE);
+        finalWarning.setTypeface(null, android.graphics.Typeface.BOLD);
+        finalWarning.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams finalParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        finalParams.setMargins(0, 0, 0, 0);
+        finalWarning.setLayoutParams(finalParams);
+        contentLayout.addView(finalWarning);
+        
+        mainLayout.addView(contentLayout);
+        
+        // Butonlar için özel container
+        LinearLayout buttonContainer = new LinearLayout(this);
+        buttonContainer.setOrientation(LinearLayout.HORIZONTAL);
+        buttonContainer.setBackgroundColor(Color.parseColor("#0f0f1e"));
+        buttonContainer.setPadding(40, 25, 40, 25);
+        buttonContainer.setGravity(android.view.Gravity.CENTER);
+        
+        // İptal butonu
+        Button cancelButton = new Button(this);
+        cancelButton.setText("İptal");
+        cancelButton.setTextColor(Color.WHITE);
+        cancelButton.setTextSize(15);
+        cancelButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        cancelButton.setAllCaps(false);
+        
+        android.graphics.drawable.GradientDrawable cancelBg = new android.graphics.drawable.GradientDrawable();
+        cancelBg.setColor(Color.parseColor("#2d4a2d"));
+        cancelBg.setCornerRadius(25);
+        cancelButton.setBackground(cancelBg);
+        
+        LinearLayout.LayoutParams cancelParams = new LinearLayout.LayoutParams(
+            0,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            1
+        );
+        cancelParams.setMargins(0, 0, 15, 0);
+        cancelButton.setLayoutParams(cancelParams);
+        cancelButton.setPadding(0, 30, 0, 30);
+        
+        // Sil butonu
+        Button deleteButton = new Button(this);
+        deleteButton.setText("Evet, Hesabı Sil");
+        deleteButton.setTextColor(Color.WHITE);
+        deleteButton.setTextSize(15);
+        deleteButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        deleteButton.setAllCaps(false);
+        
+        android.graphics.drawable.GradientDrawable deleteBg = new android.graphics.drawable.GradientDrawable();
+        deleteBg.setColor(Color.parseColor("#d32f2f"));
+        deleteBg.setCornerRadius(25);
+        deleteButton.setBackground(deleteBg);
+        
+        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
+            0,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            1
+        );
+        deleteParams.setMargins(15, 0, 0, 0);
+        deleteButton.setLayoutParams(deleteParams);
+        deleteButton.setPadding(0, 30, 0, 30);
+        
+        buttonContainer.addView(cancelButton);
+        buttonContainer.addView(deleteButton);
+        
+        mainLayout.addView(buttonContainer);
+        
+        // Dialog oluştur
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setView(mainLayout);
+        builder.setCancelable(true);
+        
+        android.app.AlertDialog dialog = builder.create();
+        
+        // Buton click listener'ları
+        cancelButton.setOnClickListener(v -> dialog.dismiss());
+        deleteButton.setOnClickListener(v -> {
+            dialog.dismiss();
+            deleteAccountRequest();
+        });
+        
+        // Dialog arka planını şeffaf yap
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        
+        dialog.show();
+    }
+
+    /**
+     * Hesap başarıyla silindiğinde özel başarı dialog'u gösterir.
+     * @param message Sunucudan gelen detaylı mesaj
+     */
+    private void showAccountDeletedSuccessDialog(String message) {
+        // Ana container
+        LinearLayout mainLayout = new LinearLayout(this);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setBackgroundColor(Color.parseColor("#0f3443"));
+        
+        // İçerik container
+        LinearLayout contentLayout = new LinearLayout(this);
+        contentLayout.setOrientation(LinearLayout.VERTICAL);
+        contentLayout.setPadding(60, 55, 60, 45);
+        
+        // Başarı ikonu
+        ImageView iconView = new ImageView(this);
+        iconView.setImageResource(android.R.drawable.checkbox_on_background);
+        iconView.setColorFilter(Color.parseColor("#6bcf7f"));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(150, 150);
+        iconParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        iconParams.setMargins(0, 0, 0, 40);
+        iconView.setLayoutParams(iconParams);
+        contentLayout.addView(iconView);
+        
+        // Başlık
+        TextView titleView = new TextView(this);
+        titleView.setText("✓ Hesap Silindi");
+        titleView.setTextSize(28);
+        titleView.setTextColor(Color.parseColor("#6bcf7f"));
+        titleView.setTypeface(null, android.graphics.Typeface.BOLD);
+        titleView.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        titleParams.setMargins(0, 0, 0, 35);
+        titleView.setLayoutParams(titleParams);
+        contentLayout.addView(titleView);
+        
+        // Yeşil ayırıcı çizgi
+        View divider = new View(this);
+        divider.setBackgroundColor(Color.parseColor("#6bcf7f"));
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 4
+        );
+        dividerParams.setMargins(0, 0, 0, 35);
+        divider.setLayoutParams(dividerParams);
+        contentLayout.addView(divider);
+        
+        // Bilgi kutusu
+        LinearLayout infoBox = new LinearLayout(this);
+        infoBox.setOrientation(LinearLayout.VERTICAL);
+        infoBox.setBackgroundColor(Color.parseColor("#1a4d5c"));
+        infoBox.setPadding(40, 30, 40, 30);
+        LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        infoParams.setMargins(0, 0, 0, 30);
+        infoBox.setLayoutParams(infoParams);
+        
+        // Bilgi kutusu kenarlık
+        android.graphics.drawable.GradientDrawable infoBorder = new android.graphics.drawable.GradientDrawable();
+        infoBorder.setColor(Color.parseColor("#1a4d5c"));
+        infoBorder.setStroke(3, Color.parseColor("#4dd0e1"));
+        infoBorder.setCornerRadius(15);
+        infoBox.setBackground(infoBorder);
+        
+        // Mesaj metni
+        TextView messageView = new TextView(this);
+        messageView.setText(message);
+        messageView.setTextSize(14);
+        messageView.setTextColor(Color.parseColor("#e0f7fa"));
+        messageView.setLineSpacing(12, 1);
+        infoBox.addView(messageView);
+        
+        contentLayout.addView(infoBox);
+        
+        // Önemli bilgi başlığı
+        TextView importantTitle = new TextView(this);
+        importantTitle.setText("📌 Önemli Bilgi:");
+        importantTitle.setTextSize(16);
+        importantTitle.setTextColor(Color.parseColor("#ffd93d"));
+        importantTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams impTitleParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        impTitleParams.setMargins(0, 0, 0, 18);
+        importantTitle.setLayoutParams(impTitleParams);
+        contentLayout.addView(importantTitle);
+        
+        // Bilgi kartı
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setBackgroundColor(Color.parseColor("#1a3d4d"));
+        card.setPadding(30, 25, 30, 25);
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        cardParams.setMargins(0, 0, 0, 30);
+        card.setLayoutParams(cardParams);
+        
+        // Kart kenarlık
+        android.graphics.drawable.GradientDrawable cardBorder = new android.graphics.drawable.GradientDrawable();
+        cardBorder.setColor(Color.parseColor("#1a3d4d"));
+        cardBorder.setStroke(2, Color.parseColor("#4dd0e1"));
+        cardBorder.setCornerRadius(12);
+        card.setBackground(cardBorder);
+        
+        TextView cardIcon = new TextView(this);
+        cardIcon.setText("⏱️");
+        cardIcon.setTextSize(26);
+        cardIcon.setPadding(0, 0, 25, 0);
+        card.addView(cardIcon);
+        
+        TextView cardText = new TextView(this);
+        cardText.setText("30 gün içinde giriş yaparak geri alabilirsiniz.");
+        cardText.setTextSize(13);
+        cardText.setTextColor(Color.parseColor("#b3e5fc"));
+        cardText.setLineSpacing(5, 1);
+        card.addView(cardText);
+        
+        contentLayout.addView(card);
+        
+        // Teşekkür mesajı
+        TextView thanksView = new TextView(this);
+        thanksView.setText("Niko AI'ı kullandığınız için teşekkür ederiz! 💙");
+        thanksView.setTextSize(15);
+        thanksView.setTextColor(Color.parseColor("#80deea"));
+        thanksView.setTypeface(null, android.graphics.Typeface.ITALIC);
+        thanksView.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams thanksParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        thanksParams.setMargins(0, 0, 0, 0);
+        thanksView.setLayoutParams(thanksParams);
+        contentLayout.addView(thanksView);
+        
+        mainLayout.addView(contentLayout);
+        
+        // Buton container
+        LinearLayout buttonContainer = new LinearLayout(this);
+        buttonContainer.setOrientation(LinearLayout.HORIZONTAL);
+        buttonContainer.setBackgroundColor(Color.parseColor("#0a2530"));
+        buttonContainer.setPadding(60, 25, 60, 25);
+        buttonContainer.setGravity(android.view.Gravity.CENTER);
+        
+        // Tamam butonu
+        Button okButton = new Button(this);
+        okButton.setText("Tamam");
+        okButton.setTextColor(Color.WHITE);
+        okButton.setTextSize(16);
+        okButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        okButton.setAllCaps(false);
+        
+        android.graphics.drawable.GradientDrawable okBg = new android.graphics.drawable.GradientDrawable();
+        okBg.setColor(Color.parseColor("#2e7d32"));
+        okBg.setCornerRadius(25);
+        okButton.setBackground(okBg);
+        
+        LinearLayout.LayoutParams okParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        okButton.setLayoutParams(okParams);
+        okButton.setPadding(0, 35, 0, 35);
+        
+        buttonContainer.addView(okButton);
+        mainLayout.addView(buttonContainer);
+        
+        // Dialog oluştur
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setView(mainLayout);
+        builder.setCancelable(false);
+        
+        android.app.AlertDialog dialog = builder.create();
+        
+        // Buton click listener
+        okButton.setOnClickListener(v -> dialog.dismiss());
+        
+        // Dialog arka planını şeffaf yap
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        
+        dialog.show();
+    }
+
+    /**
+     * Kullanıcının hesabını silmek için işaretler.
+     * Sunucuya DELETE isteği gönderir ve başarılı olursa logout yapar.
+     * Hesap 30 gün içinde geri aktif edilebilir.
+     */
+    private void deleteAccountRequest() {
+        if (authToken == null) {
+            Toast.makeText(this, "Hesap silmek için giriş yapmanız gerekiyor", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        addLog("[HESAP SİL] Hesap silme isteği gönderiliyor...");
+        
+        new Thread(() -> {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL(API_BASE_URL + "/me");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("DELETE");
+                conn.setRequestProperty("Authorization", "Bearer " + authToken);
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setConnectTimeout(30000);
+                conn.setReadTimeout(30000);
+
+                int code = conn.getResponseCode();
+                addLog("[HESAP SİL] Sunucu yanıt kodu: " + code);
+
+                if (code == 200) {
+                    // Başarılı silme işareti
+                    // Sunucudan gelen mesajı oku
+                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        response.append(line);
+                    }
+                    br.close();
+                    
+                    // JSON'dan mesajı çıkar
+                    String serverMessage = "Hesabınız silme için işaretlendi";
+                    try {
+                        JSONObject jsonResponse = new JSONObject(response.toString());
+                        if (jsonResponse.has("message")) {
+                            serverMessage = jsonResponse.getString("message");
+                        }
+                    } catch (Exception e) {
+                        addLog("[HESAP SİL] JSON parse hatası: " + e.getMessage());
+                    }
+                    
+                    final String finalMessage = serverMessage;
+                    
+                    runOnUiThread(() -> {
+                        addLog("[HESAP SİL] " + finalMessage);
+                        
+                        // Yerel verileri temizle (performLogout benzeri)
+                        authToken = null;
+                        authUsername = null;
+                        authPrefs.edit().clear().apply();
+                        
+                        // Profil resimlerini varsayılana döndür
+                        imgTopProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+                        imgTopProfile.setColorFilter(Color.WHITE);
+                        imgMainProfile.setImageResource(android.R.drawable.ic_menu_myplaces);
+                        imgMainProfile.setColorFilter(Color.WHITE);
+                        if (imgProfileAvatar != null) {
+                            imgProfileAvatar.setImageResource(android.R.drawable.ic_menu_myplaces);
+                            imgProfileAvatar.setColorFilter(Color.WHITE);
+                        }
+                        
+                        hideAccount();
+                        updateAccountUI();
+                        
+                        // Sunucudan gelen mesajı özel dialog ile göster
+                        showAccountDeletedSuccessDialog(finalMessage);
+                    });
+                } else {
+                    // Hata durumu
+                    InputStream errorStream = conn.getErrorStream();
+                    String errorDetail = "";
+                    if (errorStream != null) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(errorStream, "utf-8"));
+                        StringBuilder esb = new StringBuilder();
+                        String eline;
+                        while ((eline = br.readLine()) != null) esb.append(eline);
+                        br.close();
+                        errorDetail = esb.toString();
+                    }
+                    addLog("[HESAP SİL] HATA: " + code + " - " + errorDetail);
+                    
+                    // JSON'dan detail mesajını çıkarmaya çalış
+                    String errorMessage = "";
+                    try {
+                        JSONObject errorJson = new JSONObject(errorDetail);
+                        if (errorJson.has("detail")) {
+                            errorMessage = errorJson.getString("detail");
+                        }
+                    } catch (Exception e) {
+                        // JSON parse edilemezse varsayılan mesajları kullan
+                    }
+                    
+                    final String msg;
+                    if (!errorMessage.isEmpty()) {
+                        msg = errorMessage;
+                    } else {
+                        msg = code == 401 ? "Oturum süresi dolmuş. Lütfen tekrar giriş yapın." 
+                            : code == 403 ? "Bu işlem için yetkiniz yok."
+                            : code == 404 ? "Hesap bulunamadı."
+                            : "Hesap silinemedi. Sunucu hatası: " + code;
+                    }
+                    
+                    runOnUiThread(() -> Toast.makeText(this, msg, Toast.LENGTH_LONG).show());
+                }
+            } catch (Exception e) {
+                addLog("[HESAP SİL] İSTİSNA: " + e.getMessage());
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.", Toast.LENGTH_SHORT).show());
+            } finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            }
+        }).start();
     }
 
     /**
