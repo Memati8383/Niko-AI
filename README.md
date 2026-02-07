@@ -104,4 +104,4 @@ python main.py
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
 
-> 🌐 **Güncel Tünel Adresi:** [https://periods-kansas-tales-qui.trycloudflare.com](https://periods-kansas-tales-qui.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://elements-tumor-editorials-nebraska.trycloudflare.com](https://elements-tumor-editorials-nebraska.trycloudflare.com)
