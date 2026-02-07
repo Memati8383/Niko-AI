@@ -1,0 +1,28 @@
+Niko AI projem için e-posta doğrulama sistemi kur.
+
+BACKEND: Python FastAPI
+- email_verification.py: Resend API (re_Ejpe1U4w_9RD9ByjtPfh4hfF6kSMcwh1v)
+- 6 haneli kod, 5 dakika geçerli, 5 deneme hakkı
+- Sadece http.client kullan (requests KULLANMA)
+- Premium HTML e-posta şablonu
+
+ENDPOINT'LER (main.py):
+- POST /send-verification-code
+- POST /verify-email-code  
+- POST /resend-verification-code
+
+MOBİL: Android Java (MainActivity.java)
+- showEmailVerificationDialog()
+- sendVerificationCode()
+- verifyEmailCode()
+- performRegistration()
+- registerRequest() metodunu güncelle (e-posta varsa dialog aç)
+
+TEST: test_email_verification.py
+- Test email: delivered@resend.dev
+
+DÖKÜMANTASYON:
+- EMAIL_VERIFICATION_README.md
+- KULLANIM_KILAVUZU.md
+
+Tüm dosyalar için tam kod ver. Detaylı açıklama ekle.
