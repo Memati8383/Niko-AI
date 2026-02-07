@@ -1,4 +1,22 @@
-# Niko AI Ecosystem
+# 🤖 Niko AI Ecosystem
+
+<div align="center">
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Python](https://img.shields.io/badge/python-3.9+-green.svg)
+![License](https://img.shields.io/badge/license-MIT-orange.svg)
+![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android-lightgrey.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
+
+**Türkçe optimize edilmiş, sesli komut destekli, hibrit yapay zeka asistanı**
+
+[🚀 Hızlı Başlangıç](#-kurulum-ve-çalıştırma) • [📖 Dokümantasyon](docs/) • [🐛 Hata Bildir](https://github.com/Memati8383/niko-with-kiro/issues) • [💡 Özellik İste](https://github.com/Memati8383/niko-with-kiro/issues/new?template=feature_request.md)
+
+</div>
+
+---
+
+## 📝 Hakkında
 
 Niko AI, gelişmiş Türkçe sesli komut desteği sunan, Android ve Web platformlarında çalışan hibrit bir kişisel yapay zeka asistanı ekosistemidir. FastAPI altyapısı, Ollama entegrasyonu ve modern kullanıcı arayüzleri ile hem mobil hem de masaüstü kullanıcıları için benzersiz bir deneyim sunar.
 
@@ -56,7 +74,19 @@ Dış ağlardan ve mobil cihazdan erişim için Cloudflare tüneli kullanılmakt
 
 > ℹ️ **Not:** Mobil uygulama (Android), GitHub'daki README dosyasını okuyarak güncel API adresini otomatik olarak alabilir.
 
+## 📸 Ekran Görüntüleri
+
+<div align="center">
+
+| Web Chat | Mobil Uygulama | Admin Paneli |
+|----------|----------------|--------------|
+| Modern glassmorphism UI | Sesli komut desteği | Kullanıcı yönetimi |
+
+</div>
+
 ## 🛠️ Kurulum ve Çalıştırma
+
+> 📚 **Detaylı kurulum için:** [Kurulum Rehberi](docs/INSTALLATION.md)
 
 ### 1. Önerilen Yöntem (Otomatik)
 
@@ -98,6 +128,58 @@ python main.py
 - **Yerelleştirme:** `main.py` dahil tüm backend kodları, fonksiyon açıklamaları ve loglar Türkçe'ye çevrilmiştir.
 - **Hızlı Commit:** Kod değişikliklerini hızlıca GitHub'a göndermek için `hizli_commit.bat` aracını kullanabilirsiniz.
 - **Testler:** Validasyon testleri için `test_validation.py` dosyasını `pytest` veya doğrudan Python ile çalıştırabilirsiniz.
+
+## 📚 Dokümantasyon
+
+- 📖 [Kurulum Rehberi](docs/INSTALLATION.md) - Detaylı kurulum adımları
+- 🔌 [API Dokümantasyonu](docs/API.md) - REST API referansı
+- 🏗️ [Mimari Dokümantasyonu](docs/ARCHITECTURE.md) - Sistem mimarisi
+- ❓ [SSS](docs/FAQ.md) - Sık sorulan sorular
+- 🤝 [Katkıda Bulunma](CONTRIBUTING.md) - Nasıl katkıda bulunulur
+- 🔒 [Güvenlik](SECURITY.md) - Güvenlik politikası
+
+## 🤝 Katkıda Bulunma
+
+Katkılarınızı bekliyoruz! Lütfen [CONTRIBUTING.md](CONTRIBUTING.md) dosyasını okuyun.
+
+1. Fork edin
+2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
+3. Commit edin (`git commit -m 'feat: harika özellik eklendi'`)
+4. Push edin (`git push origin feature/amazing-feature`)
+5. Pull Request açın
+
+## 📄 Lisans
+
+Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
+
+## 🙏 Teşekkürler
+
+- [Ollama](https://ollama.ai/) - Yerel LLM altyapısı
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern web framework
+- [Cloudflare](https://www.cloudflare.com/) - Tunnel servisi
+- Tüm katkıda bulunanlara ❤️
+
+## 📞 İletişim
+
+- 🐛 **Bug Raporu:** [GitHub Issues](https://github.com/Memati8383/niko-with-kiro/issues)
+- 💡 **Özellik İsteği:** [Feature Request](https://github.com/Memati8383/niko-with-kiro/issues/new?template=feature_request.md)
+- 💬 **Tartışma:** [GitHub Discussions](https://github.com/Memati8383/niko-with-kiro/discussions)
+
+## ⭐ Yıldız Geçmişi
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Memati8383/niko-with-kiro&type=Date)](https://star-history.com/#Memati8383/niko-with-kiro&Date)
+
+---
+
+<div align="center">
+
+**Niko AI - Geleceğin Asistanı, Bugün Yanınızda** 🚀
+
+Made with ❤️ in Turkey 🇹🇷
+
+[⬆ Başa Dön](#-niko-ai-ecosystem)
+
+</div>
 
 ---
 
