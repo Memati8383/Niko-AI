@@ -382,10 +382,10 @@ public class MainActivity extends Activity {
         });
         
         btnCancelVerification.setOnClickListener(v -> {
-            layoutVerification.setVisibility(View.GONE);
-            layoutAccountFields.setVisibility(View.VISIBLE);
+            animateVerificationExit();
             edtVerifyCode.setText("");
         });
+
 
         // Admin Log Bileşenlerini Bağla
         layoutAdminLogs = findViewById(R.id.layoutAdminLogs);
@@ -1406,10 +1406,6 @@ public class MainActivity extends Activity {
     
     /**
      * Kullanıcı kaydı isteği gönderir.
-     * E-posta doğrulaması yapmadan direkt kayıt yapar.
-     */
-    /**
-     * Kullanıcı kaydı isteği gönderir.
      * Artık önce e-posta doğrulama kodu gönderiyor.
      */
     private void registerRequest(String username, String password, String email, String fullName) {
@@ -1451,13 +1447,13 @@ public class MainActivity extends Activity {
                 if (code == 200) {
                     runOnUiThread(() -> {
                         Toast.makeText(this, "Doğrulama maili gönderildi! Lütfen kodunuzu girin.", Toast.LENGTH_SHORT).show();
-                        // UI Değiştir
-                        layoutAccountFields.setVisibility(View.GONE);
-                        layoutVerification.setVisibility(View.VISIBLE);
+                        // UI Değiştir (Animasyonlu)
+                        animateVerificationEntry();
                         
                         TextView txtInfo = findViewById(R.id.txtVerifyInfo);
                         if(txtInfo != null) txtInfo.setText(email + "\nadresine gönderilen kodu girin.");
                     });
+
                 } else {
                     // Hata detayını oku
                     InputStream errorStream = conn.getErrorStream();
@@ -1507,16 +1503,104 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    // ================= ANİMASYON YARDIMCILARI =================
+
+    /**
+     * Doğrulama ekranının sağdan animasyonla gelmesini sağlar.
+     */
+    private void animateVerificationEntry() {
+        layoutVerification.setVisibility(View.VISIBLE);
+        layoutVerification.setAlpha(0f);
+        
+        // Ekran genişliğini alarak tam sağdan gelmesini sağla
+        float screenWidth = getResources().getDisplayMetrics().widthPixels;
+        layoutVerification.setTranslationX(screenWidth);
+
+        // Form alanlarını sola kaydırarak gizle
+        layoutAccountFields.animate()
+            .alpha(0f)
+            .translationX(-100f)
+            .setDuration(300)
+            .withEndAction(() -> layoutAccountFields.setVisibility(View.GONE))
+            .start();
+
+        // Doğrulama ekranını sağdan getir
+        layoutVerification.animate()
+            .alpha(1f)
+            .translationX(0f)
+            .setDuration(450)
+            .setInterpolator(new android.view.animation.OvershootInterpolator(1.0f))
+            .start();
+            
+        // Input alanına odaklan ve klavyeyi aç
+        edtVerifyCode.requestFocus();
+    }
+
+    /**
+     * Doğrulama ekranını gizleyip ana form ekranını geri getirir.
+     */
+    private void animateVerificationExit() {
+         layoutAccountFields.setVisibility(View.VISIBLE);
+         layoutAccountFields.setAlpha(0f);
+         layoutAccountFields.setTranslationX(-100f);
+
+         // Doğrulama ekranını sağa kaydırarak gizle
+         layoutVerification.animate()
+             .alpha(0f)
+             .translationX(200f)
+             .setDuration(300)
+             .withEndAction(() -> {
+                 layoutVerification.setVisibility(View.GONE);
+                 layoutVerification.setTranslationX(0f); // Reset
+             })
+             .start();
+
+         // Form alanlarını soldan getir
+         layoutAccountFields.animate()
+             .alpha(1f)
+             .translationX(0f)
+             .setDuration(400)
+             .setInterpolator(new android.view.animation.DecelerateInterpolator())
+             .start();
+    }
+
+    /**
+     * Hatalı işlemde görsele titreme efekti verir.
+     */
+    private void shakeView(View view) {
+        android.view.animation.TranslateAnimation shake = new android.view.animation.TranslateAnimation(0, 20, 0, 0);
+        shake.setDuration(600);
+        shake.setInterpolator(new android.view.animation.CycleInterpolator(5));
+        view.startAnimation(shake);
+        
+        // Haptic feedback
+        vibrateFeedback();
+        
+        // Kırmızı flash efekti
+        view.animate().scaleX(1.1f).scaleY(1.1f).setDuration(100).withEndAction(() -> {
+            view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
+        }).start();
+    }
+
     /**
      * Girilen kodu doğrular ve başarılıysa kaydı tamamlar.
      */
     private void verifyCodeAndRegister(String code) {
+
         final String username = edtUsername.getText().toString().trim();
         final String password = edtPassword.getText().toString().trim();
         final String email = edtEmail.getText().toString().trim();
         final String fullName = edtFullName.getText().toString().trim();
         
         addLog("[DOĞRULAMA] Kod kontrol ediliyor: " + code);
+
+        // Doğrulama butonuna yükleniyor efekti ver
+        runOnUiThread(() -> {
+            btnVerifyCode.setEnabled(false);
+            btnVerifyCode.setAlpha(0.7f);
+            btnVerifyCode.setText("Kontrol Ediliyor...");
+            btnVerifyCode.animate().scaleX(0.95f).scaleY(0.95f).setDuration(200).start();
+        });
 
         new Thread(() -> {
             try {
@@ -1537,7 +1621,14 @@ public class MainActivity extends Activity {
                 
                 int verifyStatus = verifyConn.getResponseCode();
                 if (verifyStatus != 200) {
-                     runOnUiThread(() -> Toast.makeText(this, "Hatalı veya süresi dolmuş kod!", Toast.LENGTH_SHORT).show());
+                     runOnUiThread(() -> {
+                         btnVerifyCode.setEnabled(true);
+                         btnVerifyCode.setAlpha(1.0f);
+                         btnVerifyCode.setText("Doğrula ve Kayıt Ol");
+                         btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
+                         Toast.makeText(this, "Hatalı veya süresi dolmuş kod!", Toast.LENGTH_SHORT).show();
+                         shakeView(edtVerifyCode); // Hata animasyonu
+                     });
                      return;
                 }
 
@@ -1564,11 +1655,16 @@ public class MainActivity extends Activity {
                 
                 if (regCode == 200) {
                     runOnUiThread(() -> {
+                        btnVerifyCode.setEnabled(true);
+                        btnVerifyCode.setAlpha(1.0f);
+                        btnVerifyCode.setText("Doğrula ve Kayıt Ol");
+                        btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
                         Toast.makeText(this, "Kayıt Başarılı! Hoşgeldiniz.", Toast.LENGTH_LONG).show();
                         
+                        // Başarılı animasyonla çıkış
+                        animateVerificationExit();
+                        
                         // Ekranları sıfırla
-                        layoutVerification.setVisibility(View.GONE);
-                        layoutAccountFields.setVisibility(View.VISIBLE);
                         edtVerifyCode.setText("");
                         edtPassword.setText("");
                         
@@ -1580,12 +1676,24 @@ public class MainActivity extends Activity {
                         layoutRegisterExtras.setVisibility(View.GONE);
                     });
                 } else {
-                     runOnUiThread(() -> Toast.makeText(this, "Kayıt sırasında bir hata oluştu.", Toast.LENGTH_SHORT).show());
+                     runOnUiThread(() -> {
+                         btnVerifyCode.setEnabled(true);
+                         btnVerifyCode.setAlpha(1.0f);
+                         btnVerifyCode.setText("Doğrula ve Kayıt Ol");
+                         btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
+                         Toast.makeText(this, "Kayıt sırasında bir hata oluştu.", Toast.LENGTH_SHORT).show();
+                     });
                 }
 
             } catch (Exception e) {
                 e.printStackTrace();
-                runOnUiThread(() -> Toast.makeText(this, "İşlem hatası", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> {
+                    btnVerifyCode.setEnabled(true);
+                    btnVerifyCode.setAlpha(1.0f);
+                    btnVerifyCode.setText("Doğrula ve Kayıt Ol");
+                    btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
+                    Toast.makeText(this, "İşlem hatası", Toast.LENGTH_SHORT).show();
+                });
             }
         }).start();
     }
