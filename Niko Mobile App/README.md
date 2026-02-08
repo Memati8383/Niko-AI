@@ -186,6 +186,9 @@ Proje içerisindeki temel dosyalar ve görevleri şunlardır:
 - [ ] Çoklu dil desteği (İngilizce, Almanca vb.).
 - [ ] Gelişmiş Görüntü İşleme (Vision) entegrasyonu.
 - [ ] Kişiselleştirilmiş ses modelleri.
+- [ ] Karşılıklı anlık dil çeviri.
+- [ ] OCR.
+
 
 ## İletişim
 
