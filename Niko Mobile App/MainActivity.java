@@ -356,10 +356,24 @@ public class MainActivity extends Activity {
 
         updatePrefs = getSharedPreferences("update_settings", MODE_PRIVATE);
 
-        imgTopProfile.setOnClickListener(v -> showAccount());
-        btnCloseAccount.setOnClickListener(v -> hideAccount());
-        btnSwitchMode.setOnClickListener(v -> toggleAccountMode());
-        btnSubmitAccount.setOnClickListener(v -> performAccountAction());
+        imgTopProfile.setOnClickListener(v -> {
+            vibrateFeedback();
+            showAccount();
+        });
+        btnCloseAccount.setOnClickListener(v -> {
+            vibrateFeedback();
+            hideAccount();
+        });
+        btnSwitchMode.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
+            toggleAccountMode();
+        });
+        btnSubmitAccount.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
+            performAccountAction();
+        });
         
         // Doğrulama Listenerları
         btnVerifyCode.setOnClickListener(v -> {
@@ -534,6 +548,9 @@ public class MainActivity extends Activity {
 
         // Başlangıçta hesap durumunu kontrol et (Giriş yapılmışsa profil fotosunu yükler)
         updateAccountUI();
+        
+        // Input animasyonlarını ayarla
+        setupInputAnimations();
         
         // Otomatik güncelleme kontrolü (Arka planda)
         checkForUpdates();
@@ -1084,18 +1101,20 @@ public class MainActivity extends Activity {
     private void showAccount() {
         runOnUiThread(() -> {
             layoutAccount.setVisibility(View.VISIBLE);
+            animateAccountEntry();
             updateAccountUI();
         });
     }
 
     private void hideAccount() {
         runOnUiThread(() -> {
-            layoutAccount.setVisibility(View.GONE);
             // Klavyeyi kapat
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             if (imm != null) {
                 imm.hideSoftInputFromWindow(layoutAccount.getWindowToken(), 0);
             }
+            
+            animateAccountExit();
         });
     }
 
@@ -1105,7 +1124,7 @@ public class MainActivity extends Activity {
     private void toggleAccountMode() {
         isRegisterMode = !isRegisterMode;
         isEditProfileMode = false;
-        updateAccountUI();
+        animateAccountModeSwitch();
     }
 
     private void enableEditMode() {
@@ -1347,6 +1366,7 @@ public class MainActivity extends Activity {
 
                     runOnUiThread(() -> {
                         Toast.makeText(this, "Giriş başarılı! Hoş geldin " + username, Toast.LENGTH_SHORT).show();
+                        animateSuccess(btnSubmitAccount);
                         updateAccountUI();
                         new Handler(Looper.getMainLooper()).postDelayed(this::hideAccount, 1500);
                     });
@@ -1506,6 +1526,205 @@ public class MainActivity extends Activity {
     // ================= ANİMASYON YARDIMCILARI =================
 
     /**
+     * Hesap panelinin açılış animasyonu (Premium giriş efekti).
+     */
+    private void animateAccountEntry() {
+        layoutAccount.setAlpha(0f);
+        layoutAccount.setScaleX(0.9f);
+        layoutAccount.setScaleY(0.9f);
+        
+        layoutAccount.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(400)
+            .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
+            .start();
+        
+        // Form alanlarını sırayla animasyonla göster
+        animateFormFieldsEntry();
+    }
+
+    /**
+     * Form alanlarının sıralı giriş animasyonu (Stagger effect).
+     */
+    private void animateFormFieldsEntry() {
+        View[] fields = {
+            txtAccountTitle,
+            edtUsername,
+            edtPassword,
+            edtEmail,
+            edtFullName,
+            btnSubmitAccount,
+            btnSwitchMode
+        };
+        
+        for (int i = 0; i < fields.length; i++) {
+            if (fields[i] != null) {
+                final View field = fields[i];
+                final int delay = i * 60;
+                
+                field.setAlpha(0f);
+                field.setTranslationY(30);
+                
+                field.animate()
+                    .alpha(1f)
+                    .translationY(0)
+                    .setStartDelay(delay + 200)
+                    .setDuration(350)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                    .start();
+            }
+        }
+    }
+
+    /**
+     * Hesap panelinin kapanış animasyonu.
+     */
+    private void animateAccountExit() {
+        layoutAccount.animate()
+            .alpha(0f)
+            .scaleX(0.95f)
+            .scaleY(0.95f)
+            .setDuration(250)
+            .setInterpolator(new android.view.animation.AccelerateInterpolator())
+            .withEndAction(() -> layoutAccount.setVisibility(View.GONE))
+            .start();
+    }
+
+    /**
+     * Giriş/Kayıt modu değişim animasyonu.
+     */
+    private void animateAccountModeSwitch() {
+        // Mevcut alanları sola kaydırarak gizle
+        View[] currentFields = {
+            layoutAccountFields,
+            layoutRegisterExtras,
+            btnSubmitAccount,
+            btnSwitchMode
+        };
+        
+        for (View field : currentFields) {
+            if (field != null && field.getVisibility() == View.VISIBLE) {
+                field.animate()
+                    .alpha(0f)
+                    .translationX(-50f)
+                    .setDuration(200)
+                    .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                    .start();
+            }
+        }
+        
+        // Başlığı döndürerek değiştir
+        txtAccountTitle.animate()
+            .rotationY(90f)
+            .setDuration(150)
+            .withEndAction(() -> {
+                updateAccountUI();
+                
+                // Başlığı geri döndür
+                txtAccountTitle.setRotationY(-90f);
+                txtAccountTitle.animate()
+                    .rotationY(0f)
+                    .setDuration(150)
+                    .start();
+                
+                // Yeni alanları sağdan getir
+                new android.os.Handler().postDelayed(() -> {
+                    for (View field : currentFields) {
+                        if (field != null && field.getVisibility() == View.VISIBLE) {
+                            field.setAlpha(0f);
+                            field.setTranslationX(50f);
+                            field.animate()
+                                .alpha(1f)
+                                .translationX(0f)
+                                .setDuration(300)
+                                .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                                .start();
+                        }
+                    }
+                }, 100);
+            })
+            .start();
+    }
+
+    /**
+     * Buton tıklama animasyonu (Pulse efekti).
+     */
+    private void animateButtonClick(View button) {
+        button.animate()
+            .scaleX(0.92f)
+            .scaleY(0.92f)
+            .setDuration(100)
+            .withEndAction(() -> {
+                button.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(100)
+                    .start();
+            })
+            .start();
+    }
+
+    /**
+     * Başarılı işlem animasyonu (Yeşil flash).
+     */
+    private void animateSuccess(View view) {
+        int originalColor = Color.parseColor("#00E5FF");
+        int successColor = Color.parseColor("#4CAF50");
+        
+        android.animation.ValueAnimator colorAnim = android.animation.ValueAnimator.ofArgb(originalColor, successColor, originalColor);
+        colorAnim.setDuration(600);
+        colorAnim.addUpdateListener(animator -> {
+            if (view instanceof TextView) {
+                ((TextView) view).setTextColor((int) animator.getAnimatedValue());
+            }
+        });
+        colorAnim.start();
+        
+        // Hafif büyüme efekti
+        view.animate()
+            .scaleX(1.05f)
+            .scaleY(1.05f)
+            .setDuration(200)
+            .withEndAction(() -> {
+                view.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(200)
+                    .start();
+            })
+            .start();
+    }
+
+    /**
+     * Input alanı odaklanma animasyonu.
+     */
+    private void setupInputAnimations() {
+        EditText[] inputs = {edtUsername, edtPassword, edtEmail, edtFullName, edtCurrentPassword};
+        
+        for (EditText input : inputs) {
+            if (input != null) {
+                input.setOnFocusChangeListener((v, hasFocus) -> {
+                    if (hasFocus) {
+                        v.animate()
+                            .scaleX(1.02f)
+                            .scaleY(1.02f)
+                            .setDuration(200)
+                            .start();
+                    } else {
+                        v.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .setDuration(200)
+                            .start();
+                    }
+                });
+            }
+        }
+    }
+
+    /**
      * Doğrulama ekranının sağdan animasyonla gelmesini sağlar.
      */
     private void animateVerificationEntry() {
@@ -1659,6 +1878,10 @@ public class MainActivity extends Activity {
                         btnVerifyCode.setAlpha(1.0f);
                         btnVerifyCode.setText("Doğrula ve Kayıt Ol");
                         btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
+                        
+                        // Başarı animasyonu
+                        animateSuccess(btnVerifyCode);
+                        
                         Toast.makeText(this, "Kayıt Başarılı! Hoşgeldiniz.", Toast.LENGTH_LONG).show();
                         
                         // Başarılı animasyonla çıkış
@@ -1752,6 +1975,7 @@ public class MainActivity extends Activity {
 
                     runOnUiThread(() -> {
                         Toast.makeText(this, "Profil başarıyla güncellendi", Toast.LENGTH_LONG).show();
+                        animateSuccess(btnSubmitAccount);
                         isEditProfileMode = false;
                         selectedImageBase64 = null; // Temizle
                         updateAccountUI();
