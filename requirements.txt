@@ -11,3 +11,4 @@ edge-tts>=6.1.0
 pytest>=7.4.0
 hypothesis>=6.92.0
 selenium>=4.15.0
+python-dotenv>=1.2.1

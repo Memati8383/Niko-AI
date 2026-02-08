@@ -429,6 +429,80 @@
                         android:padding="8dp" />
                 </LinearLayout>
 
+                <!-- DOĞRULAMA KODU PANELİ: Kayıt sonrası görünür -->
+                <LinearLayout
+                    android:id="@+id/layoutVerification"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:paddingTop="16dp">
+
+                    <TextView
+                        android:id="@+id/txtVerifyInfo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="E-posta adresinize gönderilen 6 haneli kodu girin."
+                        android:textColor="#a0a0b0"
+                        android:textSize="14sp"
+                        android:layout_marginBottom="24dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:gravity="center" />
+
+                    <EditText
+                        android:id="@+id/edtVerifyCode"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginBottom="16dp"
+                        android:background="@drawable/auth_input_bg"
+                        android:hint="Doğrulama Kodu"
+                        android:textColorHint="#505060"
+                        android:textColor="#FFFFFF"
+                        android:paddingHorizontal="20dp"
+                        android:inputType="number"
+                        android:maxLength="6"
+                        android:gravity="center"
+                        android:letterSpacing="0.2"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="18sp" />
+
+                    <Button
+                        android:id="@+id/btnVerifyCode"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="@drawable/auth_button_bg"
+                        android:text="Doğrula ve Kayıt Ol"
+                        android:textColor="#FFFFFF"
+                        android:textAllCaps="false"
+                        android:fontFamily="sans-serif-bold"
+                        android:textSize="16sp"
+                        android:elevation="4dp" />
+                    
+                    <TextView
+                        android:id="@+id/btnResendCode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center"
+                        android:text="Kodu Tekrar Gönder"
+                        android:textColor="#6366f1"
+                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-bold"
+                        android:padding="8dp" />
+
+                    <TextView
+                        android:id="@+id/btnCancelVerification"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:text="İptal"
+                        android:textColor="#eb4d4b"
+                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-bold"
+                        android:padding="8dp" />
+                </LinearLayout>
+
                 <!-- GİRİŞ YAPILMIŞ DURUM: Ultra Premium profil özeti ekranı -->
                 <LinearLayout
                     android:id="@+id/layoutLoggedIn"

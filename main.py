@@ -4,6 +4,11 @@ Türkçe AI sohbet uygulaması için FastAPI backend
 """
 
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 import re
 import json
 import time
@@ -22,6 +27,7 @@ from typing import AsyncGenerator
 from fastapi.responses import StreamingResponse
 import logging
 from prompts import build_full_prompt
+from email_verification import get_email_service, EmailVerificationService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -79,12 +85,17 @@ class UserCreate(BaseModel):
     @field_validator('email')
     @classmethod
     def validate_email(cls, v):
-        """Regex deseni ile e-posta doğrulama"""
+        """Regex deseni ve izin verilen sağlayıcılar ile e-posta doğrulama"""
         if v is None:
             return v
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(email_pattern, v):
             raise ValueError('Geçersiz e-posta formatı')
+        
+        # İzin verilen e-posta sağlayıcıları kontrolü
+        email_service = get_email_service()
+        if not email_service.is_allowed_email_provider(v):
+            raise ValueError(f'Desteklenmeyen e-posta sağlayıcısı. Lütfen {email_service.get_allowed_providers_message()} kullanın')
         return v
 
 
@@ -106,12 +117,17 @@ class UserUpdate(BaseModel):
     @field_validator('email')
     @classmethod
     def validate_email(cls, v):
-        """Regex deseni ile e-posta doğrulama"""
+        """Regex deseni ve izin verilen sağlayıcılar ile e-posta doğrulama"""
         if v is None:
             return v
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(email_pattern, v):
             raise ValueError('Geçersiz e-posta formatı')
+        
+        # İzin verilen e-posta sağlayıcıları kontrolü
+        email_service = get_email_service()
+        if not email_service.is_allowed_email_provider(v):
+            raise ValueError(f'Desteklenmeyen e-posta sağlayıcısı. Lütfen {email_service.get_allowed_providers_message()} kullanın')
         return v
 
     @field_validator('new_password')
@@ -148,6 +164,39 @@ class ChatRequest(BaseModel):
     images: Optional[List[str]] = None  # base64 encoded images
     stream: bool = True  # Default to streaming, customizable for clients
 
+
+# ============================================================================
+# E-posta Doğrulama Modelleri
+# ============================================================================
+
+class EmailVerificationRequest(BaseModel):
+    """E-posta doğrulama kodu gönderme isteği"""
+    email: str
+    username: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        """E-posta format ve sağlayıcı doğrulama"""
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, v):
+            raise ValueError('Geçersiz e-posta formatı')
+        
+        email_service = get_email_service()
+        if not email_service.is_allowed_email_provider(v):
+            raise ValueError(f'Desteklenmeyen e-posta sağlayıcısı. Lütfen {email_service.get_allowed_providers_message()} kullanın')
+        return v
+
+
+class EmailVerifyCodeRequest(BaseModel):
+    """E-posta doğrulama kodu kontrol isteği"""
+    email: str
+    code: str
+
+
+class EmailResendRequest(BaseModel):
+    """E-posta doğrulama kodu yeniden gönderme isteği"""
+    email: str
 
 # ============================================================================
 # Yönetici Paneli Modelleri
@@ -1646,6 +1695,92 @@ async def favicon():
     # Sadece 204 İçerik Yok döndürmek tarayıcının şikayet etmesini durdurmak için yeterlidir
     # veya küçük bir 1x1 şeffaf piksel sunabiliriz.
     return PlainTextResponse("", status_code=204)
+
+
+# ============================================================================
+# E-posta Doğrulama Uç Noktaları
+# ============================================================================
+
+@app.post("/email/send-verification")
+async def send_verification_email(request: EmailVerificationRequest):
+    """
+    E-posta doğrulama kodu gönder.
+    
+    Resend API kullanarak belirtilen e-posta adresine 6 haneli doğrulama kodu gönderir.
+    Kod 5 dakika geçerlidir.
+    """
+    try:
+        email_service = get_email_service()
+        result = email_service.send_verification_email(request.email, request.username)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["message"])
+        
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"E-posta doğrulama hatası: {e}")
+        raise HTTPException(status_code=500, detail=f"E-posta gönderilemedi: {str(e)}")
+
+
+@app.post("/email/verify")
+async def verify_email_code(request: EmailVerifyCodeRequest):
+    """
+    E-posta doğrulama kodunu kontrol et.
+    
+    Kullanıcının girdiği kodu doğrular. Maksimum 5 deneme hakkı vardır.
+    """
+    try:
+        email_service = get_email_service()
+        result = email_service.verify_code(request.email, request.code)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["message"])
+        
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/email/resend")
+async def resend_verification_code(request: EmailResendRequest):
+    """
+    Yeni doğrulama kodu gönder.
+    
+    Önceki kodu geçersiz kılar ve yeni bir kod gönderir.
+    60 saniye bekleme süresi uygulanır.
+    """
+    try:
+        email_service = get_email_service()
+        result = email_service.resend_code(request.email)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["message"])
+        
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/email/status/{email}")
+async def get_verification_status(email: str):
+    """
+    E-posta doğrulama durumunu kontrol et.
+    
+    Bekleyen doğrulama varsa bilgileri döndürür.
+    """
+    email_service = get_email_service()
+    
+    if email_service.has_pending_verification(email):
+        info = email_service.get_pending_verification(email)
+        return {
+            "pending": True,
+            "expires_at": info["expires_at"],
+            "attempts_remaining": info["max_attempts"] - info["attempts"]
+        }
+    
+    return {"pending": False}
 
 
 # ============================================================================

@@ -23,7 +23,24 @@ Niko, Android cihazlar için geliştirilmiş, sesli komutlarla çalışan kişis
 - **Görsel Geri Bildirim:** Sesinizin şiddetine göre tepki veren dinamik "Voice Orb" animasyonu.
 - **Kullanıcı Kimlik Doğrulama:** Güvenli kayıt ve giriş sistemi (JWT tabanlı).
 - **Profil Yönetimi:** Uygulama içerisinden kullanıcı adı, e-posta, ad-soyad ve profil fotoğrafı güncelleme.
+- **E-posta Doğrulama:** Güvenli hesap oluşturma için 6 haneli kod ile e-posta (Gmail, Hotmail, Outlook vb.) doğrulama sistemi.
 - **Yönetici (Admin) Modu:** "admin" kullanıcı adıyla giriş yapıldığında, uygulama içi hata ve sistem loglarını görüntüleyebileceğiniz gizli bir panel aktif olur.
+
+## Kurulum ve Gereksinimler
+
+Niko'nun tam potansiyeliyle çalışabilmesi için bir Backend sunucusuna ihtiyacı vardır.
+
+### Gereksinimler
+
+- **Android Sürümü:** Android 8.0 (Oreo) ve üzeri.
+- **İnternet Bağlantısı:** Yapay zeka servislerine erişim için gereklidir.
+- **Backend Sunucusu:** Yerel ağda veya Cloudflare Tunnel üzerinde çalışan `main.py`.
+
+### Kurulum Adımları
+
+1.  **APK Yükleme:** En son `niko.apk` dosyasını `GitHub Releases` bölümünden indirin ve cihazınıza kurun.
+2.  **İzinleri Verme:** Uygulamayı ilk açtığınızda istenen mikrofon, rehber ve diğer izinleri onaylayın.
+3.  **Backend Bağlantısı:** Uygulama otomatik olarak yapılandırılmış GitHub üzerindeki `version.json` dosyasından güncel API adresini çeker. Eğer kendi sunucunuzu kullanıyorsanız backend adresini kontrol edin.
 
 ## Kullanım Rehberi
 
@@ -134,6 +151,24 @@ Proje içerisindeki temel dosyalar ve görevleri şunlardır:
 - **`clear_button_bg.xml`**: Geçmişi temizleme butonu için tasarlanmış özel görsel stildir.
 - **`file_paths.xml`**: Uygulama içi güncellemeler için güvenli dosya paylaşımını (FileProvider) sağlayan yapılandırma dosyasıdır.
 - **`icons/`**: Uygulama ikon adaylarını ve referans görselleri içeren klasördür.
+- **`admin_log_bg.xml`**: Admin paneli log görüntüleme alanı için arka plan.
+- **`auth_button_bg.xml`**: Kimlik doğrulama ekranındaki birincil butonların stili.
+- **`auth_input_bg.xml`**: Giriş alanları (kullanıcı adı, şifre) için arka plan stili.
+- **`auth_overlay_bg.xml`**: Kimlik doğrulama ekranı kaplaması (overlay) için arka plan.
+- **`auth_secondary_button_bg.xml`**: Kimlik doğrulama ekranındaki ikincil butonların stili.
+- **`history_card_bg.xml`**: Sohbet geçmişi kartları için arka plan tasarımı.
+- **`history_date_badge_bg.xml`**: Geçmiş ekranındaki tarih rozetleri için arka plan.
+- **`history_empty_state_bg.xml`**: Geçmiş boş olduğunda gösterilen durum için arka plan.
+- **`profile_avatar_bg.xml`**: Profil resmi çerçevesi için arka plan.
+- **`profile_avatar_glow_bg.xml`**: Profil resmi etrafındaki parlama efekti.
+- **`profile_button_danger_bg.xml`**: Tehlikeli işlemler (silme vb.) butonları için kırmızı temalı stil.
+- **`profile_button_delete_account_bg.xml`**: Hesap silme butonu için özel stil.
+- **`profile_button_primary_bg.xml`**: Profil ekranındaki birincil işlem butonları için stil.
+- **`profile_card_premium_bg.xml`**: Premium profil kartı görünümü için özel arka plan.
+- **`profile_divider.xml`**: Profil bileşenleri arasındaki ayırıcı çizgi stili.
+- **`profile_icon_bg.xml`**: Profil ikonları için arka plan.
+- **`profile_info_card_bg.xml`**: Profil bilgi kartları için arka plan.
+- **`terminal_container_bg.xml`**: Terminal/Log görüntüleme alanı için arka plan.
 
 ## Yakında Eklenecekler
 
@@ -146,11 +181,11 @@ Proje içerisindeki temel dosyalar ve görevleri şunlardır:
 - [x] Sohbet Geçmişi ve mesaj yönetimi.
 - [x] Modern Chat arayüzü ve model seçici.
 - [x] Otomatik uygulama içi güncelleme sistemi (In-app updates).
+- [x] E-posta doğrulama sistemi (Gmail/SMTP).
+- [x] Kullanıcının kendi hesabını silebilmesi.
 - [ ] Çoklu dil desteği (İngilizce, Almanca vb.).
 - [ ] Gelişmiş Görüntü İşleme (Vision) entegrasyonu.
 - [ ] Kişiselleştirilmiş ses modelleri.
-- [x] Kullanıcının kendi hesabını silebilmesi. 30 gün içinde geri dönebilmesi.
-- [ ] Mail onay düzeltmesi(sadece gmail, hotmail vs.). gmail onay sistemi.
 
 ## İletişim
 

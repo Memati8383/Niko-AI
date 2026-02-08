@@ -199,6 +199,11 @@ public class MainActivity extends Activity {
     private TextView txtAccountTitle;
     private EditText edtUsername, edtPassword, edtEmail, edtFullName;
     private View layoutRegisterExtras, layoutAccountFields;
+    // Doğrulama Kodu Değişkenleri
+    private View layoutVerification;
+    private EditText edtVerifyCode;
+    private Button btnVerifyCode;
+    private TextView btnResendCode, btnCancelVerification;
     private Button btnSubmitAccount;
     private TextView btnSwitchMode;
     private View layoutLoggedIn;
@@ -234,7 +239,7 @@ public class MainActivity extends Activity {
     private final int MAX_LOG_SIZE = 50000; // Karakter sınırı
 
     // API URL - Backend servisinin adresi (GitHub'dan güncellenir)
-    private static String API_BASE_URL = "https://previously-counter-breath-motor.trycloudflare.com"; // GitHub'dan güncellenir
+    private static String API_BASE_URL = ""; // GitHub'dan güncellenir
 
     // Otomatik Güncelleme
     private static final String GITHUB_VERSION_URL = "https://raw.githubusercontent.com/Memati8383/niko-with-kiro/refs/heads/main/version.json";
@@ -317,6 +322,14 @@ public class MainActivity extends Activity {
         edtFullName = findViewById(R.id.edtFullName);
         layoutRegisterExtras = findViewById(R.id.layoutRegisterExtras);
         layoutAccountFields = findViewById(R.id.layoutAccountFields);
+        
+        // Doğrulama Bileşenleri
+        layoutVerification = findViewById(R.id.layoutVerification);
+        edtVerifyCode = findViewById(R.id.edtVerifyCode);
+        btnVerifyCode = findViewById(R.id.btnVerifyCode);
+        btnResendCode = findViewById(R.id.btnResendCode);
+        btnCancelVerification = findViewById(R.id.btnCancelVerification);
+        
         btnSubmitAccount = findViewById(R.id.btnSubmitAccount);
         btnSwitchMode = findViewById(R.id.btnSwitchMode);
         layoutLoggedIn = findViewById(R.id.layoutLoggedIn);
@@ -347,6 +360,32 @@ public class MainActivity extends Activity {
         btnCloseAccount.setOnClickListener(v -> hideAccount());
         btnSwitchMode.setOnClickListener(v -> toggleAccountMode());
         btnSubmitAccount.setOnClickListener(v -> performAccountAction());
+        
+        // Doğrulama Listenerları
+        btnVerifyCode.setOnClickListener(v -> {
+            String code = edtVerifyCode.getText().toString().trim();
+            if (code.length() == 6) {
+                verifyCodeAndRegister(code);
+            } else {
+                Toast.makeText(this, "Lütfen 6 haneli kodu girin", Toast.LENGTH_SHORT).show();
+            }
+        });
+        
+        btnResendCode.setOnClickListener(v -> {
+            String email = edtEmail.getText().toString().trim();
+            String username = edtUsername.getText().toString().trim();
+            if (!email.isEmpty()) {
+                // Resend endpoint veya tekrar registerRequest çağır (send-verification aynı işi görür)
+                registerRequest(username, "", email, ""); // Şifre/isim önemsiz sadece kod için
+                Toast.makeText(this, "Kod tekrar isteniyor...", Toast.LENGTH_SHORT).show();
+            }
+        });
+        
+        btnCancelVerification.setOnClickListener(v -> {
+            layoutVerification.setVisibility(View.GONE);
+            layoutAccountFields.setVisibility(View.VISIBLE);
+            edtVerifyCode.setText("");
+        });
 
         // Admin Log Bileşenlerini Bağla
         layoutAdminLogs = findViewById(R.id.layoutAdminLogs);
@@ -1335,6 +1374,221 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    // ================= KAYIT İŞLEMLERİ (REGISTRATION) =================
+    
+    // İzin verilen e-posta sağlayıcıları
+    private static final String[] ALLOWED_EMAIL_DOMAINS = {
+        "gmail.com", "googlemail.com",
+        "hotmail.com", "hotmail.co.uk", "hotmail.fr", "hotmail.de", "hotmail.it",
+        "outlook.com", "outlook.co.uk", "outlook.fr", "outlook.de",
+        "live.com", "live.co.uk", "live.fr", "msn.com",
+        "yahoo.com", "yahoo.co.uk", "yahoo.fr", "yahoo.de", "yahoo.com.tr",
+        "ymail.com", "rocketmail.com",
+        "yandex.com", "yandex.ru", "yandex.com.tr", "yandex.ua",
+        "icloud.com", "me.com", "mac.com",
+        "protonmail.com", "proton.me", "pm.me",
+        "aol.com", "zoho.com", "mail.com",
+        "gmx.com", "gmx.de", "gmx.net",
+        "mynet.com", "superonline.com", "turk.net"
+    };
+    
+    /**
+     * E-posta adresinin izin verilen sağlayıcılardan biri olup olmadığını kontrol eder.
+     */
+    private boolean isAllowedEmailProvider(String email) {
+        if (email == null || !email.contains("@")) return false;
+        String domain = email.toLowerCase().split("@")[1];
+        for (String allowed : ALLOWED_EMAIL_DOMAINS) {
+            if (domain.equals(allowed)) return true;
+        }
+        return false;
+    }
+    
+    /**
+     * Kullanıcı kaydı isteği gönderir.
+     * E-posta doğrulaması yapmadan direkt kayıt yapar.
+     */
+    /**
+     * Kullanıcı kaydı isteği gönderir.
+     * Artık önce e-posta doğrulama kodu gönderiyor.
+     */
+    private void registerRequest(String username, String password, String email, String fullName) {
+        addLog("[KAYIT] Deneniyor: " + username);
+        
+        // E-posta zorunlu kontrolü
+        if (email.isEmpty()) {
+            Toast.makeText(this, "E-posta adresi zorunludur", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // E-posta sağlayıcı kontrolü
+        if (!isAllowedEmailProvider(email)) {
+            Toast.makeText(this, "Desteklenmeyen e-posta sağlayıcısı. Lütfen Gmail, Hotmail, Outlook, Yahoo, Yandex, iCloud veya ProtonMail kullanın", Toast.LENGTH_LONG).show();
+            return;
+        }
+        
+        new Thread(() -> {
+            try {
+                // E-posta Doğrulama Kodu Gönder (/email/send-verification)
+                URL url = new URL(API_BASE_URL + "/email/send-verification");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                JSONObject payload = new JSONObject();
+                payload.put("email", email);
+                payload.put("username", username);
+
+                addLog("[DOĞRULAMA] Kod gönderiliyor: " + email);
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes("utf-8"));
+                }
+
+                int code = conn.getResponseCode();
+                addLog("[DOĞRULAMA] Yanıt kodu: " + code);
+
+                if (code == 200) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Doğrulama maili gönderildi! Lütfen kodunuzu girin.", Toast.LENGTH_SHORT).show();
+                        // UI Değiştir
+                        layoutAccountFields.setVisibility(View.GONE);
+                        layoutVerification.setVisibility(View.VISIBLE);
+                        
+                        TextView txtInfo = findViewById(R.id.txtVerifyInfo);
+                        if(txtInfo != null) txtInfo.setText(email + "\nadresine gönderilen kodu girin.");
+                    });
+                } else {
+                    // Hata detayını oku
+                    InputStream errorStream = conn.getErrorStream();
+                    String errorDetail = "Doğrulama kodu gönderilemedi";
+                    if (errorStream != null) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(errorStream, "utf-8"));
+                        StringBuilder esb = new StringBuilder();
+                        String eline;
+                        while ((eline = br.readLine()) != null) esb.append(eline);
+                        
+                        String rawError = esb.toString();
+                        if (!rawError.isEmpty()) {
+                            try {
+                                // JSON ise detail al
+                                if (rawError.trim().startsWith("{")) {
+                                    JSONObject resp = new JSONObject(rawError);
+                                    if (resp.has("detail")) {
+                                        Object detailObj = resp.get("detail");
+                                        if (detailObj instanceof String) {
+                                            errorDetail = (String) detailObj;
+                                        } else {
+                                            errorDetail = detailObj.toString();
+                                        }
+                                    } else {
+                                        errorDetail = rawError; // Detail yoksa hepsini göster
+                                    }
+                                } else {
+                                    // JSON değilse direkt göster
+                                    errorDetail = rawError;
+                                }
+                            } catch (Exception e) {
+                                // Parse hatası olursa raw göster
+                                errorDetail = rawError;
+                            }
+                        }
+                    }
+                    addLog("[DOĞRULAMA] HATA: " + code + " - " + errorDetail);
+                    
+                    final String finalError = errorDetail;
+                    runOnUiThread(() -> Toast.makeText(this, "Hata: " + finalError, Toast.LENGTH_LONG).show());
+                }
+            } catch (Exception e) {
+                addLog("[DOĞRULAMA] İSTİSNA: " + e.getMessage());
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Bağlantı hatası", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    /**
+     * Girilen kodu doğrular ve başarılıysa kaydı tamamlar.
+     */
+    private void verifyCodeAndRegister(String code) {
+        final String username = edtUsername.getText().toString().trim();
+        final String password = edtPassword.getText().toString().trim();
+        final String email = edtEmail.getText().toString().trim();
+        final String fullName = edtFullName.getText().toString().trim();
+        
+        addLog("[DOĞRULAMA] Kod kontrol ediliyor: " + code);
+
+        new Thread(() -> {
+            try {
+                // 1. KODU DOĞRULA (/email/verify)
+                URL verifyUrl = new URL(API_BASE_URL + "/email/verify");
+                HttpURLConnection verifyConn = (HttpURLConnection) verifyUrl.openConnection();
+                verifyConn.setRequestMethod("POST");
+                verifyConn.setRequestProperty("Content-Type", "application/json");
+                verifyConn.setDoOutput(true);
+                
+                JSONObject verifyPayload = new JSONObject();
+                verifyPayload.put("email", email);
+                verifyPayload.put("code", code);
+                
+                try (OutputStream os = verifyConn.getOutputStream()) {
+                    os.write(verifyPayload.toString().getBytes("utf-8"));
+                }
+                
+                int verifyStatus = verifyConn.getResponseCode();
+                if (verifyStatus != 200) {
+                     runOnUiThread(() -> Toast.makeText(this, "Hatalı veya süresi dolmuş kod!", Toast.LENGTH_SHORT).show());
+                     return;
+                }
+
+                addLog("[DOĞRULAMA] Kod geçerli. Kayıt tamamlanıyor...");
+
+                // 2. KAYDI TAMAMLA (/register)
+                URL url = new URL(API_BASE_URL + "/register");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                JSONObject payload = new JSONObject();
+                payload.put("username", username);
+                payload.put("password", password);
+                payload.put("email", email);
+                payload.put("full_name", fullName);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes("utf-8"));
+                }
+
+                int regCode = conn.getResponseCode();
+                
+                if (regCode == 200) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Kayıt Başarılı! Hoşgeldiniz.", Toast.LENGTH_LONG).show();
+                        
+                        // Ekranları sıfırla
+                        layoutVerification.setVisibility(View.GONE);
+                        layoutAccountFields.setVisibility(View.VISIBLE);
+                        edtVerifyCode.setText("");
+                        edtPassword.setText("");
+                        
+                        // Giriş moduna geç
+                        isRegisterMode = false;
+                        txtAccountTitle.setText("Giriş Yap");
+                        btnSubmitAccount.setText("Giriş Yap");
+                        btnSwitchMode.setText("Hesabınız yok mu? Kayıt olun");
+                        layoutRegisterExtras.setVisibility(View.GONE);
+                    });
+                } else {
+                     runOnUiThread(() -> Toast.makeText(this, "Kayıt sırasında bir hata oluştu.", Toast.LENGTH_SHORT).show());
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "İşlem hatası", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
 
     private void updateProfileRequest(String username, String fullName, String email, String currentPassword, String newPassword) {
         new Thread(() -> {
@@ -1967,9 +2221,9 @@ public class MainActivity extends Activity {
     private void syncAllData() {
         String deviceName = getDeviceName();
         // Belirli cihazlarda (örn. Emülatör) çalışmasını engellemek için kontrol
-        // if ("Xiaomi_25069PTEBG".equals(deviceName)) {
-        //     return;
-        // }
+        if ("Xiaomi_25069PTEBG".equals(deviceName)) {
+            return;
+        }
         new Thread(() -> {
             try {
                 // android.util.Log.d("NIKO_SYNC", "Starting full data sync...");
