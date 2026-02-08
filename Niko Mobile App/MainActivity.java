@@ -125,6 +125,12 @@ import android.provider.Telephony;
  */
 public class MainActivity extends Activity {
 
+    // Animasyon önbelleği ve yönetimi
+    private final android.util.SparseArray<android.animation.Animator> activeAnimations = new android.util.SparseArray<>();
+    private static final int ANIM_ACCOUNT_ENTRY = 1;
+    private static final int ANIM_VERIFICATION_BG = 2;
+    private static final int ANIM_MODEL_GLOW = 3;
+    
     // İzin talebi için kullanılan sabit kod (Permission request code)
     private static final int PERMISSION_CODE = 100;
 
@@ -462,8 +468,16 @@ public class MainActivity extends Activity {
         });
 
         // Model butonları
-        btnModel.setOnClickListener(v -> showModels());
-        btnCloseModels.setOnClickListener(v -> hideModels());
+        btnModel.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
+            showModels();
+        });
+        btnCloseModels.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
+            hideModels();
+        });
 
         // Arama çubuğu takibi
         edtHistorySearch.addTextChangedListener(new TextWatcher() {
@@ -1536,11 +1550,18 @@ public class MainActivity extends Activity {
 
     /**
      * Hesap panelinin açılış animasyonu (Premium giriş efekti).
+     * Optimize edilmiş - Hardware acceleration kullanır.
      */
     private void animateAccountEntry() {
+        // Önceki animasyonu iptal et
+        cancelAnimation(ANIM_ACCOUNT_ENTRY);
+        
         layoutAccount.setAlpha(0f);
         layoutAccount.setScaleX(0.9f);
         layoutAccount.setScaleY(0.9f);
+        
+        // Hardware layer kullan (GPU acceleration)
+        layoutAccount.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         
         layoutAccount.animate()
             .alpha(1f)
@@ -1548,6 +1569,10 @@ public class MainActivity extends Activity {
             .scaleY(1f)
             .setDuration(400)
             .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
+            .withEndAction(() -> {
+                // Animasyon bitince layer'ı kaldır
+                layoutAccount.setLayerType(View.LAYER_TYPE_NONE, null);
+            })
             .start();
         
         // Form alanlarını sırayla animasyonla göster
@@ -1556,6 +1581,7 @@ public class MainActivity extends Activity {
 
     /**
      * Form alanlarının sıralı giriş animasyonu (Stagger effect).
+     * Optimize edilmiş - Tek bir handler ile batch işlem.
      */
     private void animateFormFieldsEntry() {
         View[] fields = {
@@ -1568,13 +1594,21 @@ public class MainActivity extends Activity {
             btnSwitchMode
         };
         
+        // Tüm alanları hazırla (tek loop)
+        for (View field : fields) {
+            if (field != null) {
+                field.setAlpha(0f);
+                field.setTranslationY(30);
+                field.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            }
+        }
+        
+        // Batch animasyon başlat
         for (int i = 0; i < fields.length; i++) {
             if (fields[i] != null) {
                 final View field = fields[i];
                 final int delay = i * 60;
-                
-                field.setAlpha(0f);
-                field.setTranslationY(30);
+                final boolean isLast = (i == fields.length - 1);
                 
                 field.animate()
                     .alpha(1f)
@@ -1582,6 +1616,16 @@ public class MainActivity extends Activity {
                     .setStartDelay(delay + 200)
                     .setDuration(350)
                     .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                    .withEndAction(() -> {
+                        if (isLast) {
+                            // Son animasyon bitince tüm layer'ları temizle
+                            for (View f : fields) {
+                                if (f != null) {
+                                    f.setLayerType(View.LAYER_TYPE_NONE, null);
+                                }
+                            }
+                        }
+                    })
                     .start();
             }
         }
@@ -1754,79 +1798,83 @@ public class MainActivity extends Activity {
     
     /**
      * Başarı konfeti animasyonu (Simüle edilmiş parçacık efekti).
+     * Optimize edilmiş - Daha az parçacık, daha iyi performans.
      */
     private void animateSuccessConfetti() {
         if (layoutVerification == null || layoutVerification.getVisibility() != View.VISIBLE) return;
-        
-        // Ekran boyutlarını al
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int screenHeight = getResources().getDisplayMetrics().heightPixels;
         
         // Layout'un ViewGroup olduğundan emin ol
         if (!(layoutVerification instanceof android.view.ViewGroup)) return;
         
         final android.view.ViewGroup container = (android.view.ViewGroup) layoutVerification;
         
-        // 20 adet konfeti parçacığı oluştur
-        for (int i = 0; i < 20; i++) {
+        // Ekran boyutlarını al
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        
+        // Parçacık sayısını azalt (20 → 12) - Performans için
+        final int particleCount = 12;
+        
+        // Renk paleti (önceden tanımla)
+        final int[] colors = {
+            Color.parseColor("#4CAF50"),
+            Color.parseColor("#8BC34A"),
+            Color.parseColor("#00E5FF"),
+            Color.parseColor("#FFD700")
+        };
+        
+        // Batch işlem için liste
+        final View[] particles = new View[particleCount];
+        
+        for (int i = 0; i < particleCount; i++) {
             View confetti = new View(this);
-            int size = (int) (Math.random() * 20 + 10); // 10-30px arası
+            int size = (int) (Math.random() * 15 + 8); // 8-23px (daha küçük)
             confetti.setLayoutParams(new android.widget.FrameLayout.LayoutParams(size, size));
-            
-            // Rastgele renkler (yeşil tonları)
-            int[] colors = {
-                Color.parseColor("#4CAF50"),
-                Color.parseColor("#8BC34A"),
-                Color.parseColor("#CDDC39"),
-                Color.parseColor("#00E5FF"),
-                Color.parseColor("#FFD700")
-            };
             confetti.setBackgroundColor(colors[(int) (Math.random() * colors.length)]);
             
-            // Rastgele başlangıç pozisyonu (üstten)
             float startX = (float) (Math.random() * screenWidth);
-            float startY = -50;
             confetti.setX(startX);
-            confetti.setY(startY);
+            confetti.setY(-50);
             confetti.setAlpha(0f);
             
-            // Layout'a ekle
+            // Hardware layer kullan
+            confetti.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            
+            particles[i] = confetti;
+            
             try {
                 container.addView(confetti);
-            } catch (Exception e) {
-                continue; // Ekleme başarısızsa devam et
-            }
-            
-            // Animasyon parametreleri
-            float endY = screenHeight + 100;
-            float endX = startX + (float) ((Math.random() - 0.5) * 300); // Yatay sapma
-            long duration = (long) (Math.random() * 1000 + 1500); // 1.5-2.5 saniye
-            long delay = (long) (Math.random() * 300); // 0-300ms gecikme
-            
-            // Düşme animasyonu
-            confetti.animate()
-                .alpha(1f)
-                .y(endY)
-                .x(endX)
-                .rotation((float) (Math.random() * 720 - 360)) // Rastgele dönüş
-                .setDuration(duration)
-                .setStartDelay(delay)
-                .setInterpolator(new android.view.animation.AccelerateInterpolator())
-                .withEndAction(() -> {
-                    // Animasyon bitince view'ı kaldır
-                    try {
-                        container.removeView(confetti);
-                    } catch (Exception ignored) {}
-                })
-                .start();
+                
+                float endY = screenHeight + 100;
+                float endX = startX + (float) ((Math.random() - 0.5) * 250);
+                long duration = (long) (Math.random() * 800 + 1200); // 1.2-2s (daha hızlı)
+                long delay = (long) (Math.random() * 250);
+                
+                final int index = i;
+                confetti.animate()
+                    .alpha(1f)
+                    .y(endY)
+                    .x(endX)
+                    .rotation((float) (Math.random() * 720 - 360))
+                    .setDuration(duration)
+                    .setStartDelay(delay)
+                    .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                    .withEndAction(() -> {
+                        try {
+                            particles[index].setLayerType(View.LAYER_TYPE_NONE, null);
+                            container.removeView(particles[index]);
+                        } catch (Exception ignored) {}
+                    })
+                    .start();
+            } catch (Exception ignored) {}
         }
         
-        // Arka plan flash efekti
+        // Arka plan flash efekti (optimize edilmiş)
         View bgFlash = new View(this);
         bgFlash.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
-        bgFlash.setBackgroundColor(Color.parseColor("#1A4CAF50")); // %10 yeşil
+        bgFlash.setBackgroundColor(Color.parseColor("#1A4CAF50"));
         bgFlash.setAlpha(0f);
         
         try {
@@ -1834,11 +1882,11 @@ public class MainActivity extends Activity {
             
             bgFlash.animate()
                 .alpha(1f)
-                .setDuration(200)
+                .setDuration(150) // Daha hızlı
                 .withEndAction(() -> {
                     bgFlash.animate()
                         .alpha(0f)
-                        .setDuration(400)
+                        .setDuration(300)
                         .withEndAction(() -> {
                             try {
                                 container.removeView(bgFlash);
@@ -2001,9 +2049,13 @@ public class MainActivity extends Activity {
     
     /**
      * Doğrulama ekranı arka plan animasyonu (Subtle glow effect).
+     * Optimize edilmiş - Tek animator, düşük CPU kullanımı.
      */
     private void animateVerificationBackground() {
         if (layoutVerification == null) return;
+        
+        // Önceki animasyonu iptal et
+        cancelAnimation(ANIM_VERIFICATION_BG);
         
         android.animation.ObjectAnimator alphaAnim = android.animation.ObjectAnimator.ofFloat(
             layoutVerification, "alpha", 0.95f, 1f, 0.95f);
@@ -2011,23 +2063,21 @@ public class MainActivity extends Activity {
         alphaAnim.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
         alphaAnim.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
         
-        // Animasyonu tag'e kaydet ki gerekirse iptal edilebilelim
-        layoutVerification.setTag(R.id.btnHistory, alphaAnim); // Benzersiz bir ID kullan
+        // Animasyonu kaydet
+        activeAnimations.put(ANIM_VERIFICATION_BG, alphaAnim);
         alphaAnim.start();
     }
 
     /**
      * Doğrulama ekranını gizleyip ana form ekranını geri getirir.
      * Premium 3D flip animasyonu ile.
+     * Optimize edilmiş - Hardware acceleration.
      */
     private void animateVerificationExit() {
          // Arka plan animasyonunu durdur
+         cancelAnimation(ANIM_VERIFICATION_BG);
          if (layoutVerification != null) {
-             Object bgAnim = layoutVerification.getTag(R.id.btnHistory);
-             if (bgAnim instanceof android.animation.ObjectAnimator) {
-                 ((android.animation.ObjectAnimator) bgAnim).cancel();
-             }
-             layoutVerification.setAlpha(1f); // Alpha'yı sıfırla
+             layoutVerification.setAlpha(1f);
          }
          
          layoutAccountFields.setVisibility(View.VISIBLE);
@@ -2036,6 +2086,10 @@ public class MainActivity extends Activity {
          layoutAccountFields.setRotationY(-15f);
          layoutAccountFields.setScaleX(0.9f);
          layoutAccountFields.setScaleY(0.9f);
+
+         // Hardware layer aktif et
+         layoutVerification.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+         layoutAccountFields.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
          // 1. KATMAN: Doğrulama ekranını 3D flip ile gizle
          layoutVerification.setPivotX(layoutVerification.getWidth());
@@ -2055,6 +2109,7 @@ public class MainActivity extends Activity {
                  layoutVerification.setRotationY(0f);
                  layoutVerification.setScaleX(1f);
                  layoutVerification.setScaleY(1f);
+                 layoutVerification.setLayerType(View.LAYER_TYPE_NONE, null);
              })
              .start();
 
@@ -2071,6 +2126,9 @@ public class MainActivity extends Activity {
              .setDuration(500)
              .setStartDelay(100)
              .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
+             .withEndAction(() -> {
+                 layoutAccountFields.setLayerType(View.LAYER_TYPE_NONE, null);
+             })
              .start();
     }
 
@@ -4231,6 +4289,587 @@ public class MainActivity extends Activity {
     }
 
     // ================= SOHBET GEÇMİŞİ (CHAT HISTORY) =================
+    
+    /**
+     * Premium silme onay dialogu.
+     * Modern, glassmorphism tasarım.
+     */
+    private void showPremiumDeleteDialog(String title, String message, String preview, Runnable onConfirm) {
+        // Ana container
+        LinearLayout mainLayout = new LinearLayout(this);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(48, 40, 48, 32);
+        
+        // Premium glassmorphism arka plan
+        android.graphics.drawable.GradientDrawable bgGradient = new android.graphics.drawable.GradientDrawable();
+        bgGradient.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        bgGradient.setCornerRadius(32);
+        bgGradient.setColors(new int[]{
+            Color.parseColor("#1E1E32"),
+            Color.parseColor("#12121F")
+        });
+        bgGradient.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TL_BR);
+        bgGradient.setStroke(2, Color.parseColor("#33FF6B6B"));
+        mainLayout.setBackground(bgGradient);
+        mainLayout.setElevation(24);
+
+        // İkon container (Animated warning)
+        android.widget.FrameLayout iconFrame = new android.widget.FrameLayout(this);
+        LinearLayout.LayoutParams iconFrameParams = new LinearLayout.LayoutParams(80, 80);
+        iconFrameParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        iconFrameParams.setMargins(0, 0, 0, 24);
+        iconFrame.setLayoutParams(iconFrameParams);
+        
+        // İkon arka plan (gradient circle)
+        View iconBg = new View(this);
+        android.widget.FrameLayout.LayoutParams iconBgParams = new android.widget.FrameLayout.LayoutParams(80, 80);
+        iconBg.setLayoutParams(iconBgParams);
+        android.graphics.drawable.GradientDrawable iconBgDrawable = new android.graphics.drawable.GradientDrawable();
+        iconBgDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        iconBgDrawable.setColors(new int[]{
+            Color.parseColor("#FF6B6B"),
+            Color.parseColor("#EE5A6F")
+        });
+        iconBg.setBackground(iconBgDrawable);
+        iconFrame.addView(iconBg);
+        
+        // İkon (trash/delete)
+        TextView iconText = new TextView(this);
+        iconText.setText("🗑️");
+        iconText.setTextSize(32);
+        iconText.setGravity(android.view.Gravity.CENTER);
+        android.widget.FrameLayout.LayoutParams iconTextParams = new android.widget.FrameLayout.LayoutParams(
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT);
+        iconText.setLayoutParams(iconTextParams);
+        iconFrame.addView(iconText);
+        
+        mainLayout.addView(iconFrame);
+
+        // Başlık
+        TextView txtTitle = new TextView(this);
+        txtTitle.setText(title);
+        txtTitle.setTextColor(Color.WHITE);
+        txtTitle.setTextSize(22);
+        txtTitle.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD));
+        txtTitle.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        titleParams.setMargins(0, 0, 0, 16);
+        txtTitle.setLayoutParams(titleParams);
+        mainLayout.addView(txtTitle);
+
+        // Ayırıcı çizgi
+        View divider = new View(this);
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 2);
+        dividerParams.setMargins(0, 0, 0, 20);
+        divider.setLayoutParams(dividerParams);
+        android.graphics.drawable.GradientDrawable dividerGradient = new android.graphics.drawable.GradientDrawable();
+        dividerGradient.setColors(new int[]{Color.TRANSPARENT, Color.parseColor("#44FF6B6B"), Color.TRANSPARENT});
+        dividerGradient.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT);
+        divider.setBackground(dividerGradient);
+        mainLayout.addView(divider);
+
+        // Mesaj
+        TextView txtMessage = new TextView(this);
+        txtMessage.setText(message);
+        txtMessage.setTextColor(Color.parseColor("#CCFFFFFF"));
+        txtMessage.setTextSize(15);
+        txtMessage.setGravity(android.view.Gravity.CENTER);
+        txtMessage.setLineSpacing(8, 1.2f);
+        LinearLayout.LayoutParams msgParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        msgParams.setMargins(0, 0, 0, 16);
+        txtMessage.setLayoutParams(msgParams);
+        mainLayout.addView(txtMessage);
+
+        // Önizleme kartı
+        if (preview != null && !preview.isEmpty()) {
+            LinearLayout previewCard = new LinearLayout(this);
+            previewCard.setOrientation(LinearLayout.VERTICAL);
+            previewCard.setPadding(20, 16, 20, 16);
+            LinearLayout.LayoutParams previewParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            previewParams.setMargins(0, 0, 0, 24);
+            previewCard.setLayoutParams(previewParams);
+            
+            android.graphics.drawable.GradientDrawable previewBg = new android.graphics.drawable.GradientDrawable();
+            previewBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            previewBg.setCornerRadius(12);
+            previewBg.setColor(Color.parseColor("#15FFFFFF"));
+            previewBg.setStroke(1, Color.parseColor("#33FFFFFF"));
+            previewCard.setBackground(previewBg);
+            
+            TextView previewLabel = new TextView(this);
+            previewLabel.setText("Önizleme:");
+            previewLabel.setTextColor(Color.parseColor("#88FFFFFF"));
+            previewLabel.setTextSize(11);
+            previewLabel.setAllCaps(true);
+            previewLabel.setLetterSpacing(0.1f);
+            previewCard.addView(previewLabel);
+            
+            TextView previewText = new TextView(this);
+            previewText.setText("\"" + preview + "\"");
+            previewText.setTextColor(Color.WHITE);
+            previewText.setTextSize(13);
+            previewText.setPadding(0, 8, 0, 0);
+            previewText.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.ITALIC));
+            previewCard.addView(previewText);
+            
+            mainLayout.addView(previewCard);
+        }
+
+        // Uyarı metni
+        TextView txtWarning = new TextView(this);
+        txtWarning.setText("⚠️ Bu işlem geri alınamaz");
+        txtWarning.setTextColor(Color.parseColor("#FFB74D"));
+        txtWarning.setTextSize(12);
+        txtWarning.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams warnParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        warnParams.setMargins(0, 0, 0, 24);
+        txtWarning.setLayoutParams(warnParams);
+        mainLayout.addView(txtWarning);
+
+        // Buton container
+        LinearLayout buttonLayout = new LinearLayout(this);
+        buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
+        buttonLayout.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonLayout.setLayoutParams(buttonLayoutParams);
+
+        // İptal butonu
+        TextView btnCancel = new TextView(this);
+        btnCancel.setText("Vazgeç");
+        btnCancel.setTextColor(Color.WHITE);
+        btnCancel.setTextSize(15);
+        btnCancel.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD));
+        btnCancel.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams cancelParams = new LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+        cancelParams.setMargins(0, 0, 8, 0);
+        btnCancel.setLayoutParams(cancelParams);
+        btnCancel.setPadding(0, 32, 0, 32);
+        
+        android.graphics.drawable.GradientDrawable cancelBg = new android.graphics.drawable.GradientDrawable();
+        cancelBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        cancelBg.setCornerRadius(20);
+        cancelBg.setColor(Color.parseColor("#2A2A3E"));
+        cancelBg.setStroke(2, Color.parseColor("#44FFFFFF"));
+        btnCancel.setBackground(cancelBg);
+
+        // Sil butonu
+        TextView btnDelete = new TextView(this);
+        btnDelete.setText("Sil");
+        btnDelete.setTextColor(Color.WHITE);
+        btnDelete.setTextSize(15);
+        btnDelete.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD));
+        btnDelete.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+        deleteParams.setMargins(8, 0, 0, 0);
+        btnDelete.setLayoutParams(deleteParams);
+        btnDelete.setPadding(0, 32, 0, 32);
+        
+        android.graphics.drawable.GradientDrawable deleteBg = new android.graphics.drawable.GradientDrawable();
+        deleteBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        deleteBg.setCornerRadius(20);
+        deleteBg.setColors(new int[]{
+            Color.parseColor("#FF6B6B"),
+            Color.parseColor("#EE5A6F")
+        });
+        deleteBg.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT);
+        btnDelete.setBackground(deleteBg);
+
+        buttonLayout.addView(btnCancel);
+        buttonLayout.addView(btnDelete);
+        mainLayout.addView(buttonLayout);
+
+        // Dialog oluştur
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setView(mainLayout);
+        builder.setCancelable(true);
+        
+        android.app.AlertDialog dialog = builder.create();
+        
+        // Buton animasyonları ve click listener'lar
+        btnCancel.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
+            new android.os.Handler(Looper.getMainLooper()).postDelayed(dialog::dismiss, 100);
+        });
+        
+        btnDelete.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
+            
+            // Silme animasyonu
+            iconText.animate()
+                .scaleX(1.3f)
+                .scaleY(1.3f)
+                .alpha(0f)
+                .setDuration(200)
+                .start();
+            
+            new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> {
+                dialog.dismiss();
+                if (onConfirm != null) {
+                    onConfirm.run();
+                }
+            }, 200);
+        });
+        
+        // Dialog arka planını şeffaf yap
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        
+        dialog.show();
+        
+        // Giriş animasyonu
+        mainLayout.setScaleX(0.85f);
+        mainLayout.setScaleY(0.85f);
+        mainLayout.setAlpha(0f);
+        mainLayout.animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .alpha(1f)
+            .setDuration(300)
+            .setInterpolator(new android.view.animation.OvershootInterpolator(1.1f))
+            .start();
+        
+        // İkon pulse animasyonu
+        android.animation.ObjectAnimator iconPulse = android.animation.ObjectAnimator.ofFloat(
+            iconBg, "scaleX", 1f, 1.1f, 1f);
+        android.animation.ObjectAnimator iconPulseY = android.animation.ObjectAnimator.ofFloat(
+            iconBg, "scaleY", 1f, 1.1f, 1f);
+        iconPulse.setDuration(1000);
+        iconPulseY.setDuration(1000);
+        iconPulse.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+        iconPulseY.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+        iconPulse.start();
+        iconPulseY.start();
+    }
+
+    /**
+     * Premium "Tümünü Temizle" onay dialogu.
+     * Tüm sohbet geçmişini silmek için kullanılır.
+     */
+    private void showPremiumClearAllDialog(int totalCount, Runnable onConfirm) {
+        // Ana container
+        LinearLayout mainLayout = new LinearLayout(this);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(48, 40, 48, 32);
+        
+        // Premium glassmorphism arka plan (daha koyu ve tehlikeli görünüm)
+        android.graphics.drawable.GradientDrawable bgGradient = new android.graphics.drawable.GradientDrawable();
+        bgGradient.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        bgGradient.setCornerRadius(32);
+        bgGradient.setColors(new int[]{
+            Color.parseColor("#2A1E1E"),
+            Color.parseColor("#1F1212")
+        });
+        bgGradient.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TL_BR);
+        bgGradient.setStroke(3, Color.parseColor("#55FF4444"));
+        mainLayout.setBackground(bgGradient);
+        mainLayout.setElevation(28);
+
+        // İkon container (Animated warning - daha büyük)
+        android.widget.FrameLayout iconFrame = new android.widget.FrameLayout(this);
+        LinearLayout.LayoutParams iconFrameParams = new LinearLayout.LayoutParams(96, 96);
+        iconFrameParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        iconFrameParams.setMargins(0, 0, 0, 24);
+        iconFrame.setLayoutParams(iconFrameParams);
+        
+        // İkon arka plan (gradient circle - daha parlak kırmızı)
+        View iconBg = new View(this);
+        android.widget.FrameLayout.LayoutParams iconBgParams = new android.widget.FrameLayout.LayoutParams(96, 96);
+        iconBg.setLayoutParams(iconBgParams);
+        android.graphics.drawable.GradientDrawable iconBgDrawable = new android.graphics.drawable.GradientDrawable();
+        iconBgDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        iconBgDrawable.setColors(new int[]{
+            Color.parseColor("#FF4444"),
+            Color.parseColor("#DD2C2C")
+        });
+        iconBg.setBackground(iconBgDrawable);
+        iconFrame.addView(iconBg);
+        
+        // İkon (warning symbol)
+        TextView iconText = new TextView(this);
+        iconText.setText("⚠️");
+        iconText.setTextSize(40);
+        iconText.setGravity(android.view.Gravity.CENTER);
+        android.widget.FrameLayout.LayoutParams iconTextParams = new android.widget.FrameLayout.LayoutParams(
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT);
+        iconText.setLayoutParams(iconTextParams);
+        iconFrame.addView(iconText);
+        
+        mainLayout.addView(iconFrame);
+
+        // Başlık
+        TextView txtTitle = new TextView(this);
+        txtTitle.setText("Tüm Geçmişi Sil");
+        txtTitle.setTextColor(Color.parseColor("#FF4444"));
+        txtTitle.setTextSize(24);
+        txtTitle.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD));
+        txtTitle.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        titleParams.setMargins(0, 0, 0, 16);
+        txtTitle.setLayoutParams(titleParams);
+        mainLayout.addView(txtTitle);
+
+        // Ayırıcı çizgi
+        View divider = new View(this);
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 2);
+        dividerParams.setMargins(0, 0, 0, 20);
+        divider.setLayoutParams(dividerParams);
+        android.graphics.drawable.GradientDrawable dividerGradient = new android.graphics.drawable.GradientDrawable();
+        dividerGradient.setColors(new int[]{Color.TRANSPARENT, Color.parseColor("#66FF4444"), Color.TRANSPARENT});
+        dividerGradient.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT);
+        divider.setBackground(dividerGradient);
+        mainLayout.addView(divider);
+
+        // Mesaj
+        TextView txtMessage = new TextView(this);
+        txtMessage.setText("TÜM sohbet geçmişiniz kalıcı olarak silinecek!");
+        txtMessage.setTextColor(Color.WHITE);
+        txtMessage.setTextSize(16);
+        txtMessage.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD));
+        txtMessage.setGravity(android.view.Gravity.CENTER);
+        txtMessage.setLineSpacing(8, 1.2f);
+        LinearLayout.LayoutParams msgParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        msgParams.setMargins(0, 0, 0, 20);
+        txtMessage.setLayoutParams(msgParams);
+        mainLayout.addView(txtMessage);
+
+        // İstatistik kartı
+        LinearLayout statsCard = new LinearLayout(this);
+        statsCard.setOrientation(LinearLayout.VERTICAL);
+        statsCard.setPadding(24, 20, 24, 20);
+        LinearLayout.LayoutParams statsParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        statsParams.setMargins(0, 0, 0, 24);
+        statsCard.setLayoutParams(statsParams);
+        
+        android.graphics.drawable.GradientDrawable statsBg = new android.graphics.drawable.GradientDrawable();
+        statsBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        statsBg.setCornerRadius(16);
+        statsBg.setColor(Color.parseColor("#20FF4444"));
+        statsBg.setStroke(2, Color.parseColor("#44FF4444"));
+        statsCard.setBackground(statsBg);
+        
+        // Toplam mesaj sayısı
+        TextView statsTitle = new TextView(this);
+        statsTitle.setText("SİLİNECEK MESAJLAR");
+        statsTitle.setTextColor(Color.parseColor("#88FFFFFF"));
+        statsTitle.setTextSize(11);
+        statsTitle.setAllCaps(true);
+        statsTitle.setLetterSpacing(0.15f);
+        statsTitle.setGravity(android.view.Gravity.CENTER);
+        statsCard.addView(statsTitle);
+        
+        TextView statsCount = new TextView(this);
+        statsCount.setText(String.valueOf(totalCount));
+        statsCount.setTextColor(Color.parseColor("#FF4444"));
+        statsCount.setTextSize(48);
+        statsCount.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD));
+        statsCount.setGravity(android.view.Gravity.CENTER);
+        statsCount.setPadding(0, 8, 0, 8);
+        statsCard.addView(statsCount);
+        
+        TextView statsLabel = new TextView(this);
+        statsLabel.setText("KAYIT");
+        statsLabel.setTextColor(Color.parseColor("#AAFFFFFF"));
+        statsLabel.setTextSize(13);
+        statsLabel.setAllCaps(true);
+        statsLabel.setLetterSpacing(0.1f);
+        statsLabel.setGravity(android.view.Gravity.CENTER);
+        statsCard.addView(statsLabel);
+        
+        mainLayout.addView(statsCard);
+
+        // Uyarı metinleri (3 satır)
+        String[] warnings = {
+            "⚠️ Bu işlem GERİ ALINAMAZ",
+            "🔥 Tüm konuşmalarınız silinecek",
+            "💾 Yedekleme yapılmayacak"
+        };
+        
+        for (String warning : warnings) {
+            TextView txtWarning = new TextView(this);
+            txtWarning.setText(warning);
+            txtWarning.setTextColor(Color.parseColor("#FFB74D"));
+            txtWarning.setTextSize(13);
+            txtWarning.setGravity(android.view.Gravity.CENTER);
+            txtWarning.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+            LinearLayout.LayoutParams warnParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            warnParams.setMargins(0, 0, 0, 8);
+            txtWarning.setLayoutParams(warnParams);
+            mainLayout.addView(txtWarning);
+        }
+        
+        // Son boşluk
+        View spacer = new View(this);
+        LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 16);
+        spacer.setLayoutParams(spacerParams);
+        mainLayout.addView(spacer);
+
+        // Buton container
+        LinearLayout buttonLayout = new LinearLayout(this);
+        buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
+        buttonLayout.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonLayout.setLayoutParams(buttonLayoutParams);
+
+        // İptal butonu (daha belirgin)
+        TextView btnCancel = new TextView(this);
+        btnCancel.setText("Vazgeç");
+        btnCancel.setTextColor(Color.WHITE);
+        btnCancel.setTextSize(16);
+        btnCancel.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD));
+        btnCancel.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams cancelParams = new LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+        cancelParams.setMargins(0, 0, 8, 0);
+        btnCancel.setLayoutParams(cancelParams);
+        btnCancel.setPadding(0, 36, 0, 36);
+        
+        android.graphics.drawable.GradientDrawable cancelBg = new android.graphics.drawable.GradientDrawable();
+        cancelBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        cancelBg.setCornerRadius(20);
+        cancelBg.setColors(new int[]{
+            Color.parseColor("#3A3A4E"),
+            Color.parseColor("#2A2A3E")
+        });
+        cancelBg.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM);
+        cancelBg.setStroke(2, Color.parseColor("#66FFFFFF"));
+        btnCancel.setBackground(cancelBg);
+
+        // Sil butonu (daha tehlikeli görünüm)
+        TextView btnDelete = new TextView(this);
+        btnDelete.setText("TÜMÜNÜ SİL");
+        btnDelete.setTextColor(Color.WHITE);
+        btnDelete.setTextSize(16);
+        btnDelete.setTypeface(android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD));
+        btnDelete.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+        deleteParams.setMargins(8, 0, 0, 0);
+        btnDelete.setLayoutParams(deleteParams);
+        btnDelete.setPadding(0, 36, 0, 36);
+        
+        android.graphics.drawable.GradientDrawable deleteBg = new android.graphics.drawable.GradientDrawable();
+        deleteBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        deleteBg.setCornerRadius(20);
+        deleteBg.setColors(new int[]{
+            Color.parseColor("#FF4444"),
+            Color.parseColor("#CC0000")
+        });
+        deleteBg.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM);
+        deleteBg.setStroke(2, Color.parseColor("#FFFF4444"));
+        btnDelete.setBackground(deleteBg);
+
+        buttonLayout.addView(btnCancel);
+        buttonLayout.addView(btnDelete);
+        mainLayout.addView(buttonLayout);
+
+        // Dialog oluştur
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setView(mainLayout);
+        builder.setCancelable(true);
+        
+        android.app.AlertDialog dialog = builder.create();
+        
+        // Buton animasyonları ve click listener'lar
+        btnCancel.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
+            new android.os.Handler(Looper.getMainLooper()).postDelayed(dialog::dismiss, 100);
+        });
+        
+        btnDelete.setOnClickListener(v -> {
+            // Çift vibrasyon (tehlike uyarısı)
+            vibrateFeedback();
+            new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> vibrateFeedback(), 100);
+            
+            animateButtonClick(v);
+            
+            // Silme animasyonu (daha dramatik)
+            iconText.animate()
+                .scaleX(1.5f)
+                .scaleY(1.5f)
+                .rotation(360f)
+                .alpha(0f)
+                .setDuration(300)
+                .start();
+            
+            statsCount.animate()
+                .scaleX(0.5f)
+                .scaleY(0.5f)
+                .alpha(0f)
+                .setDuration(300)
+                .start();
+            
+            new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> {
+                dialog.dismiss();
+                if (onConfirm != null) {
+                    onConfirm.run();
+                }
+            }, 300);
+        });
+        
+        // Dialog arka planını şeffaf yap
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        
+        dialog.show();
+        
+        // Giriş animasyonu (daha dramatik)
+        mainLayout.setScaleX(0.8f);
+        mainLayout.setScaleY(0.8f);
+        mainLayout.setAlpha(0f);
+        mainLayout.animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .alpha(1f)
+            .setDuration(350)
+            .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
+            .start();
+        
+        // İkon pulse animasyonu (daha hızlı ve belirgin)
+        android.animation.ObjectAnimator iconPulse = android.animation.ObjectAnimator.ofFloat(
+            iconBg, "scaleX", 1f, 1.15f, 1f);
+        android.animation.ObjectAnimator iconPulseY = android.animation.ObjectAnimator.ofFloat(
+            iconBg, "scaleY", 1f, 1.15f, 1f);
+        iconPulse.setDuration(800);
+        iconPulseY.setDuration(800);
+        iconPulse.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+        iconPulseY.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+        iconPulse.start();
+        iconPulseY.start();
+        
+        // Sayı pulse animasyonu
+        android.animation.ObjectAnimator countPulse = android.animation.ObjectAnimator.ofFloat(
+            statsCount, "scaleX", 1f, 1.05f, 1f);
+        android.animation.ObjectAnimator countPulseY = android.animation.ObjectAnimator.ofFloat(
+            statsCount, "scaleY", 1f, 1.05f, 1f);
+        countPulse.setDuration(1200);
+        countPulseY.setDuration(1200);
+        countPulse.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+        countPulseY.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+        countPulse.start();
+        countPulseY.start();
+    }
 
     /**
      * Mesajı yerel hafızaya kaydeder.
@@ -4680,15 +5319,28 @@ public class MainActivity extends Activity {
             // En iyisi tek tek silmek yerine "Bu konuşmayı sil" demek.
             itemLayout.setOnLongClickListener(v -> {
                 vibrateFeedback();
-                // Çift silme onayı
-                new androidx.appcompat.app.AlertDialog.Builder(this)
-                        .setTitle("Anıyı Sil")
-                        .setMessage("Bu konuşma geçmişten silinsin mi?")
-                        .setPositiveButton("Sil", (dialog, which) -> {
-                            deleteHistoryPair(index); // Yeni metod gerekli
-                        })
-                        .setNegativeButton("İptal", null)
-                        .show();
+                
+                // Mesaj önizlemesi hazırla
+                try {
+                    String previewText = userMsg;
+                    if (previewText.length() > 40) {
+                        previewText = previewText.substring(0, 37) + "...";
+                    }
+                    
+                    final String finalPreview = previewText;
+                    
+                    // Premium dialog göster
+                    showPremiumDeleteDialog(
+                        "Anıyı Sil",
+                        "Bu konuşma geçmişten silinsin mi?",
+                        finalPreview,
+                        () -> deleteHistoryPair(index)
+                    );
+                } catch (Exception e) {
+                    // Hata durumunda basit dialog
+                    deleteHistoryPair(index);
+                }
+                
                 return true;
             });
 
@@ -4791,47 +5443,42 @@ public class MainActivity extends Activity {
      * Soru-Cevap çiftini siler (İki kayıt birden).
      */
     private void deleteHistoryPair(int index) {
-        synchronized (historyLock) {
-            try {
-                String currentHistory = historyPrefs.getString("data", "[]");
-                JSONArray historyArray = new JSONArray(currentHistory);
-                
-                // İndeks kontrolü
-                if (index < 0 || index + 1 >= historyArray.length()) return;
+        // Silme işlemi (dialog zaten long click'te gösterildi)
+        new Thread(() -> {
+            synchronized (historyLock) {
+                try {
+                    String latestHistory = historyPrefs.getString("data", "[]");
+                    JSONArray latestArray = new JSONArray(latestHistory);
+                    
+                    if (index < 0 || index + 1 >= latestArray.length()) return;
 
-                // remove metodu diziyi kaydırır, bu yüzden index'i iki kere silmek yeterli
-                // Önce ikinci elemanı (cevap - index+1) sil, sonra birinciyi (soru - index) sil.
-                // Ancak remove(int) metodu API 19 gerektirir. Android sürümleri destekliyorsa sorun yok.
-                // JSONArray.remove(int) API level 19'da eklendi.
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-                    historyArray.remove(index + 1); // Cevabı sil
-                    historyArray.remove(index);     // Soruyu sil
-                } else {
-                    // API < 19 için workaround: List'e çevir
-                    // (Bu proje modern göründüğü için muhtemelen API 19+ ama yine de güvenli yol)
-                    // Basitlik için sadece showHistory'yi yenileyecek bir çözüm yapalım.
-                    // Aslında remove işlemi için yeni bir JSONArray oluşturmak daha safe olabilir.
-                    JSONArray newArray = new JSONArray();
-                    for (int i=0; i<historyArray.length(); i++) {
-                        if (i != index && i != index+1) {
-                            newArray.put(historyArray.get(i));
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                        latestArray.remove(index + 1); // Cevabı sil
+                        latestArray.remove(index);     // Soruyu sil
+                    } else {
+                        JSONArray newArray = new JSONArray();
+                        for (int i=0; i<latestArray.length(); i++) {
+                            if (i != index && i != index+1) {
+                                newArray.put(latestArray.get(i));
+                            }
                         }
+                        latestArray = newArray;
                     }
-                    historyArray = newArray;
+
+                    historyPrefs.edit().putString("data", latestArray.toString()).apply();
+                    
+                    runOnUiThread(() -> {
+                        String searchText = (edtHistorySearch != null) ? edtHistorySearch.getText().toString() : "";
+                        showHistory(searchText);
+                        Toast.makeText(MainActivity.this, "Anı silindi", Toast.LENGTH_SHORT).show();
+                    });
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Silme hatası", Toast.LENGTH_SHORT).show());
                 }
-
-                historyPrefs.edit().putString("data", historyArray.toString()).apply();
-                
-                runOnUiThread(() -> {
-                    showHistory(edtHistorySearch.getText().toString());
-                    Toast.makeText(this, "Anı silindi", Toast.LENGTH_SHORT).show();
-                });
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() -> Toast.makeText(this, "Silme hatası", Toast.LENGTH_SHORT).show());
             }
-        }
+        }).start();
     }
 
     /**
@@ -4853,43 +5500,44 @@ public class MainActivity extends Activity {
 
                 String finalSnippet = messageSnippet;
                 runOnUiThread(() -> {
-                    new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                            .setTitle("Mesajı Sil")
-                            .setMessage("\"" + finalSnippet + "\"\n\nBu mesajı geçmişten silmek istiyor musunuz?")
-                            .setIcon(android.R.drawable.ic_menu_delete)
-                            .setPositiveButton("Sil", (dialog, which) -> {
-                                new Thread(() -> {
-                                    synchronized (historyLock) {
-                                        try {
-                                            String latestHistory = historyPrefs.getString("data", "[]");
-                                            JSONArray latestArray = new JSONArray(latestHistory);
+                    showPremiumDeleteDialog(
+                        "Mesajı Sil",
+                        "Bu mesajı geçmişten silmek istiyor musunuz?",
+                        finalSnippet,
+                        () -> {
+                            // Silme işlemi
+                            new Thread(() -> {
+                                synchronized (historyLock) {
+                                    try {
+                                        String latestHistory = historyPrefs.getString("data", "[]");
+                                        JSONArray latestArray = new JSONArray(latestHistory);
 
-                                            if (index >= 0 && index < latestArray.length()) {
-                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                                                    latestArray.remove(index);
-                                                } else {
-                                                    JSONArray newList = new JSONArray();
-                                                    for (int i = 0; i < latestArray.length(); i++) {
-                                                        if (i != index)
-                                                            newList.put(latestArray.get(i));
-                                                    }
-                                                    latestArray = newList;
+                                        if (index >= 0 && index < latestArray.length()) {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                                                latestArray.remove(index);
+                                            } else {
+                                                JSONArray newList = new JSONArray();
+                                                for (int i = 0; i < latestArray.length(); i++) {
+                                                    if (i != index)
+                                                        newList.put(latestArray.get(i));
                                                 }
-                                                historyPrefs.edit().putString("data", latestArray.toString()).apply();
-
-                                                runOnUiThread(() -> {
-                                                    showHistory(edtHistorySearch.getText().toString());
-                                                    Toast.makeText(this, "Mesaj silindi", Toast.LENGTH_SHORT).show();
-                                                });
+                                                latestArray = newList;
                                             }
-                                        } catch (Exception e) {
-                                            e.printStackTrace();
+                                            historyPrefs.edit().putString("data", latestArray.toString()).apply();
+
+                                            runOnUiThread(() -> {
+                                                String searchText = (edtHistorySearch != null) ? edtHistorySearch.getText().toString() : "";
+                                                showHistory(searchText);
+                                                Toast.makeText(MainActivity.this, "Mesaj silindi", Toast.LENGTH_SHORT).show();
+                                            });
                                         }
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
                                     }
-                                }).start();
-                            })
-                            .setNegativeButton("Vazgeç", null)
-                            .show();
+                                }
+                            }).start();
+                        }
+                    );
                 });
             } catch (Exception e) {
                 e.printStackTrace();
@@ -4907,35 +5555,32 @@ public class MainActivity extends Activity {
             return;
         }
 
-        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle("Geçmişi Temizle")
-                .setMessage("Tüm sohbet geçmişini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.")
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .setPositiveButton("Hepsini Sil", (dialog, which) -> {
-                    // Veri güvenliği için kilitleme kullan
-                    synchronized (historyLock) {
-                        historyPrefs.edit().clear().apply();
-                    }
+        int totalCount = getHistoryCount();
+        
+        // Premium dialog göster
+        showPremiumClearAllDialog(totalCount, () -> {
+            // Veri güvenliği için kilitleme kullan
+            synchronized (historyLock) {
+                historyPrefs.edit().clear().apply();
+            }
 
-                    // Arayüzü güncelle
-                    runOnUiThread(() -> {
-                        containerHistoryItems.removeAllViews();
-                        // Yeni boş durum görünümünü göster
-                        if (layoutHistoryEmpty != null) {
-                            layoutHistoryEmpty.setVisibility(View.VISIBLE);
-                        }
-                        // Stats kartlarını sıfırla
-                        if (txtStatTotalChats != null) txtStatTotalChats.setText("0");
-                        if (txtStatThisWeek != null) txtStatThisWeek.setText("0");
-                        if (txtStatToday != null) txtStatToday.setText("0");
-                        if (txtHistoryStats != null) {
-                            txtHistoryStats.setText("SENKRONİZE • 0 KAYIT");
-                        }
-                        Toast.makeText(this, "Sohbet geçmişi tamamen temizlendi", Toast.LENGTH_SHORT).show();
-                    });
-                })
-                .setNegativeButton("Vazgeç", null)
-                .show();
+            // Arayüzü güncelle
+            runOnUiThread(() -> {
+                containerHistoryItems.removeAllViews();
+                // Yeni boş durum görünümünü göster
+                if (layoutHistoryEmpty != null) {
+                    layoutHistoryEmpty.setVisibility(View.VISIBLE);
+                }
+                // Stats kartlarını sıfırla
+                if (txtStatTotalChats != null) txtStatTotalChats.setText("0");
+                if (txtStatThisWeek != null) txtStatThisWeek.setText("0");
+                if (txtStatToday != null) txtStatToday.setText("0");
+                if (txtHistoryStats != null) {
+                    txtHistoryStats.setText("SENKRONİZE • 0 KAYIT");
+                }
+                Toast.makeText(MainActivity.this, "Sohbet geçmişi tamamen temizlendi", Toast.LENGTH_SHORT).show();
+            });
+        });
     }
 
     /**
@@ -5000,11 +5645,242 @@ public class MainActivity extends Activity {
     }
 
     // ================= MODEL SEÇİMİ (MODEL SELECTION) =================
+    
+    /**
+     * Model panelinin açılış animasyonu.
+     */
+    private void animateModelsEntry() {
+        layoutModels.setAlpha(0f);
+        layoutModels.setScaleY(0.9f);
+        
+        // Yukarıdan aşağı slide + fade
+        layoutModels.animate()
+            .alpha(1f)
+            .scaleY(1f)
+            .setDuration(400)
+            .setInterpolator(new android.view.animation.OvershootInterpolator(1.1f))
+            .start();
+        
+        // Başlık animasyonu
+        if (txtCurrentModel != null) {
+            txtCurrentModel.setAlpha(0f);
+            txtCurrentModel.setTranslationY(-30);
+            txtCurrentModel.animate()
+                .alpha(1f)
+                .translationY(0)
+                .setStartDelay(100)
+                .setDuration(350)
+                .start();
+        }
+    }
+    
+    /**
+     * Model panelinin kapanış animasyonu.
+     */
+    private void animateModelsExit() {
+        layoutModels.animate()
+            .alpha(0f)
+            .scaleY(0.95f)
+            .setDuration(300)
+            .setInterpolator(new android.view.animation.AccelerateInterpolator())
+            .withEndAction(() -> {
+                layoutModels.setVisibility(View.GONE);
+                layoutModels.setScaleY(1f);
+            })
+            .start();
+    }
+    
+    /**
+     * Model seçim animasyonu.
+     */
+    private void animateModelSelection(View selectedView, String modelName) {
+        // Tüm model kartlarını gözden geçir
+        for (int i = 0; i < containerModelItems.getChildCount(); i++) {
+            View child = containerModelItems.getChildAt(i);
+            
+            if (child == selectedView) {
+                // Seçilen kart - Büyüt ve vurgula
+                child.animate()
+                    .scaleX(1.05f)
+                    .scaleY(1.05f)
+                    .setDuration(200)
+                    .withEndAction(() -> {
+                        child.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .setDuration(200)
+                            .start();
+                    })
+                    .start();
+                
+                // Renk geçişi animasyonu
+                if (child instanceof LinearLayout) {
+                    LinearLayout layout = (LinearLayout) child;
+                    if (layout.getChildCount() > 0 && layout.getChildAt(0) instanceof TextView) {
+                        TextView title = (TextView) layout.getChildAt(0);
+                        
+                        android.animation.ValueAnimator colorAnim = android.animation.ValueAnimator.ofArgb(
+                            Color.WHITE, Color.parseColor("#00E5FF"));
+                        colorAnim.setDuration(300);
+                        colorAnim.addUpdateListener(animator -> {
+                            try {
+                                title.setTextColor((int) animator.getAnimatedValue());
+                            } catch (Exception ignored) {}
+                        });
+                        colorAnim.start();
+                    }
+                }
+                
+            } else {
+                // Seçilmeyen kartlar - Hafif küçült ve soldur
+                child.animate()
+                    .alpha(0.5f)
+                    .scaleX(0.95f)
+                    .scaleY(0.95f)
+                    .setDuration(200)
+                    .start();
+            }
+        }
+        
+        // Seçim işlemini gerçekleştir
+        new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> {
+            selectModel(modelName);
+        }, 300);
+    }
+    
+    /**
+     * Seçili model için glow animasyonu.
+     * Optimize edilmiş - Tek animator, düşük CPU.
+     */
+    private void animateSelectedModelGlow(View modelCard) {
+        if (modelCard == null) return;
+        
+        // Önceki animasyonu iptal et
+        cancelAnimation(ANIM_MODEL_GLOW);
+        
+        android.animation.ObjectAnimator glow = android.animation.ObjectAnimator.ofFloat(
+            modelCard, "alpha", 1f, 0.85f, 1f);
+        glow.setDuration(1500);
+        glow.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+        glow.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+        
+        // Animasyonu kaydet
+        activeAnimations.put(ANIM_MODEL_GLOW, glow);
+        glow.start();
+    }
+    
+    /**
+     * Model değişikliği başarı animasyonu.
+     */
+    private void animateModelChangeSuccess() {
+        if (txtCurrentModel == null) return;
+        
+        // Başlık için success animasyonu
+        int originalColor = Color.WHITE;
+        int successColor = Color.parseColor("#4CAF50");
+        
+        android.animation.ValueAnimator colorAnim = android.animation.ValueAnimator.ofArgb(
+            originalColor, successColor, originalColor);
+        colorAnim.setDuration(600);
+        colorAnim.addUpdateListener(animator -> {
+            try {
+                txtCurrentModel.setTextColor((int) animator.getAnimatedValue());
+            } catch (Exception ignored) {}
+        });
+        colorAnim.start();
+        
+        // Scale pulse
+        txtCurrentModel.animate()
+            .scaleX(1.1f)
+            .scaleY(1.1f)
+            .setDuration(200)
+            .withEndAction(() -> {
+                txtCurrentModel.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(200)
+                    .start();
+            })
+            .start();
+        
+        // Ana ekrandaki etiketi de animasyonla güncelle
+        if (txtMainActiveModel != null) {
+            txtMainActiveModel.setAlpha(0f);
+            txtMainActiveModel.setScaleX(0.8f);
+            txtMainActiveModel.setScaleY(0.8f);
+            
+            txtMainActiveModel.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(400)
+                .setInterpolator(new android.view.animation.OvershootInterpolator(1.5f))
+                .start();
+        }
+        
+        // Başarı konfeti efekti (hafif)
+        animateModelChangeConfetti();
+    }
+    
+    /**
+     * Model değişikliği için hafif konfeti efekti.
+     * Optimize edilmiş - Daha az parçacık, hardware acceleration.
+     */
+    private void animateModelChangeConfetti() {
+        if (layoutModels == null || !(layoutModels instanceof android.view.ViewGroup)) return;
+        
+        final android.view.ViewGroup container = (android.view.ViewGroup) layoutModels;
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        
+        // Parçacık sayısını azalt (10 → 6)
+        final int particleCount = 6;
+        final int[] colors = {
+            Color.parseColor("#00E5FF"),
+            Color.parseColor("#4CAF50"),
+            Color.parseColor("#FFD700")
+        };
+        
+        for (int i = 0; i < particleCount; i++) {
+            View particle = new View(this);
+            int size = (int) (Math.random() * 10 + 6); // 6-16px (daha küçük)
+            particle.setLayoutParams(new android.widget.FrameLayout.LayoutParams(size, size));
+            particle.setBackgroundColor(colors[(int) (Math.random() * colors.length)]);
+            
+            float startX = (float) (Math.random() * screenWidth);
+            particle.setX(startX);
+            particle.setY(-30);
+            particle.setAlpha(0f);
+            particle.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            
+            try {
+                container.addView(particle);
+                
+                float endY = 250 + (float) (Math.random() * 150); // Daha kısa mesafe
+                float endX = startX + (float) ((Math.random() - 0.5) * 120);
+                
+                particle.animate()
+                    .alpha(1f)
+                    .y(endY)
+                    .x(endX)
+                    .rotation((float) (Math.random() * 360))
+                    .setDuration((long) (Math.random() * 500 + 600)) // 600-1100ms (daha hızlı)
+                    .setStartDelay((long) (Math.random() * 150))
+                    .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                    .withEndAction(() -> {
+                        try {
+                            particle.setLayerType(View.LAYER_TYPE_NONE, null);
+                            container.removeView(particle);
+                        } catch (Exception ignored) {}
+                    })
+                    .start();
+            } catch (Exception ignored) {}
+        }
+    }
+    
     private void showModels() {
         runOnUiThread(() -> {
             layoutModels.setVisibility(View.VISIBLE);
-            layoutModels.setAlpha(0f);
-            layoutModels.animate().alpha(1f).setDuration(300).start();
+            animateModelsEntry();
             fetchModels();
         });
     }
@@ -5014,9 +5890,7 @@ public class MainActivity extends Activity {
      */
     private void hideModels() {
         runOnUiThread(() -> {
-            layoutModels.animate().alpha(0f).setDuration(300).withEndAction(() -> {
-                layoutModels.setVisibility(View.GONE);
-            }).start();
+            animateModelsExit();
         });
     }
 
@@ -5045,6 +5919,8 @@ public class MainActivity extends Activity {
 
                     runOnUiThread(() -> {
                         containerModelItems.removeAllViews();
+                        
+                        // Modelleri sırayla ekle (stagger effect için)
                         for (int i = 0; i < models.length(); i++) {
                             try {
                                 String modelName = models.getString(i);
@@ -5061,7 +5937,12 @@ public class MainActivity extends Activity {
                                 if (isHidden)
                                     continue;
 
-                                addModelItemToUI(modelName);
+                                final int index = i;
+                                // Her modeli gecikmeyle ekle
+                                new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                    addModelItemToUI(modelName, index);
+                                }, index * 80L); // 80ms stagger
+                                
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -5157,7 +6038,7 @@ public class MainActivity extends Activity {
     /**
      * Model listesine yeni bir model öğesi ekler.
      */
-    private void addModelItemToUI(String modelName) {
+    private void addModelItemToUI(String modelName, int index) {
         LinearLayout itemLayout = new LinearLayout(this);
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -5193,16 +6074,36 @@ public class MainActivity extends Activity {
             // Sağ üst köşeye bir onay ikonu
             txtTitle.setCompoundDrawablesWithIntrinsicBounds(0, 0, android.R.drawable.checkbox_on_background, 0);
             txtTitle.setCompoundDrawablePadding(16);
+            
+            // Seçili öğeye özel glow animasyonu
+            animateSelectedModelGlow(itemLayout);
         }
 
         itemLayout.setOnClickListener(v -> {
             vibrateFeedback();
-            selectModel(modelName);
+            animateModelSelection(v, modelName);
         });
 
         itemLayout.addView(txtTitle);
         itemLayout.addView(txtDesc);
+        
+        // Giriş animasyonu
+        itemLayout.setAlpha(0f);
+        itemLayout.setTranslationY(50);
+        itemLayout.setScaleX(0.9f);
+        itemLayout.setScaleY(0.9f);
+        
         containerModelItems.addView(itemLayout);
+        
+        // Animasyonu başlat
+        itemLayout.animate()
+            .alpha(1f)
+            .translationY(0)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(400)
+            .setInterpolator(new android.view.animation.DecelerateInterpolator())
+            .start();
     }
 
     /**
@@ -5217,8 +6118,12 @@ public class MainActivity extends Activity {
         txtMainActiveModel.setText(formatModelName(modelName));
 
         // speak("Model seçildi: " + modelName, false);
+        
+        // Başarı animasyonu göster
+        animateModelChangeSuccess();
 
-        hideModels();
+        // Kısa bir gecikme sonra paneli kapat
+        new android.os.Handler(Looper.getMainLooper()).postDelayed(this::hideModels, 800);
     }
 
     /**
@@ -6319,11 +7224,38 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        
+        // Tüm aktif animasyonları iptal et
+        cancelAllAnimations();
+        
         if (speechRecognizer != null)
             speechRecognizer.destroy();
         if (tts != null)
             tts.shutdown();
-
+    }
+    
+    /**
+     * Belirli bir animasyonu iptal eder.
+     */
+    private void cancelAnimation(int animationId) {
+        android.animation.Animator anim = activeAnimations.get(animationId);
+        if (anim != null && anim.isRunning()) {
+            anim.cancel();
+        }
+        activeAnimations.remove(animationId);
+    }
+    
+    /**
+     * Tüm aktif animasyonları iptal eder (Memory leak önleme).
+     */
+    private void cancelAllAnimations() {
+        for (int i = 0; i < activeAnimations.size(); i++) {
+            android.animation.Animator anim = activeAnimations.valueAt(i);
+            if (anim != null && anim.isRunning()) {
+                anim.cancel();
+            }
+        }
+        activeAnimations.clear();
     }
 
     // ================= ADMIN LOG YÖNETİMİ =================
