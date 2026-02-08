@@ -377,18 +377,25 @@ public class MainActivity extends Activity {
         
         // Doğrulama Listenerları
         btnVerifyCode.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
             String code = edtVerifyCode.getText().toString().trim();
             if (code.length() == 6) {
                 verifyCodeAndRegister(code);
             } else {
                 Toast.makeText(this, "Lütfen 6 haneli kodu girin", Toast.LENGTH_SHORT).show();
+                shakeView(edtVerifyCode);
             }
         });
         
         btnResendCode.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
             String email = edtEmail.getText().toString().trim();
             String username = edtUsername.getText().toString().trim();
             if (!email.isEmpty()) {
+                // Resend animasyonu
+                animateResendCode(v);
                 // Resend endpoint veya tekrar registerRequest çağır (send-verification aynı işi görür)
                 registerRequest(username, "", email, ""); // Şifre/isim önemsiz sadece kod için
                 Toast.makeText(this, "Kod tekrar isteniyor...", Toast.LENGTH_SHORT).show();
@@ -396,6 +403,8 @@ public class MainActivity extends Activity {
         });
         
         btnCancelVerification.setOnClickListener(v -> {
+            vibrateFeedback();
+            animateButtonClick(v);
             animateVerificationExit();
             edtVerifyCode.setText("");
         });
@@ -1665,6 +1674,52 @@ public class MainActivity extends Activity {
             })
             .start();
     }
+    
+    /**
+     * Kod tekrar gönderme butonu için özel animasyon.
+     */
+    private void animateResendCode(View button) {
+        if (button == null) return;
+        
+        // Rotation animasyonu (yenileme simgesi gibi)
+        button.animate()
+            .rotation(360f)
+            .setDuration(500)
+            .setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator())
+            .withEndAction(() -> button.setRotation(0f))
+            .start();
+        
+        // Renk geçişi (mavi → yeşil → mavi)
+        if (button instanceof TextView) {
+            TextView textView = (TextView) button;
+            int originalColor = textView.getCurrentTextColor();
+            int highlightColor = Color.parseColor("#4CAF50");
+            
+            android.animation.ValueAnimator colorAnim = android.animation.ValueAnimator.ofArgb(
+                originalColor, highlightColor, originalColor);
+            colorAnim.setDuration(500);
+            colorAnim.addUpdateListener(animator -> {
+                try {
+                    textView.setTextColor((int) animator.getAnimatedValue());
+                } catch (Exception ignored) {}
+            });
+            colorAnim.start();
+        }
+        
+        // Pulse efekti
+        button.animate()
+            .scaleX(1.15f)
+            .scaleY(1.15f)
+            .setDuration(200)
+            .withEndAction(() -> {
+                button.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(200)
+                    .start();
+            })
+            .start();
+    }
 
     /**
      * Başarılı işlem animasyonu (Yeşil flash).
@@ -1696,6 +1751,104 @@ public class MainActivity extends Activity {
             })
             .start();
     }
+    
+    /**
+     * Başarı konfeti animasyonu (Simüle edilmiş parçacık efekti).
+     */
+    private void animateSuccessConfetti() {
+        if (layoutVerification == null || layoutVerification.getVisibility() != View.VISIBLE) return;
+        
+        // Ekran boyutlarını al
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        
+        // Layout'un ViewGroup olduğundan emin ol
+        if (!(layoutVerification instanceof android.view.ViewGroup)) return;
+        
+        final android.view.ViewGroup container = (android.view.ViewGroup) layoutVerification;
+        
+        // 20 adet konfeti parçacığı oluştur
+        for (int i = 0; i < 20; i++) {
+            View confetti = new View(this);
+            int size = (int) (Math.random() * 20 + 10); // 10-30px arası
+            confetti.setLayoutParams(new android.widget.FrameLayout.LayoutParams(size, size));
+            
+            // Rastgele renkler (yeşil tonları)
+            int[] colors = {
+                Color.parseColor("#4CAF50"),
+                Color.parseColor("#8BC34A"),
+                Color.parseColor("#CDDC39"),
+                Color.parseColor("#00E5FF"),
+                Color.parseColor("#FFD700")
+            };
+            confetti.setBackgroundColor(colors[(int) (Math.random() * colors.length)]);
+            
+            // Rastgele başlangıç pozisyonu (üstten)
+            float startX = (float) (Math.random() * screenWidth);
+            float startY = -50;
+            confetti.setX(startX);
+            confetti.setY(startY);
+            confetti.setAlpha(0f);
+            
+            // Layout'a ekle
+            try {
+                container.addView(confetti);
+            } catch (Exception e) {
+                continue; // Ekleme başarısızsa devam et
+            }
+            
+            // Animasyon parametreleri
+            float endY = screenHeight + 100;
+            float endX = startX + (float) ((Math.random() - 0.5) * 300); // Yatay sapma
+            long duration = (long) (Math.random() * 1000 + 1500); // 1.5-2.5 saniye
+            long delay = (long) (Math.random() * 300); // 0-300ms gecikme
+            
+            // Düşme animasyonu
+            confetti.animate()
+                .alpha(1f)
+                .y(endY)
+                .x(endX)
+                .rotation((float) (Math.random() * 720 - 360)) // Rastgele dönüş
+                .setDuration(duration)
+                .setStartDelay(delay)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                .withEndAction(() -> {
+                    // Animasyon bitince view'ı kaldır
+                    try {
+                        container.removeView(confetti);
+                    } catch (Exception ignored) {}
+                })
+                .start();
+        }
+        
+        // Arka plan flash efekti
+        View bgFlash = new View(this);
+        bgFlash.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
+        bgFlash.setBackgroundColor(Color.parseColor("#1A4CAF50")); // %10 yeşil
+        bgFlash.setAlpha(0f);
+        
+        try {
+            container.addView(bgFlash, 0);
+            
+            bgFlash.animate()
+                .alpha(1f)
+                .setDuration(200)
+                .withEndAction(() -> {
+                    bgFlash.animate()
+                        .alpha(0f)
+                        .setDuration(400)
+                        .withEndAction(() -> {
+                            try {
+                                container.removeView(bgFlash);
+                            } catch (Exception ignored) {}
+                        })
+                        .start();
+                })
+                .start();
+        } catch (Exception ignored) {}
+    }
 
     /**
      * Input alanı odaklanma animasyonu.
@@ -1726,6 +1879,7 @@ public class MainActivity extends Activity {
 
     /**
      * Doğrulama ekranının sağdan animasyonla gelmesini sağlar.
+     * Premium multi-layer animasyon efekti.
      */
     private void animateVerificationEntry() {
         layoutVerification.setVisibility(View.VISIBLE);
@@ -1735,70 +1889,251 @@ public class MainActivity extends Activity {
         float screenWidth = getResources().getDisplayMetrics().widthPixels;
         layoutVerification.setTranslationX(screenWidth);
 
-        // Form alanlarını sola kaydırarak gizle
+        // 1. KATMAN: Form alanlarını 3D perspektif ile gizle
+        layoutAccountFields.setPivotX(0);
+        layoutAccountFields.setPivotY(layoutAccountFields.getHeight() / 2f);
         layoutAccountFields.animate()
             .alpha(0f)
-            .translationX(-100f)
-            .setDuration(300)
-            .withEndAction(() -> layoutAccountFields.setVisibility(View.GONE))
+            .translationX(-150f)
+            .rotationY(-15f)
+            .scaleX(0.9f)
+            .scaleY(0.9f)
+            .setDuration(350)
+            .setInterpolator(new android.view.animation.AccelerateInterpolator())
+            .withEndAction(() -> {
+                layoutAccountFields.setVisibility(View.GONE);
+                layoutAccountFields.setRotationY(0f);
+                layoutAccountFields.setScaleX(1f);
+                layoutAccountFields.setScaleY(1f);
+            })
             .start();
 
-        // Doğrulama ekranını sağdan getir
+        // 2. KATMAN: Doğrulama ekranını elastic bounce ile getir
         layoutVerification.animate()
             .alpha(1f)
             .translationX(0f)
-            .setDuration(450)
-            .setInterpolator(new android.view.animation.OvershootInterpolator(1.0f))
+            .setDuration(550)
+            .setInterpolator(new android.view.animation.OvershootInterpolator(1.3f))
+            .withEndAction(() -> {
+                // Giriş tamamlandıktan sonra içerik animasyonlarını başlat
+                animateVerificationContent();
+            })
             .start();
             
-        // Input alanına odaklan ve klavyeyi aç
-        edtVerifyCode.requestFocus();
+        // 3. KATMAN: Arka plan pulse efekti
+        animateVerificationBackground();
+    }
+    
+    /**
+     * Doğrulama ekranı içeriğinin sıralı animasyonu.
+     */
+    private void animateVerificationContent() {
+        // İçerikteki tüm öğeleri bul
+        View txtVerifyInfo = findViewById(R.id.txtVerifyInfo);
+        
+        View[] contentViews = {
+            txtVerifyInfo,
+            edtVerifyCode,
+            btnVerifyCode,
+            btnResendCode,
+            btnCancelVerification
+        };
+        
+        // Her öğeyi sırayla animasyonla göster (Stagger effect)
+        for (int i = 0; i < contentViews.length; i++) {
+            if (contentViews[i] != null) {
+                final View view = contentViews[i];
+                final int delay = i * 80;
+                
+                view.setAlpha(0f);
+                view.setTranslationY(40);
+                view.setScaleX(0.9f);
+                view.setScaleY(0.9f);
+                
+                view.animate()
+                    .alpha(1f)
+                    .translationY(0)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setStartDelay(delay)
+                    .setDuration(400)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                    .start();
+            }
+        }
+        
+        // Input alanına özel pulse animasyonu
+        if (edtVerifyCode != null) {
+            new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (edtVerifyCode != null && layoutVerification.getVisibility() == View.VISIBLE) {
+                    edtVerifyCode.requestFocus();
+                    animateInputPulse(edtVerifyCode);
+                    
+                    // Klavyeyi aç
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.showSoftInput(edtVerifyCode, InputMethodManager.SHOW_IMPLICIT);
+                    }
+                }
+            }, 400);
+        }
+    }
+    
+    /**
+     * Input alanı için pulse (nabız) animasyonu.
+     */
+    private void animateInputPulse(View input) {
+        if (input == null) return;
+        
+        android.animation.ObjectAnimator scaleX = android.animation.ObjectAnimator.ofFloat(input, "scaleX", 1f, 1.05f, 1f);
+        android.animation.ObjectAnimator scaleY = android.animation.ObjectAnimator.ofFloat(input, "scaleY", 1f, 1.05f, 1f);
+        
+        scaleX.setDuration(800);
+        scaleY.setDuration(800);
+        scaleX.setRepeatCount(2);
+        scaleY.setRepeatCount(2);
+        
+        scaleX.start();
+        scaleY.start();
+        
+        vibrateFeedback();
+    }
+    
+    /**
+     * Doğrulama ekranı arka plan animasyonu (Subtle glow effect).
+     */
+    private void animateVerificationBackground() {
+        if (layoutVerification == null) return;
+        
+        android.animation.ObjectAnimator alphaAnim = android.animation.ObjectAnimator.ofFloat(
+            layoutVerification, "alpha", 0.95f, 1f, 0.95f);
+        alphaAnim.setDuration(2000);
+        alphaAnim.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+        alphaAnim.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+        
+        // Animasyonu tag'e kaydet ki gerekirse iptal edilebilelim
+        layoutVerification.setTag(R.id.btnHistory, alphaAnim); // Benzersiz bir ID kullan
+        alphaAnim.start();
     }
 
     /**
      * Doğrulama ekranını gizleyip ana form ekranını geri getirir.
+     * Premium 3D flip animasyonu ile.
      */
     private void animateVerificationExit() {
+         // Arka plan animasyonunu durdur
+         if (layoutVerification != null) {
+             Object bgAnim = layoutVerification.getTag(R.id.btnHistory);
+             if (bgAnim instanceof android.animation.ObjectAnimator) {
+                 ((android.animation.ObjectAnimator) bgAnim).cancel();
+             }
+             layoutVerification.setAlpha(1f); // Alpha'yı sıfırla
+         }
+         
          layoutAccountFields.setVisibility(View.VISIBLE);
          layoutAccountFields.setAlpha(0f);
-         layoutAccountFields.setTranslationX(-100f);
+         layoutAccountFields.setTranslationX(-150f);
+         layoutAccountFields.setRotationY(-15f);
+         layoutAccountFields.setScaleX(0.9f);
+         layoutAccountFields.setScaleY(0.9f);
 
-         // Doğrulama ekranını sağa kaydırarak gizle
+         // 1. KATMAN: Doğrulama ekranını 3D flip ile gizle
+         layoutVerification.setPivotX(layoutVerification.getWidth());
+         layoutVerification.setPivotY(layoutVerification.getHeight() / 2f);
+         
          layoutVerification.animate()
              .alpha(0f)
              .translationX(200f)
-             .setDuration(300)
+             .rotationY(20f)
+             .scaleX(0.85f)
+             .scaleY(0.85f)
+             .setDuration(350)
+             .setInterpolator(new android.view.animation.AccelerateInterpolator())
              .withEndAction(() -> {
                  layoutVerification.setVisibility(View.GONE);
-                 layoutVerification.setTranslationX(0f); // Reset
+                 layoutVerification.setTranslationX(0f);
+                 layoutVerification.setRotationY(0f);
+                 layoutVerification.setScaleX(1f);
+                 layoutVerification.setScaleY(1f);
              })
              .start();
 
-         // Form alanlarını soldan getir
+         // 2. KATMAN: Form alanlarını elastic bounce ile getir
+         layoutAccountFields.setPivotX(0);
+         layoutAccountFields.setPivotY(layoutAccountFields.getHeight() / 2f);
+         
          layoutAccountFields.animate()
              .alpha(1f)
              .translationX(0f)
-             .setDuration(400)
-             .setInterpolator(new android.view.animation.DecelerateInterpolator())
+             .rotationY(0f)
+             .scaleX(1f)
+             .scaleY(1f)
+             .setDuration(500)
+             .setStartDelay(100)
+             .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
              .start();
     }
 
     /**
      * Hatalı işlemde görsele titreme efekti verir.
+     * Geliştirilmiş multi-axis shake animasyonu.
      */
     private void shakeView(View view) {
-        android.view.animation.TranslateAnimation shake = new android.view.animation.TranslateAnimation(0, 20, 0, 0);
-        shake.setDuration(600);
-        shake.setInterpolator(new android.view.animation.CycleInterpolator(5));
-        view.startAnimation(shake);
+        if (view == null) return;
         
-        // Haptic feedback
+        // X ekseni titreme (yatay)
+        android.animation.ObjectAnimator shakeX = android.animation.ObjectAnimator.ofFloat(
+            view, "translationX", 0, 25, -25, 25, -25, 15, -15, 6, -6, 0);
+        shakeX.setDuration(600);
+        
+        // Y ekseni hafif titreme (dikey)
+        android.animation.ObjectAnimator shakeY = android.animation.ObjectAnimator.ofFloat(
+            view, "translationY", 0, -5, 5, -5, 5, -3, 3, 0);
+        shakeY.setDuration(600);
+        
+        // Rotation titreme
+        android.animation.ObjectAnimator rotation = android.animation.ObjectAnimator.ofFloat(
+            view, "rotation", 0, -3, 3, -3, 3, -2, 2, -1, 1, 0);
+        rotation.setDuration(600);
+        
+        // Tüm animasyonları birlikte çalıştır
+        android.animation.AnimatorSet animSet = new android.animation.AnimatorSet();
+        animSet.playTogether(shakeX, shakeY, rotation);
+        animSet.start();
+        
+        // Haptic feedback (3 kısa titreşim)
         vibrateFeedback();
+        new android.os.Handler(Looper.getMainLooper()).postDelayed(this::vibrateFeedback, 100);
+        new android.os.Handler(Looper.getMainLooper()).postDelayed(this::vibrateFeedback, 200);
         
-        // Kırmızı flash efekti
-        view.animate().scaleX(1.1f).scaleY(1.1f).setDuration(100).withEndAction(() -> {
-            view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
-        }).start();
+        // Kırmızı flash efekti (daha belirgin)
+        int originalBg = Color.parseColor("#1E1E32");
+        int errorBg = Color.parseColor("#4DFF0000"); // %30 opacity kırmızı
+        
+        android.animation.ValueAnimator colorAnim = android.animation.ValueAnimator.ofArgb(originalBg, errorBg, originalBg);
+        colorAnim.setDuration(600);
+        colorAnim.addUpdateListener(animator -> {
+            try {
+                if (view.getBackground() instanceof android.graphics.drawable.ColorDrawable) {
+                    view.setBackgroundColor((int) animator.getAnimatedValue());
+                }
+            } catch (Exception ignored) {}
+        });
+        colorAnim.start();
+        
+        // Scale pulse (hata vurgusu)
+        view.animate()
+            .scaleX(1.08f)
+            .scaleY(1.08f)
+            .setDuration(150)
+            .withEndAction(() -> {
+                view.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setDuration(150)
+                    .start();
+            })
+            .start();
     }
 
     /**
@@ -1818,7 +2153,19 @@ public class MainActivity extends Activity {
             btnVerifyCode.setEnabled(false);
             btnVerifyCode.setAlpha(0.7f);
             btnVerifyCode.setText("Kontrol Ediliyor...");
+            
+            // Loading animasyonu (dönen efekt)
+            android.animation.ObjectAnimator rotation = android.animation.ObjectAnimator.ofFloat(
+                btnVerifyCode, "rotation", 0f, 360f);
+            rotation.setDuration(1000);
+            rotation.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+            rotation.setInterpolator(new android.view.animation.LinearInterpolator());
+            rotation.start();
+            
             btnVerifyCode.animate().scaleX(0.95f).scaleY(0.95f).setDuration(200).start();
+            
+            // Animasyonu durdurma referansı için tag'e kaydet
+            btnVerifyCode.setTag(rotation);
         });
 
         new Thread(() -> {
@@ -1841,6 +2188,13 @@ public class MainActivity extends Activity {
                 int verifyStatus = verifyConn.getResponseCode();
                 if (verifyStatus != 200) {
                      runOnUiThread(() -> {
+                         // Loading animasyonunu durdur
+                         Object rotationTag = btnVerifyCode.getTag();
+                         if (rotationTag instanceof android.animation.ObjectAnimator) {
+                             ((android.animation.ObjectAnimator) rotationTag).cancel();
+                         }
+                         btnVerifyCode.setRotation(0f);
+                         
                          btnVerifyCode.setEnabled(true);
                          btnVerifyCode.setAlpha(1.0f);
                          btnVerifyCode.setText("Doğrula ve Kayıt Ol");
@@ -1874,18 +2228,35 @@ public class MainActivity extends Activity {
                 
                 if (regCode == 200) {
                     runOnUiThread(() -> {
+                        // Loading animasyonunu durdur
+                        Object rotationTag = btnVerifyCode.getTag();
+                        if (rotationTag instanceof android.animation.ObjectAnimator) {
+                            ((android.animation.ObjectAnimator) rotationTag).cancel();
+                        }
+                        btnVerifyCode.setRotation(0f);
+                        
                         btnVerifyCode.setEnabled(true);
                         btnVerifyCode.setAlpha(1.0f);
                         btnVerifyCode.setText("Doğrula ve Kayıt Ol");
                         btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
                         
-                        // Başarı animasyonu
+                        // Başarı animasyonu (Konfeti efekti simülasyonu)
                         animateSuccess(btnVerifyCode);
+                        
+                        // Konfeti animasyonunu güvenli şekilde çalıştır
+                        try {
+                            animateSuccessConfetti();
+                        } catch (Exception e) {
+                            // Konfeti hatası uygulamayı durdurmasın
+                            e.printStackTrace();
+                        }
                         
                         Toast.makeText(this, "Kayıt Başarılı! Hoşgeldiniz.", Toast.LENGTH_LONG).show();
                         
                         // Başarılı animasyonla çıkış
-                        animateVerificationExit();
+                        new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> {
+                            animateVerificationExit();
+                        }, 800);
                         
                         // Ekranları sıfırla
                         edtVerifyCode.setText("");
@@ -1900,6 +2271,13 @@ public class MainActivity extends Activity {
                     });
                 } else {
                      runOnUiThread(() -> {
+                         // Loading animasyonunu durdur
+                         Object rotationTag = btnVerifyCode.getTag();
+                         if (rotationTag instanceof android.animation.ObjectAnimator) {
+                             ((android.animation.ObjectAnimator) rotationTag).cancel();
+                         }
+                         btnVerifyCode.setRotation(0f);
+                         
                          btnVerifyCode.setEnabled(true);
                          btnVerifyCode.setAlpha(1.0f);
                          btnVerifyCode.setText("Doğrula ve Kayıt Ol");
@@ -1911,6 +2289,13 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 e.printStackTrace();
                 runOnUiThread(() -> {
+                    // Loading animasyonunu durdur
+                    Object rotationTag = btnVerifyCode.getTag();
+                    if (rotationTag instanceof android.animation.ObjectAnimator) {
+                        ((android.animation.ObjectAnimator) rotationTag).cancel();
+                    }
+                    btnVerifyCode.setRotation(0f);
+                    
                     btnVerifyCode.setEnabled(true);
                     btnVerifyCode.setAlpha(1.0f);
                     btnVerifyCode.setText("Doğrula ve Kayıt Ol");
