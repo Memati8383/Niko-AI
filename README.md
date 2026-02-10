@@ -78,11 +78,72 @@ Dış ağlardan ve mobil cihazdan erişim için Cloudflare tüneli kullanılmakt
 
 <div align="center">
 
-| Web Chat | Mobil Uygulama | Admin Paneli |
-|----------|----------------|--------------|
+| Web Chat                | Mobil Uygulama      | Admin Paneli       |
+| ----------------------- | ------------------- | ------------------ |
 | Modern glassmorphism UI | Sesli komut desteği | Kullanıcı yönetimi |
 
 </div>
+
+## 🏗️ Sıfırdan Adım Adım Kurulum
+
+Eğer projeyi ilk kez kuruyorsanız, aşağıdaki adımları sırasıyla takip edin:
+
+### 1. Ön Hazırlıklar
+
+- Sisteminizde **Python 3.9 veya üzeri** yüklü olmalıdır.
+- LLM modellerini çalıştırmak için [Ollama](https://ollama.ai/) indirilmiş ve kurulmuş olmalıdır.
+- [Git](https://git-scm.com/) yüklü olmalıdır.
+- Google play store üzerinden CodeAssist uygulamasını indirip kurmalısınız. (AndroidX Project - Uygulama Adı - Package Name - Dosya Konumu - Dil(önerilen java) - Minimum SDK(önerilen API 21))
+
+### 2. Projeyi İndirme (Clone)
+
+```bash
+git clone https://github.com/Memati8383/niko-with-kiro.git
+cd niko-with-kiro/kiro
+```
+
+### 3. Sanal Ortam Oluşturma ve Bağımlılıklar (Önerilen)
+
+Projenin temiz bir ortamda çalışması için sanal ortam kullanmanız önerilir:
+
+```bash
+# Sanal ortam oluşturma
+python -m venv venv
+
+# Sanal ortamı aktif etme (Windows)
+venv\Scripts\activate
+
+# Gerekli paketleri yükleme
+pip install -r requirements.txt
+```
+
+### 4. Dil Modelini İndirme
+
+Niko'nun farklı yetenekler kazanması için aşağıdaki modellerden ihtiyacınız olanı Ollama üzerinden çekebilirsiniz (**Önerilen: RefinedNeuro/RN_TR_R2**):
+
+```bash
+# Ana Türkçe Model (Önerilen)
+ollama pull RefinedNeuro/RN_TR_R2:latest
+
+# Diğer Desteklenen Modeller
+ollama pull medllama2:latest
+ollama pull gemma2:2b
+ollama pull feu/warnchat:12b
+ollama pull alibayram/doktorllama3:latest
+ollama pull necdetuygur/developer:latest
+ollama pull alibayram/kumru:latest
+ollama pull alibayram/turkish-gemma-9b-v0.1:latest
+```
+
+### 5. Başlatma
+
+Her şeyi otomatik olarak başlatmak için:
+
+```bash
+sistemi_baslat.bat
+```
+
+---
 
 ## 🛠️ Kurulum ve Çalıştırma
 
@@ -184,6 +245,5 @@ Made with ❤️ in Turkey 🇹🇷
 ---
 
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
-
 
 > 🌐 **Güncel Tünel Adresi:** [https://retrieved-integrated-afford-minute.trycloudflare.com](https://retrieved-integrated-afford-minute.trycloudflare.com)

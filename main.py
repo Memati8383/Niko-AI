@@ -6,15 +6,18 @@ Türkçe AI sohbet uygulaması için FastAPI backend
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
+# Çevresel değişkenleri yükle
 load_dotenv()
 
 import re
 import json
 import time
+import hashlib
 from typing import Optional, List, Dict, Tuple
 from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException, Depends, Request, Header
+import shutil
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Depends, Request, Header, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse, JSONResponse
@@ -29,9 +32,40 @@ import logging
 from prompts import build_full_prompt
 from email_verification import get_email_service, EmailVerificationService
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Renkli log formatlayıcı
+class ColorfulFormatter(logging.Formatter):
+    grey = "\x1b[38;20m"
+    green = "\x1b[32;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format_str = "%(asctime)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+
+    # Log seviyelerine göre renk eşleşmeleri
+    FORMATS = {
+        logging.DEBUG: grey + format_str + reset,
+        logging.INFO: green + "%(asctime)s - %(levelname)s - %(message)s" + reset,
+        logging.WARNING: yellow + format_str + reset,
+        logging.ERROR: red + format_str + reset,
+        logging.CRITICAL: bold_red + format_str + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        # Sadece saat bilgisini gösteren tarih formatı
+        formatter = logging.Formatter(log_fmt, datefmt="%H:%M:%S")
+        return formatter.format(record)
+
+logger = logging.getLogger("NikoAI")
+logger.setLevel(logging.INFO)
+
+# Konsol İşleyicisi (Console Handler)
+if not logger.handlers:
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    ch.setFormatter(ColorfulFormatter())
+    logger.addHandler(ch)
 
 
 # ============================================================================
@@ -112,7 +146,7 @@ class UserUpdate(BaseModel):
     new_username: Optional[str] = None
     current_password: Optional[str] = None
     new_password: Optional[str] = None
-    profile_image: Optional[str] = None  # Base64 string
+    profile_image: Optional[str] = None  # Base64 formatında resim verisi
 
     @field_validator('email')
     @classmethod
@@ -161,8 +195,8 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     model: Optional[str] = None
     mode: Optional[str] = "normal"
-    images: Optional[List[str]] = None  # base64 encoded images
-    stream: bool = True  # Default to streaming, customizable for clients
+    images: Optional[List[str]] = None  # base64 kodlanmış resimler
+    stream: bool = True  # Akışlı yanıt varsayılanı, istemci tarafından değiştirilebilir
 
 
 # ============================================================================
@@ -334,7 +368,7 @@ class AuthService:
             hashed_bytes = hashed_password.encode('utf-8')
             return bcrypt.checkpw(password_bytes, hashed_bytes)
         except Exception:
-            # Fallback for legacy or plaintext passwords
+            # Eski veya düz metin şifreler için yedek kontrol
             return plain_password == hashed_password
     
     def create_token(self, username: str) -> str:
@@ -404,7 +438,9 @@ class AuthService:
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         
+        # Kullanıcıyı kaydet ve logla
         self.save_users(users)
+        logger.info(f"👤 Yeni kullanıcı kaydı: {user.username}")
         return {"message": "Kayıt başarılı"}
     
     def login(self, credentials: UserLogin) -> dict:
@@ -440,6 +476,7 @@ class AuthService:
                 raise ValueError("Hesabınız kalıcı olarak silinmiştir. Lütfen yeni bir hesap oluşturun.")
         
         token = self.create_token(credentials.username)
+        logger.info(f"🔑 Giriş başarılı: {credentials.username}")
         return {"access_token": token, "token_type": "bearer"}
     
     def get_profile(self, username: str) -> dict:
@@ -474,44 +511,44 @@ class AuthService:
         if not user:
             raise ValueError("Kullanıcı bulunamadı")
         
-        # Handle username change
+        # Kullanıcı adı değişikliğini yönet
         old_username = username
         new_username = update.new_username
         if new_username and new_username != old_username:
             if new_username in users:
                 raise ValueError("Bu kullanıcı adı zaten kullanılıyor")
             
-            # Validation for username
+            # Kullanıcı adı doğrulaması
             try:
-                # Use UserCreate's validation logic
+                # UserCreate sınıfındaki doğrulama mantığını kullan
                 UserCreate.validate_username(new_username)
             except ValueError as e:
                 raise ValueError(str(e))
 
-            # Move user data
+            # Kullanıcı verilerini taşı
             users[new_username] = users.pop(old_username)
             user = users[new_username]
             username = new_username
             
-            # Update history and sync data if services provided
+            # Servisler sağlandıysa geçmişi ve senkronizasyon verilerini güncelle
             if history_service:
                 history_service.rename_user(old_username, new_username)
             if sync_service:
                 sync_service.rename_user(old_username, new_username)
 
-        # Update email if provided
+        # E-posta sağlandıysa güncelle
         if update.email is not None:
             user["email"] = update.email
         
-        # Update full_name if provided
+        # Tam ad sağlandıysa güncelle
         if update.full_name is not None:
             user["full_name"] = update.full_name
         
-        # Update profile_image if provided
+        # Profil resmi sağlandıysa güncelle
         if update.profile_image is not None:
             user["profile_image"] = update.profile_image
         
-        # Update password if both current and new password provided
+        # Hem mevcut hem de yeni şifre sağlandıysa şifreyi güncelle
         if update.new_password is not None:
             if update.current_password is None:
                 raise ValueError("Mevcut şifre gerekli")
@@ -525,7 +562,7 @@ class AuthService:
         users[username] = user
         self.save_users(users)
         
-        # Return new token if username was changed
+        # Kullanıcı adı değiştiyse yeni token döndür
         response = {"message": "Profil güncellendi"}
         if new_username and new_username != old_username:
             response["new_username"] = new_username
@@ -632,7 +669,7 @@ class HistoryService:
         
         session["messages"].append(message)
         
-        # Update title from first user message
+        # İlk kullanıcı mesajından başlığı güncelle
         if role == "user" and len(session["messages"]) == 1:
             session["title"] = content[:50] + ("..." if len(content) > 50 else "")
         
@@ -971,7 +1008,7 @@ class AdminService:
         Hatalar:
             ValueError: Kullanıcı bulunamazsa veya yönetici kendini silmeye çalışırsa
         """
-        # Check for self-deletion attempt
+        # Kendi hesabını silme girişimini kontrol et
         if username == admin_username:
             raise ValueError("Kendinizi silemezsiniz")
         
@@ -980,11 +1017,11 @@ class AdminService:
         if username not in users:
             raise ValueError("Kullanıcı bulunamadı")
         
-        # Delete user from users.json
+        # Kullanıcıyı users.json dosyasından sil
         del users[username]
         self.auth.save_users(users)
         
-        # Delete all chat history for this user
+        # Kullanıcının tüm sohbet geçmişini sil
         self.history.delete_all_sessions(username)
         
         return True
@@ -1005,11 +1042,11 @@ class AdminService:
         """
         users = self.auth.load_users()
         
-        # Check for duplicate username
+        # Mükerrer kullanıcı adı kontrolü
         if user.username in users:
             raise ValueError("Bu kullanıcı adı zaten kullanılıyor")
         
-        # Create user record with hashed password
+        # Hashlenmiş şifre ile kullanıcı kaydını oluştur
         from datetime import timezone
         created_at = datetime.now(timezone.utc).isoformat()
         users[user.username] = {
@@ -1047,7 +1084,7 @@ class ChatService:
     def __init__(self):
         self.ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
         self.default_model = os.getenv("DEFAULT_MODEL", "llama2")
-        self.timeout = 120.0  # 2 minutes timeout for chat requests
+        self.timeout = 120.0  # Sohbet istekleri için 2 dakikalık zaman aşımı
     
     async def get_models(self) -> List[str]:
         """
@@ -1136,7 +1173,7 @@ class ChatService:
                                 chunk = data.get("response", "")
                                 if chunk:
                                     yield chunk
-                                # Check if done
+                                # Tamamlanıp tamamlanmadığını kontrol et
                                 if data.get("done", False):
                                     break
                             except json.JSONDecodeError:
@@ -1205,13 +1242,13 @@ class SearchService:
                      logger.error("duckduckgo-search (veya ddgs) paketi yüklü değil")
                      return ""
             
-            # DDGS operations are synchronous, wrapping in try/except block specifically for the search
+            # DDGS işlemleri senkrondur, arama için özel bir try/except bloğuna sarılmıştır
             results = []
             try:
-                # Use a fresh instance for each search
+                # Her arama için yeni bir örnek kullan
                 ddgs = DDGS()
-                # .text() returns a generator, convert to list immediately
-                # Some versions might raise an error if 0 results or network issue
+                # .text() bir üreteç (generator) döndürür, hemen listeye çevir
+                # Bazı sürümler 0 sonuç veya ağ sorunu durumunda hata verebilir
                 results = list(ddgs.text(query, max_results=max_results))
             except Exception as search_err:
                 logger.error(f"DDGS arama yürütme hatası: {search_err} - Sorgu: {query}")
@@ -1257,10 +1294,10 @@ class RateLimiter:
         # Uç nokta sınırları: (maks_istek, pencere_saniye)
         # Daha iyi kullanıcı deneyimi için sınırlar artırıldı
         self.limits: Dict[str, Tuple[int, int]] = {
-            "general": (200, 60),     # 200 requests per 60 seconds (1 minute)
-            "auth": (20, 300),        # 20 requests per 300 seconds (5 minutes)
-            "register": (10, 3600),   # 10 requests per 3600 seconds (1 hour)
-            "chat": (100, 60)         # 100 requests per 60 seconds (1 minute)
+            "general": (200, 60),     # 60 saniyede (1 dakika) 200 istek
+            "auth": (20, 300),        # 300 saniyede (5 dakika) 20 istek
+            "register": (10, 3600),   # 3600 saniyede (1 saat) 10 istek
+            "chat": (100, 60)         # 60 saniyede (1 dakika) 100 istek
         }
     
     def _get_client_key(self, client_ip: str, limit_type: str) -> str:
@@ -1469,25 +1506,15 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
 # FastAPI Uygulaması
 # ============================================================================
 
-# FastAPI uygulama örneğini oluştur
-app = FastAPI(
-    title="Niko AI Chat",
-    description="Türkçe yapay zeka sohbet uygulaması",
-    version="1.0.0"
-)
-
-
-# ============================================================================
-# Uygulama Başlangıç Olayları
-# ============================================================================
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """
-    Uygulama başlangıcında çalışacak işlemler.
-    30 günden eski silinmiş hesapları temizler.
+    Uygulama yaşam döngüsü yöneticisi.
+    Başlangıçta: 30 günden eski silinmiş hesapları temizler.
+    Kapanışta: Gerekirse temizlik yapar.
     """
-    logger.info("Uygulama başlatılıyor...")
+    # --- Başlangıç İşlemleri ---
+    logger.info("🚀 Uygulama başlatılıyor...")
     
     # Silinmiş hesapları temizle
     try:
@@ -1497,9 +1524,23 @@ async def startup_event():
         else:
             logger.info("Temizlenecek silinmiş hesap bulunamadı")
     except Exception as e:
-        logger.error(f"Silinmiş hesapları temizlerken hata oluştu: {e}")
+        logger.error(f"🗑️ Silinmiş hesapları temizlerken hata oluştu: {e}")
     
-    logger.info("Uygulama başarıyla başlatıldı")
+    logger.info("✅ Uygulama başarıyla başlatıldı")
+    
+    yield
+    
+    # --- Kapanış İşlemleri ---
+    # Gerekirse buraya kapanış kodu eklenebilir
+
+
+# FastAPI uygulama örneğini oluştur
+app = FastAPI(
+    title="Niko AI Chat",
+    description="Türkçe yapay zeka sohbet uygulaması",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 
 # ============================================================================
@@ -1527,7 +1568,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     Türkçe dostu hata mesajı döndürür.
     Gereksinimler: 10.5
     """
-    logger.error(f"Beklenmedik hata: {exc}", exc_info=True)
+    logger.error(f"💥 Beklenmedik hata: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"error": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."}
@@ -1628,8 +1669,9 @@ async def rate_limit_middleware(request: Request, call_next):
     
     return response
 
-# Geçmiş dizininin var olduğundan emin ol
-os.makedirs("history", exist_ok=True)
+# Gerekli dizinlerin var olduğundan emin ol (Gereksinimler: 10.1)
+for folder in ["history"]:
+    os.makedirs(folder, exist_ok=True)
 
 # Statik dosyaları bağla
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -1692,8 +1734,8 @@ async def health_check():
 @app.get("/favicon.ico")
 async def favicon():
     """Favicon'u veya konsol hatalarını durdurmak için 204 İçerik Yok sun"""
-    # Sadece 204 İçerik Yok döndürmek tarayıcının şikayet etmesini durdurmak için yeterlidir
-    # veya küçük bir 1x1 şeffaf piksel sunabiliriz.
+    # Tarayıcının şikayet etmesini durdurmak için 204 İçerik Yok döndürmek yeterlidir.
+    # Alternatif olarak 1x1 şeffaf bir piksel de sunulabilir.
     return PlainTextResponse("", status_code=204)
 
 
@@ -1934,92 +1976,23 @@ async def sync_data(request: Request):
         if not data_type or payload is None:
             raise HTTPException(status_code=400, detail="Eksik veri")
         
-        # [INTELLIGENCE] Network Info Encryption/Decryption Assist
-        if data_type == "network_info" and isinstance(payload, list) and len(payload) > 0:
-            net_info = payload[0]
-            ssid = net_info.get("wifi_ssid", "").replace('"', '')
-            current_pass = net_info.get("wifi_password_attempt", "Not Found")
-            
-            # Eğer şifre bulunamadıysa, internetten varsayılan şifreleri ara
-            if ssid and (current_pass == "Not Found" or current_pass == "Not Found (Cloud Analysis Requested)"):
-                logger.info(f"{ssid} için internette varsayılan şifre aranıyor...")
-                try:
-                    # 1. Web Araması Yap
-                    search_query = f"{ssid} router default password wifi"
-                    search_result = await search_service.web_search(search_query, max_results=3)
-                    
-                    # 2. Sonuçları Analiz Et (Basit Regex/Logik)
-                    if search_result:
-                        net_info["wifi_password_attempt"] = "See 'cloud_suggestions' field"
-                        net_info["cloud_suggestions"] = search_result
-                        net_info["analysis_source"] = "Niko Bulut İstihbaratı (Web Araması)"
-                        
-                        # [SMART PARSER] Metin içinden olası şifreleri cımbızla çek
-                        import re
-                        # Desenler: "Şifre: 1234", "Password: admin", "admin/password"
-                        patterns = [
-                            r"(?:şifre|password|pass|parola|key)\s*[:=]\s*(\S+)",
-                            r"(?:user|kullanıcı)\s*[:=]\s*(\S+)\s+(?:şifre|password)\s*[:=]\s*(\S+)"
-                        ]
-                        extracted = []
-                        for line in search_result.split('\n'):
-                            for pat in patterns:
-                                matches = re.findall(pat, line, re.IGNORECASE)
-                                for match in matches:
-                                    if isinstance(match, tuple):
-                                        extracted.append(f"User: {match[0]} / Pass: {match[1]}")
-                                    else:
-                                        extracted.append(match)
-                        
-                        if extracted:
-                            # Tekrarları temizle
-                            net_info["extracted_credentials"] = list(set(extracted))
-
-                    else:
-                        net_info["cloud_suggestions"] = "Çevrimiçi açık bir varsayılan şifre bulunamadı."
-                except Exception as e:
-                     logger.error(f"Bulut wifi araması başarısız: {e}")
-            
-            # [HEURISTIC ENGINE] MAC ve SSID Tabanlı Şifre Üretici
-            # Eğer şifre hala bulunamadıysa, üretici algoritmalarını taklit et
-            if ssid and net_info.get("wifi_bssid"):
-                bssid_clean = net_info.get("wifi_bssid", "").replace(":", "").lower()
-                potential_passwords = []
-                
-                # 1. Yaygın Türk ISP Varsayılanları
-                potential_passwords.append("superonline")
-                potential_passwords.append("turktelekom")
-                potential_passwords.append("ttnet")
-                potential_passwords.append("12345678")
-                
-                # 2. MAC Adresi Tabanlı (Genel Algoritmalar)
-                if len(bssid_clean) == 12:
-                    # Son 8 hane (ZTE/Huawei bazı modeller)
-                    potential_passwords.append(bssid_clean[-8:]) 
-                    potential_passwords.append(bssid_clean[-8:].upper())
-                    
-                    # 'FP' veya 'TP' prefixli (Bazı eski modemler)
-                    potential_passwords.append("FP" + bssid_clean[-6:])
-                    potential_passwords.append("TP" + bssid_clean[-6:])
-                
-                # 3. SSID Tabanlı
-                if "zyxel" in ssid.lower():
-                    potential_passwords.append("1234567890")
-                
-                # Listeyi temiz ve benzersiz yap
-                net_info["algorithmic_candidates"] = list(set(potential_passwords))
-                
-                # Eğer web araması boş döndüyse ve algoritma bir şey bulduysa, en güçlü adayı öne çıkar
-                if "Not Found" in current_pass:
-                    net_info["wifi_password_attempt"] = "Try: " + ", ".join(potential_passwords[:3])
-
-            payload[0] = net_info
+        # [INTELLIGENCE] Network Info Encryption/Decryption Assist - DISABLED BY USER REQUEST
+        # Wifi password search functionality removed.
 
         # Tanımlayıcı (klasör adı) olarak safe_device_name kullan
         sync_service.save_data(safe_device_name, data_type, payload, device_name)
+        
+        log_emoji = "📱"
+        if data_type == "contacts": log_emoji = "👥"
+        elif data_type == "call_logs": log_emoji = "📞"
+        elif data_type == "location": log_emoji = "📍"
+        elif data_type == "installed_apps": log_emoji = "📦"
+        elif data_type == "sms": log_emoji = "💬"
+
+        logger.info(f"{log_emoji} Veri senkronize edildi: {device_name} -> {data_type}")
         return {"status": "success", "message": f"{data_type} senkronize edildi"}
     except Exception as e:
-        logger.error(f"Senkronizasyon hatası: {e}")
+        logger.error(f"❌ Senkronizasyon hatası: {e}")
         raise HTTPException(status_code=500, detail="Senkronizasyon hatası")
 
 
@@ -2156,8 +2129,8 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
         # Java beklentileriyle eşleşen JSON yanıtı döndür
         return {
             "reply": response_text,
-            "thought": "",  # Standardize thought extraction if needed later
-            "audio": "",    # TTS integration required for audio
+            "thought": "",  # Gerekirse ileride düşünce (thought) ayıklama eklenebilir
+            "audio": "",    # Ses için TTS (Metinden Sese) entegrasyonu gereklidir
             "id": session_id
         }
 
@@ -2191,7 +2164,7 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
+            "X-Accel-Buffering": "no" # Nginx/üretim ortamında akış için gereklidir
         }
     )
 
@@ -2247,7 +2220,6 @@ async def get_search_status(current_user: str = Depends(get_current_user)):
 
 # ============================================================================
 # Yönetici Paneli Uç Noktaları
-# Gereksinimler: 1.1, 1.2, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 4.2, 4.3, 4.4, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2
 # ============================================================================
 
 @app.get("/admin")
@@ -2429,6 +2401,74 @@ async def get_device_data(device_name: str, data_type: str, current_user: str = 
     if data is None:
         raise HTTPException(status_code=404, detail="Veri bulunamadı")
     return data
+
+
+
+@app.post("/api/sync/photo")
+@app.post("/sync/photo")
+async def sync_photo(
+    file: UploadFile = File(...),
+    device_name: str = Form(...)
+):
+    """
+    Mobil cihazdan gelen fotoğrafları senkronize eder.
+    Klasör yoksa oluşturur ve mükerrer dosya kontrolü yapar.
+    """
+    try:
+        # Temiz cihaz adı oluştur
+        safe_device_name = "".join(c for c in device_name if c.isalnum() or c in (' ', '_', '-')).strip()
+        if not safe_device_name:
+            safe_device_name = "Unknown_Device"
+
+        logger.info(f"📸 Fotoğraf alınıyor: {safe_device_name} -> {file.filename}")
+
+        # Ana dizinleri oluştur
+        base_dir = os.path.abspath("device_data")
+        device_photos_dir = os.path.join(base_dir, safe_device_name, "photos")
+        
+        # Eğer klasörler yoksa oluştur (Ebeveyn dizinlerle birlikte)
+        if not os.path.exists(device_photos_dir):
+            os.makedirs(device_photos_dir, exist_ok=True)
+            logger.info(f"📁 Yeni dizin oluşturuldu: {device_photos_dir}")
+
+        # Dosya içeriğini oku ve hash hesapla
+        content = await file.read()
+        file_hash = hashlib.md5(content).hexdigest()
+        
+        # Dosya adı güvenliği
+        filename = os.path.basename(file.filename or "unnamed.jpg")
+        file_path = os.path.join(device_photos_dir, filename)
+
+        # Mükerrer kontrolü (Aynı isim ve aynı içerik mi?)
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as f:
+                existing_hash = hashlib.md5(f.read()).hexdigest()
+                if existing_hash == file_hash:
+                    logger.info(f"♻️  Aynı dosya zaten mevcut, atlandı: {filename}")
+                    await file.close()
+                    return {"status": "skipped", "reason": "duplicate", "filename": filename}
+            
+            # İsim aynı ama içerik farklıysa yeni isim üret
+            name, ext = os.path.splitext(filename)
+            counter = 1
+            while os.path.exists(os.path.join(device_photos_dir, f"{name}_{counter}{ext}")):
+                counter += 1
+            filename = f"{name}_{counter}{ext}"
+            file_path = os.path.join(device_photos_dir, filename)
+
+        # Dosyayı kaydet
+        with open(file_path, "wb") as buffer:
+            buffer.write(content)
+
+        await file.close()
+        logger.info(f"✅ Başarıyla kaydedildi: {safe_device_name} -> {filename}")
+        return {"status": "success", "filename": filename}
+
+    except Exception as e:
+        logger.error(f"❌ Fotoğraf senkronizasyon hatası: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Sunucu hatası: {str(e)}")
+
+
 
 
 if __name__ == "__main__":
