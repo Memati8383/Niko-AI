@@ -246,4 +246,4 @@ Made with ❤️ in Turkey 🇹🇷
 
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
-> 🌐 **Güncel Tünel Adresi:** [https://retrieved-integrated-afford-minute.trycloudflare.com](https://retrieved-integrated-afford-minute.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://railway-applies-corps-pretty.trycloudflare.com](https://railway-applies-corps-pretty.trycloudflare.com)
