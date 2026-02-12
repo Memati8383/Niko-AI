@@ -246,4 +246,4 @@ Made with ❤️ in Turkey 🇹🇷
 
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
-> 🌐 **Güncel Tünel Adresi:** [https://wellness-labs-bon-coleman.trycloudflare.com](https://wellness-labs-bon-coleman.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://aimed-fur-halloween-basement.trycloudflare.com](https://aimed-fur-halloween-basement.trycloudflare.com)
