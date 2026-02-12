@@ -85,6 +85,8 @@ class EmailVerificationService:
             "gmx.com", "gmx.de", "gmx.net",
             # Türkiye'ye özel
             "mynet.com", "superonline.com", "turk.net",
+            # Uygulama Özel
+            "niko.ai",
         ]
     
     def is_allowed_email_provider(self, email: str) -> bool:
@@ -441,15 +443,18 @@ class EmailVerificationService:
         
         # Kod doğru mu?
         if record["code"] == code.strip():
-            # Başarılı doğrulama - kodu temizle
-            username = record.get("username", "")
-            del self._verification_codes[email]
+            # Başarılı doğrulama - doğrulandı olarak işaretle (silme!)
+            # Böylece kayıt işlemi sırasında kontrol edilebilir
+            record["verified"] = True
+            record["verified_at"] = datetime.now(timezone.utc)
+            # Doğrulandıktan sonra süre sınırını uzat (örn. 10 dakika içinde kayıt olmalı)
+            record["expires_at"] = datetime.now(timezone.utc) + timedelta(minutes=10)
             
             return {
                 "success": True,
                 "message": "E-posta başarıyla doğrulandı",
                 "verified": True,
-                "username": username
+                "username": record.get("username", "")
             }
         else:
             remaining = self.MAX_ATTEMPTS - record["attempts"]
@@ -459,6 +464,31 @@ class EmailVerificationService:
                 "verified": False
             }
     
+    def is_verified(self, email: str) -> bool:
+        """
+        E-posta adresinin doğrulanmış olup olmadığını kontrol et.
+        
+        Args:
+            email: E-posta adresi
+            
+        Returns:
+            bool: Doğrulanmışsa True
+        """
+        if email not in self._verification_codes:
+            return False
+            
+        record = self._verification_codes[email]
+        # Süresi dolmuş mu?
+        if datetime.now(timezone.utc) > record["expires_at"]:
+            return False
+            
+        return record.get("verified", False)
+        
+    def remove_verified_email(self, email: str):
+        """Doğrulanmış ve kayıt olmuş e-posta kaydını temizle"""
+        if email in self._verification_codes:
+            del self._verification_codes[email]
+
     def resend_code(self, email: str) -> dict:
         """
         Yeni doğrulama kodu gönder.
@@ -473,15 +503,20 @@ class EmailVerificationService:
                 "expires_at": str (ISO format, başarılıysa)
             }
         """
-        # Mevcut kayıt var mı? (Kullanıcı adını al)
+        # Kullanıcı adını al
         username = "Kullanıcı"
         if email in self._verification_codes:
             username = self._verification_codes[email].get("username", "Kullanıcı")
+            
+            # Eğer zaten doğrulanmışsa tekrar kod gönderme
+            if self._verification_codes[email].get("verified", False):
+                 return {
+                    "success": False,
+                    "message": "Bu e-posta zaten doğrulanmış."
+                }
         
-        # Eski kodu sil ve yenisini gönder
-        if email in self._verification_codes:
-            del self._verification_codes[email]
-        
+        # Sadece send_verification_email çağır
+        # (O fonksiyon cooldown kontrolü yapacak ve mevcut kaydın üzerine yazacak)
         return self.send_verification_email(email, username)
     
     def cleanup_expired_codes(self) -> int:

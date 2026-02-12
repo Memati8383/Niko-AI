@@ -1,14 +1,14 @@
-# Niko AI Chat Application - System Prompts
-# This file contains AI system prompts for the Niko AI chat application
-# Requirements: 3.1
+# Niko AI Sohbet Uygulaması - Sistem İstemleri
+# Bu dosya Niko AI sohbet uygulaması için yapay zeka sistem istemlerini içerir
+# Gereksinimler: 3.1
 
 """
-System prompts for Niko AI Chat Application.
-These prompts define the AI assistant's personality, behavior, and context handling.
+Niko AI Sohbet Uygulaması için sistem istemleri.
+Bu istemler, yapay zeka asistanının kişiliğini, davranışını ve bağlam yönetimini tanımlar.
 """
 
 # ============================================================================
-# Main System Prompt - Turkish AI Assistant
+# Ana Sistem İstemi - Türkçe Yapay Zeka Asistanı
 # ============================================================================
 
 SYSTEM_PROMPT = """Sen Niko, Türkçe konuşan yardımcı bir yapay zeka asistanısın.
@@ -40,7 +40,7 @@ SYSTEM_PROMPT = """Sen Niko, Türkçe konuşan yardımcı bir yapay zeka asistan
 """
 
 # ============================================================================
-# Web Search Context Prompt
+# Web Arama Bağlamı İstemi
 # ============================================================================
 
 WEB_SEARCH_CONTEXT_PROMPT = """## Web Arama Sonuçları
@@ -61,12 +61,7 @@ Bu bilgileri yanıtını oluştururken referans olarak kullan.
 
 
 # ============================================================================
-# Error Context Prompts
-# ============================================================================
-
-
-# ============================================================================
-# Error Context Prompts
+# Hata Bağlamı İstemleri
 # ============================================================================
 
 NO_SEARCH_RESULTS_PROMPT = """## Arama Sonuçları
@@ -76,18 +71,18 @@ Lütfen genel bilgini kullanarak yanıt ver.
 """
 
 # ============================================================================
-# Helper Functions
+# Yardımcı Fonksiyonlar
 # ============================================================================
 
 def format_web_search_context(search_results: str) -> str:
     """
-    Format web search results into a context prompt.
+    Web arama sonuçlarını bir bağlam istemine dönüştürür.
     
     Args:
-        search_results: Raw search results string
+        search_results: Ham arama sonuçları dizesi
         
     Returns:
-        Formatted context prompt with search results
+        Arama sonuçlarını içeren formatlanmış bağlam istemi
     """
     if not search_results or search_results.strip() == "":
         return NO_SEARCH_RESULTS_PROMPT
@@ -102,11 +97,11 @@ def build_full_prompt(
     user_info: dict = None
 ) -> str:
     """
-    Build the complete prompt for the AI model.
+    Yapay zeka modeli için tam istemi oluşturur.
     """
     parts = []
     
-    # Add system prompt if requested
+    # İstenirse sistem istemini ekle
     if include_system_prompt:
         system_prompt = SYSTEM_PROMPT
         if user_info and user_info.get("full_name"):
@@ -116,7 +111,7 @@ def build_full_prompt(
             
         parts.append(system_prompt)
     
-    # Add search context if available
+    # Varsa arama bağlamını ekle
     context = ""
     if web_results and web_results.strip():
         context = format_web_search_context(web_results)
@@ -124,7 +119,7 @@ def build_full_prompt(
     if context:
         parts.append(context)
     
-    # Add user message
+    # Kullanıcı mesajını ekle
     parts.append(f"Kullanıcı: {user_message}")
     
     return "\n\n".join(parts)

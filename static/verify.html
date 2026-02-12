@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niko AI - E-posta Doğrulama</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-logo">Niko AI</h1>
+                <p class="auth-subtitle">E-posta adresinizi doğrulayın</p>
+            </div>
+            
+            <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.95rem;">
+                <span id="displayEmail" style="color: var(--text-primary); font-weight: 500;">...</span> adresine 6 haneli bir kod gönderdik.
+            </p>
+
+            <form id="verifyForm" class="auth-form">
+                <div class="code-wrapper">
+                    <input type="text" class="code-input" maxlength="1" pattern="\d" required autofocus>
+                    <input type="text" class="code-input" maxlength="1" pattern="\d" required>
+                    <input type="text" class="code-input" maxlength="1" pattern="\d" required>
+                    <input type="text" class="code-input" maxlength="1" pattern="\d" required>
+                    <input type="text" class="code-input" maxlength="1" pattern="\d" required>
+                    <input type="text" class="code-input" maxlength="1" pattern="\d" required>
+                </div>
+                
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+                <div id="successMessage" class="success-message" style="display: none;"></div>
+                
+                <button type="submit" class="auth-button" id="submitBtn">
+                    <span class="button-text">Doğrula</span>
+                    <span class="button-loader" style="display: none;"></span>
+                </button>
+            </form>
+            
+            <div class="verify-timer" id="timerContainer">
+                Yeni kod için bekleyin: <span id="timer">01:00</span>
+            </div>
+            
+            <a id="resendBtn" class="resend-link disabled">Kodu tekrar gönder</a>
+
+            <div class="auth-footer">
+                <p><a href="login.html">Giriş sayfasına dön</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const email = localStorage.getItem('pendingVerificationEmail') || 'E-posta';
+        document.getElementById('displayEmail').textContent = email;
+
+        const inputs = document.querySelectorAll('.code-input');
+        const form = document.getElementById('verifyForm');
+        const resendBtn = document.getElementById('resendBtn');
+        const timerSpan = document.getElementById('timer');
+
+        // Otomatik odaklanma ve silme davranışı
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value.length === 1 && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && e.target.value.length === 0 && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+            
+            // Yapıştırma desteği
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const data = e.clipboardData.getData('text').trim();
+                if (data.length === 6 && /^\d+$/.test(data)) {
+                    data.split('').forEach((char, i) => {
+                        inputs[i].value = char;
+                    });
+                    inputs[5].focus();
+                }
+            });
+        });
+
+        // Sayaç
+        let timeLeft = 60;
+        function updateTimer() {
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            timerSpan.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            
+            if (timeLeft <= 0) {
+                resendBtn.classList.remove('disabled');
+                document.getElementById('timerContainer').style.display = 'none';
+            } else {
+                timeLeft--;
+                setTimeout(updateTimer, 1000);
+            }
+        }
+        updateTimer();
+
+        // Form gönderimi
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const code = Array.from(inputs).map(i => i.value).join('');
+            if (code.length !== 6) return;
+
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const submitBtn = document.getElementById('submitBtn');
+            const buttonText = submitBtn.querySelector('.button-text');
+            const buttonLoader = submitBtn.querySelector('.button-loader');
+
+            errorMessage.style.display = 'none';
+            submitBtn.disabled = true;
+            buttonText.style.display = 'none';
+            buttonLoader.style.display = 'inline-block';
+
+            try {
+                const response = await fetch('/email/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    successMessage.textContent = 'Doğrulama başarılı! Yönlendiriliyorsunuz...';
+                    successMessage.style.display = 'block';
+                    localStorage.removeItem('pendingVerificationEmail');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    errorMessage.textContent = data.error || 'Geçersiz kod';
+                    errorMessage.style.display = 'block';
+                    inputs.forEach(i => i.classList.add('input-error'));
+                    setTimeout(() => inputs.forEach(i => i.classList.remove('input-error')), 2000);
+                }
+            } catch (err) {
+                errorMessage.textContent = 'Bağlantı hatası';
+                errorMessage.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                buttonText.style.display = 'inline';
+                buttonLoader.style.display = 'none';
+            }
+        });
+
+        // Tekrar gönder
+        resendBtn.addEventListener('click', async () => {
+            if (resendBtn.classList.contains('disabled')) return;
+            
+            try {
+                const response = await fetch('/email/resend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                if (response.ok) {
+                    timeLeft = 60;
+                    resendBtn.classList.add('disabled');
+                    document.getElementById('timerContainer').style.display = 'block';
+                    updateTimer();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    </script>
+</body>
+</html>

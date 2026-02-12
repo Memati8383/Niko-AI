@@ -68,9 +68,11 @@ const elements = {
     profileSuccess: document.getElementById('profileSuccess'),
     closeProfileBtn: document.getElementById('closeProfileBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
+    deleteAccBtn: document.getElementById('deleteAccBtn'),
     
     // Confirm Modal
     confirmModal: document.getElementById('confirmModal'),
+    confirmIcon: document.getElementById('confirmIcon'),
     confirmTitle: document.getElementById('confirmTitle'),
     confirmDescription: document.getElementById('confirmDescription'),
     confirmCancelBtn: document.getElementById('confirmCancelBtn'),
@@ -347,12 +349,21 @@ function showToast(message, type = 'info', duration = 3000) {
  * Show confirmation modal
  * @param {string} title - Modal title
  * @param {string} description - Modal description
+ * @param {string} icon - Optional icon emoji
  * @returns {Promise<boolean>} Resolves to true if confirmed, false if cancelled
  */
-function showConfirmModal(title, description) {
+function showConfirmModal(title, description, icon = '') {
     return new Promise((resolve) => {
         elements.confirmTitle.textContent = title;
         elements.confirmDescription.textContent = description;
+        
+        if (icon) {
+            elements.confirmIcon.textContent = icon;
+            elements.confirmIcon.style.display = 'block';
+        } else {
+            elements.confirmIcon.style.display = 'none';
+        }
+
         elements.confirmModal.classList.add('active');
         
         const handleConfirm = () => {
@@ -502,6 +513,7 @@ function setupEventListeners() {
     elements.closeProfileBtn.addEventListener('click', closeProfileModal);
     elements.profileForm.addEventListener('submit', saveUserProfile);
     elements.logoutBtn.addEventListener('click', logout);
+    elements.deleteAccBtn.addEventListener('click', deleteAccount);
     
     // Close modals on overlay click
     elements.profileModal.addEventListener('click', (e) => {
@@ -1441,7 +1453,7 @@ async function saveUserProfile(e) {
         
         if (!response.ok) {
             const data = await response.json();
-            showProfileError(data.error || 'Profil güncellenemedi');
+            showProfileError(data.error || data.detail || 'Profil güncellenemedi');
             return;
         }
         
@@ -1490,6 +1502,41 @@ function showProfileSuccess(message) {
 function hideProfileMessages() {
     elements.profileError.style.display = 'none';
     elements.profileSuccess.style.display = 'none';
+}
+
+/**
+ * Delete current user account
+ */
+async function deleteAccount() {
+    const confirmed = await showConfirmModal(
+        'Hesabımı Sil',
+        'Hesabınızı silmek istediğinizden emin misiniz? Hesabınız 30 gün boyunca askıya alınacak ve bu süre sonunda kalıcı olarak silinecektir. 30 gün içinde tekrar giriş yaparak işlemi iptal edebilirsiniz.',
+        '⚠️'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        const response = await fetch('/me', {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showToast('Hesabınız silme için işaretlendi. 30 gün vaktiniz var.', 'info', 5000);
+            setTimeout(() => {
+                localStorage.clear();
+                window.location.href = '/login.html';
+            }, 3000);
+        } else {
+            showToast(data.error || 'İşlem başarısız', 'error');
+        }
+    } catch (error) {
+        console.error('Delete account error:', error);
+        showToast('Bağlantı hatası', 'error');
+    }
 }
 
 /**
