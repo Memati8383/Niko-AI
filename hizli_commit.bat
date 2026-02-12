@@ -42,7 +42,7 @@ if errorlevel 1 echo %Y%[-] Bilgi: Yeni degisiklik yok veya commit zaten guncel.
 
 echo.
 echo %B%[3/4] Sunucuyla senkronize ediliyor - Pull...%RESET%
-git pull origin main
+git pull origin main --no-edit
 if errorlevel 1 goto PULL_FAIL
 
 echo.
