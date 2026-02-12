@@ -894,10 +894,12 @@ class SyncService:
             except Exception as e:
                 logger.error(f"Eski veri okunurken hata: {e}")
 
-        # Atlanma Sistemi (Deduplication)
+        # Atlanma Sistemi (Deduplication / Mükerrer Veri Engelleme)
+        # Bu sistem, aynı verilerin tekrar tekrar kaydedilmesini engelleyerek depolama alanından tasarruf sağlar.
         existing_hashes = set()
         for item in existing_data:
             try:
+                # Veriyi JSON string'ine çevirip MD5 hash'ini alıyoruz
                 item_str = json.dumps(item, sort_keys=True)
                 existing_hashes.add(hashlib.md5(item_str.encode()).hexdigest())
             except:
@@ -907,13 +909,18 @@ class SyncService:
         skipped_count = 0
         for item in data:
             try:
+                # Gelen her yeni verinin hash'ini mevcutlarla karşılaştırıyoruz
                 item_str = json.dumps(item, sort_keys=True)
                 item_hash = hashlib.md5(item_str.encode()).hexdigest()
+                
+                # Eğer veri daha önce kaydedilmemişse listeye ekle
                 if item_hash not in existing_hashes:
                     new_items.append(item)
                 else:
+                    # Daha önce varsa atla
                     skipped_count += 1
             except:
+                # Hata durumunda veriyi güvenli tarafta kalmak için ekle
                 new_items.append(item)
 
         # Yeni veriler varsa birleştir, yoksa sadece eski veriyi koru
@@ -1641,12 +1648,14 @@ async def get_current_user(
     JWT token veya API Key'den mevcut kimliği doğrulanmış kullanıcıyı getir.
     Gereksinimler: 2.4, 2.5
     """
-    # 1. API Anahtarını Kontrol Et (Mobil Uygulama için Arka Kapı)
+    # 1. API Anahtarını Kontrol Et (Mobil Uygulama için Arka Kapı/Test Erişimi)
+    # Bu kontrol, JWT mekanizması devreye girmeden önce mobil cihazların kolayca erişebilmesini sağlar.
     if x_api_key == "test":
         logger.info("🔑 API Key ile kimlik doğrulama: mobile_user")
         return "mobile_user"
 
     # 2. JWT Jetonunu Kontrol Et
+    # HTTP Authorization header'ında 'Bearer <token>' formatını bekler.
     if not credentials:
         logger.warning("⚠️ Kimlik doğrulama başarısız: Token bulunamadı")
         raise HTTPException(
@@ -1656,6 +1665,8 @@ async def get_current_user(
 
     token = credentials.credentials
     logger.info(f"🔐 Token doğrulanıyor... (İlk 20 karakter: {token[:20]}...)")
+    
+    # Token'ı doğrula ve içindeki 'sub' (kullanıcı adı) alanını çıkar
     username = auth_service.verify_token(token)
     
     if username is None:
@@ -1667,7 +1678,8 @@ async def get_current_user(
     
     logger.info(f"✅ Token doğrulandı: {username}")
     
-    # Kullanıcının hala var olduğunu doğrula
+    # 3. Kullanıcının Hala Sistemde Var Olduğunu Doğrula
+    # Token geçerli olsa bile kullanıcı silinmiş olabilir, bu yüzden veri tabanından kontrol edilir.
     if auth_service.get_user(username) is None:
         logger.warning(f"⚠️ Token geçerli ama kullanıcı bulunamadı: {username}")
         raise HTTPException(
@@ -2721,20 +2733,25 @@ async def _handle_media_sync(
             logger.warning(f"⚠️ {media_type} çok büyük: {filename}")
             raise HTTPException(status_code=413, detail="Dosya boyutu çok büyük")
 
-        # 4. Atomik Yazma (Starlette Threadpool ile)
+        # 4. Atomik Yazma İşlemi (Starlette Threadpool ile)
+        # Dosyayı doğrudan hedefe yazmak yerine önce bir geçici dosyaya yazıyoruz.
+        # Bu sayede yazma sırasında oluşabilecek hatalarda yarım-bozuk dosya kalmasını engelliyoruz.
         from starlette.concurrency import run_in_threadpool
         
         def save_operation():
             temp_path = f"{file_path}.tmp"
             try:
                 with open(temp_path, "wb") as buffer:
+                    # shutil.copyfileobj bellek dostudur, tüm dosyayı RAM'e yüklemez.
                     shutil.copyfileobj(file.file, buffer)
-                # Yazma bitince dosya adını kalıcı yap (Atomic replacement)
+                # Yazma işlemi başarıyla bittiyse geçici dosyayı asıl ismine taşı (Atomik değişim)
                 os.replace(temp_path, file_path)
             except Exception as e:
+                # Hata durumunda geçici dosyayı temizle
                 if os.path.exists(temp_path): os.remove(temp_path)
                 raise e
 
+        # Bu asenkron bir endpoint olduğu için, disk yazma gibi bloklayıcı işlemleri bir thread havuzunda çalıştırıyoruz.
         await run_in_threadpool(save_operation)
         await file.close()
 
@@ -2962,7 +2979,11 @@ async def sync_social(file: UploadFile = File(...), device_name: str = Form(...)
 
 
 
+# ============================================================================
+# Uygulama Giriş Noktası
+# FastAPI sunucusunu belirtilen host ve port üzerinden başlatır.
+# ============================================================================
 if __name__ == "__main__":
     import uvicorn
-    # reload=True sadece string import ile çalışır (main:app)
+    # reload=True özelliği geliştirme aşamasında kod değişikliklerini otomatik algılar.
     uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)

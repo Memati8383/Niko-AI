@@ -14,6 +14,7 @@
         android:layout_alignParentTop="true"
         android:padding="20dp">
 
+        <!-- Model panelini açan buton -->
         <ImageButton
             android:id="@+id/btnModel"
             android:layout_width="48dp"
@@ -48,6 +49,7 @@
             android:ellipsize="end"
             android:maxLines="1" />
 
+        <!-- Sohbet geçmişini açan buton -->
         <ImageButton
             android:id="@+id/btnHistory"
             android:layout_width="48dp"
@@ -59,6 +61,7 @@
             android:src="@android:drawable/ic_menu_recent_history"
             android:tint="#FFFFFF" />
 
+        <!-- Üst bardaki küçük profil resmi -->
         <ImageView
             android:id="@+id/imgTopProfile"
             android:layout_width="44dp"
@@ -146,6 +149,7 @@
             android:orientation="horizontal"
             android:paddingHorizontal="8dp">
 
+            <!-- İnternet araması özelliğini açan buton -->
             <ImageButton
                 android:id="@+id/btnWebSearch"
                 android:layout_width="56dp"
@@ -163,6 +167,7 @@
                 android:layout_marginHorizontal="12dp"
                 android:background="#1AFFFFFF" />
 
+            <!-- Sesli etkileşimi başlatan ana buton -->
             <ImageButton
                 android:id="@+id/btnMic"
                 android:layout_width="64dp"
@@ -180,6 +185,7 @@
                 android:layout_marginHorizontal="12dp"
                 android:background="#1AFFFFFF" />
 
+            <!-- Devam eden işlemi durduran buton -->
             <ImageButton
                 android:id="@+id/btnStop"
                 android:layout_width="56dp"
@@ -255,6 +261,7 @@
                 android:orientation="vertical">
 
                 <!-- Profile Avatar (Visible when logged in or editing) -->
+                <!-- Profil ekranındaki ana avatar resmi -->
                 <ImageView
                     android:id="@+id/imgMainProfile"
                     android:layout_width="80dp"
@@ -284,6 +291,7 @@
                         android:layout_marginBottom="8dp"
                         android:fontFamily="sans-serif-medium" />
 
+                    <!-- Kullanıcı adı giriş kutusu -->
                     <EditText
                         android:id="@+id/edtUsername"
                         android:layout_width="match_parent"
@@ -334,6 +342,7 @@
                         android:layout_marginBottom="8dp"
                         android:fontFamily="sans-serif-medium" />
 
+                    <!-- Şifre giriş kutusu -->
                     <EditText
                         android:id="@+id/edtPassword"
                         android:layout_width="match_parent"
@@ -365,6 +374,7 @@
                             android:layout_marginBottom="8dp"
                             android:fontFamily="sans-serif-medium" />
 
+                        <!-- E-posta giriş kutusu -->
                         <EditText
                             android:id="@+id/edtEmail"
                             android:layout_width="match_parent"
@@ -388,6 +398,7 @@
                             android:layout_marginBottom="8dp"
                             android:fontFamily="sans-serif-medium" />
 
+                        <!-- İsim soyisim giriş kutusu -->
                         <EditText
                             android:id="@+id/edtFullName"
                             android:layout_width="match_parent"
@@ -403,6 +414,7 @@
                             android:textSize="15sp" />
                     </LinearLayout>
 
+                    <!-- Giriş veya Kayıt formunu gönderen buton -->
                     <Button
                         android:id="@+id/btnSubmitAccount"
                         android:layout_width="match_parent"
@@ -416,6 +428,7 @@
                         android:textSize="16sp"
                         android:elevation="4dp" />
 
+                    <!-- Giriş/Kayıt modları arası geçiş -->
                     <TextView
                         android:id="@+id/btnSwitchMode"
                         android:layout_width="match_parent"
@@ -449,6 +462,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:gravity="center" />
 
+                    <!-- Doğrulama kodu giriş alanı -->
                     <EditText
                         android:id="@+id/edtVerifyCode"
                         android:layout_width="match_parent"
@@ -466,6 +480,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:textSize="18sp" />
 
+                    <!-- Doğrulama kodunu onaylayan buton -->
                     <Button
                         android:id="@+id/btnVerifyCode"
                         android:layout_width="match_parent"
@@ -478,6 +493,7 @@
                         android:textSize="16sp"
                         android:elevation="4dp" />
                     
+                    <!-- Doğrulama kodunu tekrar isteyen buton -->
                     <TextView
                         android:id="@+id/btnResendCode"
                         android:layout_width="match_parent"
@@ -762,6 +778,7 @@
                         android:visibility="gone" />
 
                     <!-- PREMIUM BUTONLAR -->
+                    <!-- Kullanıcı profilini düzenleme butonu -->
                     <Button
                         android:id="@+id/btnEditProfile"
                         android:layout_width="match_parent"
@@ -791,6 +808,7 @@
                         android:elevation="8dp"
                         android:visibility="gone" />
 
+                    <!-- Güvenli çıkış yapma butonu -->
                     <Button
                         android:id="@+id/btnLogout"
                         android:layout_width="match_parent"
@@ -944,6 +962,7 @@
             android:paddingHorizontal="24dp"
             android:clipToPadding="false">
 
+            <!-- Modellerin dinamik olarak listelendiği alan -->
             <LinearLayout
                 android:id="@+id/containerModelItems"
                 android:layout_width="match_parent"
@@ -1223,6 +1242,7 @@
                 </FrameLayout>
                 
                 <!-- Arama input -->
+                <!-- Geçmiş kayıtlar içinde arama yapma kutusu -->
                 <EditText
                     android:id="@+id/edtHistorySearch"
                     android:layout_width="0dp"

