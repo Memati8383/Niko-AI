@@ -246,4 +246,4 @@ Made with ❤️ in Turkey 🇹🇷
 
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
-> 🌐 **Güncel Tünel Adresi:** [https://capacity-avoiding-cork-receptors.trycloudflare.com](https://capacity-avoiding-cork-receptors.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://date-removal-exit-palmer.trycloudflare.com](https://date-removal-exit-palmer.trycloudflare.com)
