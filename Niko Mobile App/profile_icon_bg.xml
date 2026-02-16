@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PROFİL İKON ARKA PLANI: Emoji ikonları için gradient yuvarlak arka plan -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <!-- Mor/Mavi gradient dolgu -->
-    <gradient
-        android:startColor="#226366f1"
-        android:endColor="#228b5cf6"
-        android:angle="135" />
-    <!-- İnce parlak çerçeve -->
-    <stroke android:width="1dp" android:color="#336366f1" />
-    <size android:width="44dp" android:height="44dp" />
-</shape>
+<!-- PROFİL İKON ARKA PLANI: Glassmorphism Icon Base -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#1AFFFFFF" />
+            <stroke
+                android:width="1dp"
+                android:color="#1AFFFFFF" />
+            <size android:width="44dp" android:height="44dp" />
+        </shape>
+    </item>
+    <item android:top="2dp" android:bottom="2dp" android:left="2dp" android:right="2dp">
+        <shape android:shape="oval">
+            <gradient
+                android:startColor="#336366f1"
+                android:endColor="#118b5cf6"
+                android:angle="135"
+                android:type="radial"
+                android:gradientRadius="100%" />
+        </shape>
+    </item>
+</layer-list>

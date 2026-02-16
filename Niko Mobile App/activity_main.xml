@@ -260,20 +260,43 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Profile Avatar (Visible when logged in or editing) -->
-                <!-- Profil ekranındaki ana avatar resmi -->
-                <ImageView
-                    android:id="@+id/imgMainProfile"
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
+                <!-- Profile Avatar Selection (Visible in edit mode) -->
+                <RelativeLayout
+                    android:id="@+id/layoutAvatarSelection"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
                     android:layout_gravity="center_horizontal"
-                    android:layout_marginBottom="16dp"
-                    android:background="@drawable/profile_avatar_bg"
-                    android:clipToOutline="true"
-                    android:elevation="6dp"
-                    android:scaleType="centerCrop"
-                    android:src="@android:drawable/ic_menu_myplaces"
-                    android:visibility="gone" />
+                    android:layout_marginBottom="24dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/imgMainProfile"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/profile_avatar_bg"
+                        android:clipToOutline="true"
+                        android:elevation="4dp"
+                        android:scaleType="centerCrop"
+                        android:src="@android:drawable/ic_menu_myplaces" />
+
+                    <!-- Camera Overlay Icon -->
+                    <FrameLayout
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_alignParentBottom="true"
+                        android:layout_alignParentEnd="true"
+                        android:background="@drawable/profile_avatar_bg"
+                        android:backgroundTint="#6366f1"
+                        android:elevation="6dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="📷"
+                            android:textSize="14sp" />
+                    </FrameLayout>
+                </RelativeLayout>
+
 
                 <!-- GİRİŞ VE KAYIT FORM ALANLARI: Kullanıcının bilgilerini girdiği kısım -->
                 <LinearLayout
@@ -357,9 +380,9 @@
                         android:fontFamily="sans-serif-medium"
                         android:textSize="15sp" />
 
-                        <!-- KAYIT EKSTRA ALANLARI: Sadece kayıt olma modunda görünür -->
-                        <LinearLayout
-                            android:id="@+id/layoutRegisterExtras"
+                    <!-- KAYIT EKSTRA ALANLARI: Sadece kayıt olma modunda görünür -->
+                    <LinearLayout
+                        android:id="@+id/layoutRegisterExtras"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
@@ -492,7 +515,7 @@
                         android:fontFamily="sans-serif-bold"
                         android:textSize="16sp"
                         android:elevation="4dp" />
-                    
+
                     <!-- Doğrulama kodunu tekrar isteyen buton -->
                     <TextView
                         android:id="@+id/btnResendCode"
@@ -535,7 +558,7 @@
                         android:layout_marginTop="16dp"
                         android:layout_marginBottom="20dp"
                         android:clipChildren="false"
-                        android:clipToPadding="false">  
+                        android:clipToPadding="false">
 
                         <!-- Dış derin ışıma efekti -->
                         <View
@@ -565,7 +588,7 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:layout_marginBottom="6dp">
-                        
+
                         <TextView
                             android:id="@+id/txtProfileDisplayName"
                             android:layout_width="wrap_content"
@@ -617,7 +640,7 @@
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
                             android:paddingVertical="12dp">
-                            
+
                             <!-- İkon Container -->
                             <FrameLayout
                                 android:layout_width="44dp"
@@ -631,7 +654,7 @@
                                     android:text="👤"
                                     android:textSize="20sp" />
                             </FrameLayout>
-                            
+
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
@@ -671,7 +694,7 @@
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
                             android:paddingVertical="12dp">
-                            
+
                             <FrameLayout
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
@@ -684,7 +707,7 @@
                                     android:text="📧"
                                     android:textSize="20sp" />
                             </FrameLayout>
-                            
+
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
@@ -724,7 +747,7 @@
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
                             android:paddingVertical="12dp">
-                            
+
                             <FrameLayout
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
@@ -737,7 +760,7 @@
                                     android:text="✨"
                                     android:textSize="20sp" />
                             </FrameLayout>
-                            
+
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
@@ -798,7 +821,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="58dp"
                         android:layout_marginBottom="12dp"
-                        android:background="@drawable/profile_button_primary_bg"
+                        android:background="@drawable/profile_button_admin_bg"
                         android:text="📜  Sistem Logları (Admin)"
                         android:textColor="#00FBFF"
                         android:textAllCaps="false"
@@ -911,7 +934,7 @@
                     android:background="@drawable/history_date_badge_bg"
                     android:paddingHorizontal="12dp"
                     android:paddingVertical="6dp">
-                    
+
                     <View
                         android:layout_width="6dp"
                         android:layout_height="6dp"
@@ -939,7 +962,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:background="@drawable/profile_icon_bg">
-                
+
                 <ImageButton
                     android:id="@+id/btnCloseModels"
                     android:layout_width="36dp"
@@ -1062,7 +1085,7 @@
                     android:background="@drawable/history_date_badge_bg"
                     android:paddingHorizontal="12dp"
                     android:paddingVertical="6dp">
-                    
+
                     <!-- Canlı gösterge noktası -->
                     <View
                         android:layout_width="6dp"
@@ -1091,7 +1114,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:background="@drawable/profile_icon_bg">
-                
+
                 <ImageButton
                     android:id="@+id/btnCloseHistory"
                     android:layout_width="36dp"
@@ -1128,7 +1151,7 @@
                 android:background="@drawable/history_card_bg"
                 android:paddingVertical="16dp"
                 android:paddingHorizontal="12dp">
-                
+
                 <TextView
                     android:id="@+id/txtStatTotalChats"
                     android:layout_width="wrap_content"
@@ -1137,7 +1160,7 @@
                     android:textColor="#00FBFF"
                     android:textSize="24sp"
                     android:fontFamily="sans-serif-black" />
-                    
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -1160,7 +1183,7 @@
                 android:background="@drawable/history_card_bg"
                 android:paddingVertical="16dp"
                 android:paddingHorizontal="12dp">
-                
+
                 <TextView
                     android:id="@+id/txtStatThisWeek"
                     android:layout_width="wrap_content"
@@ -1169,7 +1192,7 @@
                     android:textColor="#6366f1"
                     android:textSize="24sp"
                     android:fontFamily="sans-serif-black" />
-                    
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -1192,7 +1215,7 @@
                 android:background="@drawable/history_card_bg"
                 android:paddingVertical="16dp"
                 android:paddingHorizontal="12dp">
-                
+
                 <TextView
                     android:id="@+id/txtStatToday"
                     android:layout_width="wrap_content"
@@ -1201,7 +1224,7 @@
                     android:textColor="#27C93F"
                     android:textSize="24sp"
                     android:fontFamily="sans-serif-black" />
-                    
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -1230,7 +1253,7 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:paddingHorizontal="16dp">
-                
+
                 <!-- Arama ikonu -->
                 <FrameLayout
                     android:layout_width="36dp"
@@ -1243,7 +1266,7 @@
                         android:src="@android:drawable/ic_menu_search"
                         android:tint="#60FFFFFF" />
                 </FrameLayout>
-                
+
                 <!-- Arama input -->
                 <!-- Geçmiş kayıtlar içinde arama yapma kutusu -->
                 <EditText
@@ -1260,7 +1283,7 @@
                     android:textSize="15sp"
                     android:imeOptions="actionSearch"
                     android:maxLines="1" />
-                    
+
                 <!-- Temizle butonu (varsayılan gizli) -->
                 <ImageButton
                     android:id="@+id/btnClearSearch"
@@ -1316,7 +1339,7 @@
                 android:paddingVertical="48dp"
                 android:paddingHorizontal="32dp"
                 android:visibility="gone">
-                
+
                 <!-- Boş durum ikonu -->
                 <FrameLayout
                     android:layout_width="80dp"
@@ -1330,7 +1353,7 @@
                         android:text="💭"
                         android:textSize="36sp" />
                 </FrameLayout>
-                
+
                 <!-- Boş durum başlığı -->
                 <TextView
                     android:layout_width="wrap_content"
@@ -1340,7 +1363,7 @@
                     android:textSize="20sp"
                     android:fontFamily="sans-serif-bold"
                     android:layout_marginBottom="8dp" />
-                
+
                 <!-- Boş durum açıklaması -->
                 <TextView
                     android:layout_width="wrap_content"
@@ -1351,7 +1374,7 @@
                     android:fontFamily="sans-serif-medium"
                     android:gravity="center"
                     android:lineSpacingExtra="4dp" />
-                
+
                 <!-- Yeni sohbet başlat butonu -->
                 <Button
                     android:id="@+id/btnStartNewChat"
@@ -1502,16 +1525,21 @@
                 android:layout_height="32dp"
                 android:background="#1A00FBFF"
                 android:paddingHorizontal="12dp">
-                
+
                 <!-- Fake Window Dots -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerVertical="true"
                     android:orientation="horizontal">
-                    <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/mic_button" android:backgroundTint="#FF5F56" android:layout_marginEnd="6dp" />
-                    <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/mic_button" android:backgroundTint="#FFBD2E" android:layout_marginEnd="6dp" />
-                    <View android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/mic_button" android:backgroundTint="#27C93F" />
+                    <View android:layout_width="8dp" android:layout_height="8dp"
+                        android:background="@drawable/mic_button" android:backgroundTint="#FF5F56"
+                        android:layout_marginEnd="6dp" />
+                    <View android:layout_width="8dp" android:layout_height="8dp"
+                        android:background="@drawable/mic_button" android:backgroundTint="#FFBD2E"
+                        android:layout_marginEnd="6dp" />
+                    <View android:layout_width="8dp" android:layout_height="8dp"
+                        android:background="@drawable/mic_button" android:backgroundTint="#27C93F" />
                 </LinearLayout>
 
                 <TextView

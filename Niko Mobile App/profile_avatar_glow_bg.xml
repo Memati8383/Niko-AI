@@ -1,60 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PREMIUM PROFİL AVATAR IŞIMA: Çok katmanlı derin glow efekti -->
+<!-- PREMIUM PROFİL AVATAR IŞIMA: Ultra-Premium Holographic Aura -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- EN DIŞ BULANIK IŞIMA -->
-    <item
-        android:top="-20dp"
-        android:bottom="-20dp"
-        android:left="-20dp"
-        android:right="-20dp">
+    <!-- BASE DEEP GLOW (Indigo) -->
+    <item>
         <shape android:shape="oval">
             <gradient
                 android:type="radial"
                 android:gradientRadius="100%"
                 android:centerX="50%"
                 android:centerY="50%"
-                android:startColor="#446366f1"
+                android:startColor="#266366f1"
                 android:endColor="#00000000" />
         </shape>
     </item>
-    <!-- ORTA HALKA IŞIMASI (CYAN TONU) -->
-    <item
-        android:top="-12dp"
-        android:bottom="-12dp"
-        android:left="-12dp"
-        android:right="-12dp">
+
+    <!-- ACCENT GLOW (Electric Cyan) -->
+    <item android:top="10dp" android:bottom="10dp" android:left="10dp" android:right="10dp">
         <shape android:shape="oval">
             <gradient
                 android:type="radial"
-                android:gradientRadius="85%"
-                android:startColor="#3300E5FF"
+                android:gradientRadius="90%"
+                android:centerX="30%"
+                android:centerY="30%"
+                android:startColor="#1A00FBFF"
                 android:endColor="#00000000" />
         </shape>
     </item>
-    <!-- İÇ PARLAK HALKA -->
-    <item
-        android:top="-6dp"
-        android:bottom="-6dp"
-        android:left="-6dp"
-        android:right="-6dp">
+
+    <!-- INNER VIBRANCE (Violet) -->
+    <item android:top="20dp" android:bottom="20dp" android:left="20dp" android:right="20dp">
         <shape android:shape="oval">
             <gradient
                 android:type="radial"
-                android:gradientRadius="75%"
-                android:startColor="#558b5cf6"
+                android:gradientRadius="80%"
+                android:startColor="#228b5cf6"
                 android:endColor="#00000000" />
         </shape>
     </item>
-    <!-- ANA AVATAR ÇERÇEVESİ (DÖNEN GRADIENT HİSSİ) -->
-    <item>
+
+    <!-- GLASS RIM STROKE -->
+    <item android:top="25dp" android:bottom="25dp" android:left="25dp" android:right="25dp">
         <shape android:shape="oval">
-            <gradient
-                android:startColor="#6366f1"
-                android:centerColor="#00E5FF"
-                android:endColor="#8b5cf6"
-                android:angle="135"
-                android:type="sweep" />
-            <stroke android:width="3dp" android:color="#55FFFFFF" />
+            <stroke
+                android:width="1.5dp"
+                android:color="#26FFFFFF" />
         </shape>
     </item>
 </layer-list>

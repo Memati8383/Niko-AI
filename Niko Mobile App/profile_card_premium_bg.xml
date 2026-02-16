@@ -1,40 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PREMIUM PROFİL KARTI: Gradient çerçeveli glassmorphism efekti -->
+<!-- PREMIUM PROFİL KARTI: Ultra-Modern Glassmorphism -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- DIŞ GRADIENT ÇERÇEVE -->
+    <!-- DEEP SHADOW / GLOW (Holographic base) -->
     <item>
         <shape android:shape="rectangle">
             <gradient
-                android:startColor="#336366f1"
-                android:centerColor="#228b5cf6"
-                android:endColor="#3300E5FF"
+                android:startColor="#1A6366f1"
+                android:centerColor="#0D8b5cf6"
+                android:endColor="#1A00FBFF"
                 android:angle="135" />
-            <corners android:radius="20dp" />
+            <corners android:radius="24dp" />
         </shape>
     </item>
-    <!-- İÇ KOYU ARKA PLAN (1dp kenar boşluğu ile gradient çerçeve görünsün) -->
+
+    <!-- MAIN GLASS BODY (Semi-transparent dark frost) -->
     <item
-        android:top="1dp"
-        android:bottom="1dp"
-        android:left="1dp"
-        android:right="1dp">
+        android:top="1.2dp"
+        android:bottom="1.2dp"
+        android:left="1.2dp"
+        android:right="1.2dp">
         <shape android:shape="rectangle">
-            <solid android:color="#1A1A2E" />
-            <corners android:radius="19dp" />
+            <solid android:color="#260A0A1A" />
+            <corners android:radius="23dp" />
+            <!-- Ultra-thin elegant border -->
+            <stroke
+                android:width="1dp"
+                android:color="#1AFFFFFF" />
         </shape>
     </item>
-    <!-- ÜST IŞIK YANSIMASI (cam efekti için) -->
+
+    <!-- GLASS SPECULAR HIGHLIGHT (Top-left diagonal) -->
     <item
-        android:top="1dp"
-        android:left="1dp"
-        android:right="1dp">
+        android:top="1.2dp"
+        android:left="1.2dp"
+        android:right="1.2dp">
         <shape android:shape="rectangle">
             <gradient
-                android:startColor="#15FFFFFF"
+                android:startColor="#1EFFFFFF"
                 android:endColor="#00FFFFFF"
                 android:angle="270" />
-            <corners android:topLeftRadius="19dp" android:topRightRadius="19dp" />
-            <size android:height="40dp" />
+            <corners
+                android:topLeftRadius="23dp"
+                android:topRightRadius="23dp" />
+            <size android:height="60dp" />
         </shape>
     </item>
 </layer-list>

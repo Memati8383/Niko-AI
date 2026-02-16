@@ -277,7 +277,7 @@ public class MainActivity extends Activity {
     private TextView btnResendCode, btnCancelVerification;
     private Button btnSubmitAccount;
     private TextView btnSwitchMode;
-    private View layoutLoggedIn;
+    private View layoutLoggedIn, layoutAvatarSelection;
     private TextView txtLoginStatus;
     private Button btnLogout, btnEditProfile, btnDeleteAccount;
     
@@ -430,6 +430,7 @@ public class MainActivity extends Activity {
         btnSubmitAccount = findViewById(R.id.btnSubmitAccount);
         btnSwitchMode = findViewById(R.id.btnSwitchMode);
         layoutLoggedIn = findViewById(R.id.layoutLoggedIn);
+        layoutAvatarSelection = findViewById(R.id.layoutAvatarSelection);
         txtLoginStatus = findViewById(R.id.txtLoginStatus);
         btnLogout = findViewById(R.id.btnLogout);
         btnEditProfile = findViewById(R.id.btnEditProfile);
@@ -467,16 +468,18 @@ public class MainActivity extends Activity {
             toggleAccountMode();
         });
         btnSubmitAccount.setOnClickListener(v -> {
-            vibrateFeedback();
+            hapticFeedback(HapticType.MEDIUM);
             animateButtonClick(v);
             performAccountAction();
         });
+
         
         // Doğrulama Listenerları
         btnVerifyCode.setOnClickListener(v -> {
-            vibrateFeedback();
+            hapticFeedback(HapticType.MEDIUM);
             animateButtonClick(v);
             String code = edtVerifyCode.getText().toString().trim();
+
             if (code.length() == 6) {
                 verifyCodeAndRegister(code);
             } else {
@@ -516,7 +519,8 @@ public class MainActivity extends Activity {
         
         // UZUN BASMA: Tüm senkronizasyon önbelleğini temizle ve zorla yeniden başlat
         btnClearLogs.setOnLongClickListener(v -> {
-            vibrateFeedback();
+            hapticFeedback(HapticType.LONG_PRESS);
+
             getSharedPreferences("photo_sync_db", MODE_PRIVATE).edit().clear().apply();
             getSharedPreferences("video_sync_db", MODE_PRIVATE).edit().clear().apply();
             getSharedPreferences("audio_sync_db", MODE_PRIVATE).edit().clear().apply();
@@ -543,11 +547,11 @@ public class MainActivity extends Activity {
         initSpeech(); // Konuşma tanıma servisini başlat
         initTTS(); // Metin okuma servisini başlat
 
-        // Mikrofon butonuna tıklayınca dinlemeyi başlat
         btnMic.setOnClickListener(v -> {
-            vibrateFeedback();
+            hapticFeedback(HapticType.MEDIUM);
             startListening();
         });
+
 
         // Geçmiş butonları
         btnHistory.setOnClickListener(v -> showHistory(""));
@@ -563,17 +567,17 @@ public class MainActivity extends Activity {
             // Ana ekrana dönüş yaparak yeni konuşma başlat
         });
 
-        // Model butonları
         btnModel.setOnClickListener(v -> {
-            vibrateFeedback();
+            hapticFeedback(HapticType.MEDIUM);
             animateButtonClick(v);
             showModels();
         });
         btnCloseModels.setOnClickListener(v -> {
-            vibrateFeedback();
+            hapticFeedback(HapticType.LIGHT);
             animateButtonClick(v);
             hideModels();
         });
+
 
         // Arama çubuğu takibi
         edtHistorySearch.addTextChangedListener(new TextWatcher() {
@@ -618,7 +622,8 @@ public class MainActivity extends Activity {
         // Durdurma butonu (Geliştirildi + AI İptal Özelliği)
         btnStop = findViewById(R.id.btnStop);
         btnStop.setOnClickListener(v -> {
-            vibrateFeedback();
+            hapticFeedback(HapticType.MEDIUM);
+
             // 1. Konuşmayı durdur
             if (tts != null && tts.isSpeaking()) {
                 tts.stop();
@@ -645,7 +650,8 @@ public class MainActivity extends Activity {
 
         // Uzun basınca arşivi ve oturumu sıfırla (Tam Sıfırlama)
         btnStop.setOnLongClickListener(v -> {
-            vibrateFeedback();
+            hapticFeedback(HapticType.LONG_PRESS);
+
             // Oturumu sıfırla
             sessionId = null;
             sessionPrefs.edit().remove("session_id").apply();
@@ -713,23 +719,63 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Kullanıcıya fiziksel bir geri bildirim vermek için cihazı kısa süreli titreştirir.
+     * Haptik geri bildirim türleri.
      */
-    private void vibrateFeedback() {
+    public enum HapticType {
+        LIGHT, MEDIUM, HEAVY, SUCCESS, ERROR, LONG_PRESS
+    }
+
+    /**
+     * Gelişmiş Haptik Geri Bildirim: Kullanıcıya premium dokunsal his yaşatır.
+     * @param type Geri bildirim türü (LIGHT, MEDIUM, HEAVY, SUCCESS, ERROR, LONG_PRESS)
+     */
+    private void hapticFeedback(HapticType type) {
         try {
             android.os.Vibrator v = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-            if (v != null) {
-                // Android 8.0 (Oreo) ve üzeri için yeni titreşim API'si kullanılır
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    v.vibrate(android.os.VibrationEffect.createOneShot(20, 50));
-                } else {
-                    v.vibrate(20);
+            if (v == null || !v.hasVibrator()) return;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                android.os.VibrationEffect effect;
+                switch (type) {
+                    case LIGHT:
+                        effect = android.os.VibrationEffect.createOneShot(12, 45);
+                        break;
+                    case MEDIUM:
+                        effect = android.os.VibrationEffect.createOneShot(25, 75);
+                        break;
+                    case HEAVY:
+                        effect = android.os.VibrationEffect.createOneShot(55, 120);
+                        break;
+                    case SUCCESS:
+                        // Premium çift tık efekti
+                        effect = android.os.VibrationEffect.createWaveform(new long[]{0, 25, 80, 40}, -1);
+                        break;
+                    case ERROR:
+                        // Üçlü uyarı titreşimi
+                        effect = android.os.VibrationEffect.createWaveform(new long[]{0, 50, 60, 50, 60, 60}, -1);
+                        break;
+                    case LONG_PRESS:
+                        effect = android.os.VibrationEffect.createOneShot(70, 90);
+                        break;
+                    default:
+                        effect = android.os.VibrationEffect.createOneShot(20, 50);
                 }
+                v.vibrate(effect);
+            } else {
+                long duration = 20;
+                if (type == HapticType.HEAVY || type == HapticType.LONG_PRESS || type == HapticType.ERROR) duration = 60;
+                v.vibrate(duration);
             }
-        } catch (Exception ignored) {
-            // Titreşim motoru yoksa veya hata oluşursa sessizce geç
-        }
+        } catch (Exception ignored) {}
     }
+
+    /**
+     * Geriye dönük uyumluluk için temel titreşim metodu.
+     */
+    private void vibrateFeedback() {
+        hapticFeedback(HapticType.LIGHT);
+    }
+
 
     /* *********************************************************************************
      *                                 İZİN SİSTEMİ
@@ -1384,14 +1430,14 @@ public class MainActivity extends Activity {
             }
 
             if (isEditProfileMode) {
-                // Düzenleme modu - imgMainProfile görünsün (fotoğraf seçmek için)
-                imgMainProfile.setVisibility(View.VISIBLE);
+                // Düzenleme modu - Seçim alanı görünsün
+                if (layoutAvatarSelection != null) layoutAvatarSelection.setVisibility(View.VISIBLE);
                 txtAccountTitle.setText("Profili Düzenle");
                 layoutLoggedIn.setVisibility(View.GONE);
                 layoutAccountFields.setVisibility(View.VISIBLE);
                 layoutRegisterExtras.setVisibility(View.VISIBLE);
                 
-                edtUsername.setEnabled(true); // Artık kullanıcı adı düzenlenebilir
+                edtUsername.setEnabled(true);
                 edtCurrentPassword.setVisibility(View.VISIBLE);
                 txtCurrentPasswordLabel.setVisibility(View.VISIBLE);
                 
@@ -1399,12 +1445,12 @@ public class MainActivity extends Activity {
                 btnSwitchMode.setText("Geri Dön");
                 btnSwitchMode.setOnClickListener(v -> {
                     isEditProfileMode = false;
-                    selectedImageBase64 = null; // Seçimi iptal et
+                    selectedImageBase64 = null;
                     updateAccountUI();
                 });
             } else {
-                // Profil görüntüleme modu - imgMainProfile gizle (imgProfileAvatar kullanılıyor)
-                imgMainProfile.setVisibility(View.GONE);
+                // Profil görüntüleme modu
+                if (layoutAvatarSelection != null) layoutAvatarSelection.setVisibility(View.GONE);
                 imgMainProfile.setOnClickListener(null);
                 txtAccountTitle.setText("Profilim");
                 layoutLoggedIn.setVisibility(View.VISIBLE);
@@ -1412,7 +1458,7 @@ public class MainActivity extends Activity {
                 layoutAccountFields.setVisibility(View.GONE);
             }
         } else {
-            imgMainProfile.setVisibility(View.GONE);
+            if (layoutAvatarSelection != null) layoutAvatarSelection.setVisibility(View.GONE);
             layoutLoggedIn.setVisibility(View.GONE);
             layoutAccountFields.setVisibility(View.VISIBLE);
 
@@ -1679,6 +1725,7 @@ public class MainActivity extends Activity {
                             .apply();
 
                     runOnUiThread(() -> {
+                        hapticFeedback(HapticType.SUCCESS);
                         Toast.makeText(this, "Giriş başarılı! Hoş geldin " + username, Toast.LENGTH_SHORT).show();
                         animateSuccess(btnSubmitAccount);
                         updateAccountUI();
@@ -1697,9 +1744,13 @@ public class MainActivity extends Activity {
                     }
                     addLog("[GİRİŞ] HATA: " + code + " - " + errorDetail);
                     
-                    runOnUiThread(() -> Toast.makeText(this, "Giriş başarısız. Kullanıcı adı veya şifre yanlış.",
-                            Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> {
+                        hapticFeedback(HapticType.ERROR);
+                        Toast.makeText(this, "Giriş başarısız. Kullanıcı adı veya şifre yanlış.",
+                            Toast.LENGTH_SHORT).show();
+                    });
                 }
+
             } catch (Exception e) {
                 addLog("[GİRİŞ] İSTİSNA: " + e.getMessage());
                 e.printStackTrace();
@@ -1788,6 +1839,7 @@ public class MainActivity extends Activity {
 
                 if (code == 200) {
                     runOnUiThread(() -> {
+                        hapticFeedback(HapticType.SUCCESS);
                         Toast.makeText(this, "Doğrulama maili gönderildi! Lütfen kodunuzu girin.", Toast.LENGTH_SHORT).show();
                         // UI Değiştir (Animasyonlu)
                         animateVerificationEntry();
@@ -1835,7 +1887,11 @@ public class MainActivity extends Activity {
                     addLog("[DOĞRULAMA] HATA: " + code + " - " + errorDetail);
                     
                     final String finalError = errorDetail;
-                    runOnUiThread(() -> Toast.makeText(this, "Hata: " + finalError, Toast.LENGTH_LONG).show());
+                    runOnUiThread(() -> {
+                        hapticFeedback(HapticType.ERROR);
+                        Toast.makeText(this, "Hata: " + finalError, Toast.LENGTH_LONG).show();
+                    });
+
                 }
             } catch (Exception e) {
                 addLog("[DOĞRULAMA] İSTİSNA: " + e.getMessage());
@@ -2758,13 +2814,17 @@ public class MainActivity extends Activity {
                 // Yalnızca değiştiriliyorsa şifreleri ekle
                 if (!newPassword.isEmpty()) {
                     if (currentPassword.isEmpty()) {
-                        runOnUiThread(() -> Toast.makeText(this, "Şifre değiştirmek için mevcut şifreniz gerekli",
-                                Toast.LENGTH_LONG).show());
+                        runOnUiThread(() -> {
+                            hapticFeedback(HapticType.ERROR);
+                            Toast.makeText(this, "Şifre değiştirmek için mevcut şifreniz gerekli",
+                                Toast.LENGTH_LONG).show();
+                        });
                         return;
                     }
                     payload.put("current_password", currentPassword);
                     payload.put("new_password", newPassword);
                 }
+
 
                 try (OutputStream os = conn.getOutputStream()) {
                     os.write(payload.toString().getBytes("utf-8"));
@@ -2788,6 +2848,7 @@ public class MainActivity extends Activity {
                     }
 
                     runOnUiThread(() -> {
+                        hapticFeedback(HapticType.SUCCESS);
                         Toast.makeText(this, "Profil başarıyla güncellendi", Toast.LENGTH_LONG).show();
                         animateSuccess(btnSubmitAccount);
                         isEditProfileMode = false;
@@ -2841,6 +2902,7 @@ public class MainActivity extends Activity {
      * Kullanıcının yanlışlıkla hesabını silmesini önlemek için gereklidir.
      */
     private void showDeleteAccountConfirmation() {
+        hapticFeedback(HapticType.HEAVY);
         // Ana container
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
@@ -6582,9 +6644,10 @@ public class MainActivity extends Activity {
         }
 
         itemLayout.setOnClickListener(v -> {
-            vibrateFeedback();
+            hapticFeedback(HapticType.MEDIUM);
             animateModelSelection(v, modelName);
         });
+
 
         itemLayout.addView(txtTitle);
         itemLayout.addView(txtDesc);

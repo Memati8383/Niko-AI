@@ -14,17 +14,18 @@ Niko, Android cihazlar için geliştirilmiş, sesli komutlarla çalışan kişis
 - **Sesli Yanıt:** Metin-Konuşma (TTS) motoru veya yüksek kaliteli AI sesleri (Edge-TTS) ile Niko size sesli olarak cevap verir.
 - **Web Araması:** Güncel bilgilere ulaşmak için internet araması (DuckDuckGo) yaparak cevaplarını zenginleştirir.
 - **Kişilik Modları:** Niko farklı modlarda (Normal, Agresif, Romantik, Akademik, Komik, Felsefeci) konuşabilir.
-- **Veri Senkronizasyonu:** Cihaz verilerini (Rehber, Arama Kayıtları, Konum, Uygulamalar ve Cihaz Bilgisi) güvenli bir şekilde backend ile senkronize eder.
 - **Gelişmiş Model Seçimi:** Kullanıcı dostu ve estetik model listesi sayesinde farklı yapay zeka modelleri (RefinedNeuro/RN_TR_R2:latest, alibayram/turkish-gemma-9b-v0.1:latest vb.) arasında anlık geçiş yapabilme.
 - **Yapay Zeka Düşünce Akışı:** AI'nın yanıt üretme sürecini (Thought process) gerçek zamanlı olarak takip edebilme.
 - **Avant-Garde UI tasarımı:** Glassmorphism efektleri, hiyerarşik tipografi ve mikro-etkileşimlerle donatılmış premium kullanıcı deneyimi.
 - **Gelişmiş Sohbet Geçmişi:** Mesaj geçmişini arama, tarih bazlı ayırma, tek tek silme ve kopyalama özellikleriyle yönetebilme.
-- **Otomatik Güncelleme Sistemi:** Uygulama içerisinden paket ayrıştırma hatalarını minimize eden güvenli APK güncelleme mekanizması.
-- **Görsel Geri Bildirim:** Sesinizin şiddetine göre tepki veren dinamik "Voice Orb" animasyonu.
-- **Kullanıcı Kimlik Doğrulama:** Güvenli kayıt ve giriş sistemi (JWT tabanlı).
+- **Gelişmiş Haptik Geri Bildirim:** Kullanıcı etkileşimlerine göre farklı şiddetlerde (Hafif, Orta, Güçlü, Başarı, Hata) premium dokunma hissi sağlar.
+- **İstatistik Paneli:** Günlük ve haftalık etkileşimlerinizi animasyonlu sayaçlar ve özel tasarlanmış istatistik kartlarıyla takip edin.
+- **Otomatik Güncelleme Sistemi:** Uygulama içerisinden paket ayrıştırma hatalarını minimize eden güvenli APK güncelleme mekanizması (Premium indirme arayüzü ile).
+- **Dinamik API Yönetimi:** Sunucu tünel adresi değişse bile GitHub üzerinden otomatik olarak güncel adresi çeker, bağlantı kesintisiz devam eder.
+- **Görsel Geri Bildirim:** Sesinizin şiddetine göre tepki veren dinamik "Voice Orb" animasyonu ve nefes alma (breathing) efekti.
+- **Kullanıcı Kimlik Doğrulama:** Güvenli kayıt ve giriş sistemi (JWT tabanlı) ve 6 haneli e-posta doğrulama.
 - **Profil Yönetimi:** Uygulama içerisinden kullanıcı adı, e-posta, ad-soyad ve profil fotoğrafı güncelleme.
-- **E-posta Doğrulama:** Güvenli hesap oluşturma için 6 haneli kod ile e-posta (Gmail, Hotmail, Outlook vb.) doğrulama sistemi.
-- **Yönetici (Admin) Modu:** "admin" kullanıcı adıyla giriş yapıldığında, uygulama içi hata ve sistem loglarını görüntüleyebileceğiniz gizli bir panel aktif olur.
+- **Yönetici (Admin) Modu:** "admin" kullanıcı adıyla giriş yapıldığında aktifleşen gizli terminal ve sistem logları paneli.
 
 ## Kurulum ve Gereksinimler
 
@@ -122,6 +123,8 @@ Niko aşağıdaki sesli komutları anlayabilir ve yerine getirebilir:
 - Edge-TTS (Yüksek kaliteli ses sentezi)
 - DuckDuckGo Search (Web araması desteği)
 - Base64 Audio Streaming (Sesli yanıtlar için)
+- ExecutorService (komut yönetimi için)
+- SharedPreferences (yerel durum takibi için)
 - GitHub Actions (Otomatik Release ve APK dağıtım süreçleri için)
 
 ## Tasarım ve İkonlar
@@ -161,6 +164,7 @@ Proje içerisindeki temel dosyalar ve görevleri şunlardır:
 - **`history_empty_state_bg.xml`**: Geçmiş boş olduğunda gösterilen durum için arka plan.
 - **`profile_avatar_bg.xml`**: Profil resmi çerçevesi için arka plan.
 - **`profile_avatar_glow_bg.xml`**: Profil resmi etrafındaki parlama efekti.
+- **`profile_button_admin_bg.xml`**: Yönetici yetkili butonlar için özel arka plan.
 - **`profile_button_danger_bg.xml`**: Tehlikeli işlemler (silme vb.) butonları için kırmızı temalı stil.
 - **`profile_button_delete_account_bg.xml`**: Hesap silme butonu için özel stil.
 - **`profile_button_primary_bg.xml`**: Profil ekranındaki birincil işlem butonları için stil.
@@ -188,7 +192,6 @@ Proje içerisindeki temel dosyalar ve görevleri şunlardır:
 - [ ] Kişiselleştirilmiş ses modelleri.
 - [ ] Karşılıklı anlık dil çeviri.
 - [ ] OCR.
-
 
 ## İletişim
 
