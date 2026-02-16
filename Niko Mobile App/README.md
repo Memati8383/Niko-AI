@@ -187,9 +187,7 @@ Proje içerisindeki temel dosyalar ve görevleri şunlardır:
 - [x] Otomatik uygulama içi güncelleme sistemi (In-app updates).
 - [x] E-posta doğrulama sistemi (Gmail/SMTP).
 - [x] Kullanıcının kendi hesabını silebilmesi.
-- [ ] Çoklu dil desteği (İngilizce, Almanca vb.).
 - [ ] Gelişmiş Görüntü İşleme (Vision) entegrasyonu.
-- [ ] Kişiselleştirilmiş ses modelleri.
 - [ ] Karşılıklı anlık dil çeviri.
 - [ ] OCR.
 
