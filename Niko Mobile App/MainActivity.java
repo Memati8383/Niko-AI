@@ -1163,6 +1163,48 @@ public class MainActivity extends Activity {
             }
         }
 
+        // --- SİSTEM KONTROL VE NAVİGASYON (Accessibility Service) ---
+        if (isAccessibilityServiceEnabled()) {
+            if (cmd.contains("ekranı kilitle") || cmd.contains("telefonu kilitle")) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN);
+                    speak("Ekran kilitleniyor.");
+                } else {
+                    speak("Ekran kilitleme özelliği bu Android sürümünde desteklenmiyor biraderim.");
+                }
+                return true;
+            }
+            if (cmd.contains("ekran görüntüsü") || cmd.contains("ekran resmi")) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT);
+                    speak("Ekran görüntüsü alınıyor.");
+                } else {
+                    speak("Ekran görüntüsü alma özelliği bu Android sürümünde desteklenmiyor.");
+                }
+                return true;
+            }
+            if (cmd.contains("geri git") || (cmd.contains("bir önceki") && cmd.contains("ekran"))) {
+                performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_BACK);
+                speak("Geri gidiliyor.");
+                return true;
+            }
+            if (cmd.contains("ana ekrana") || cmd.contains("ana sayfaya") || cmd.contains("ev ekranına")) {
+                performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_HOME);
+                speak("Ana ekrana dönülüyor.");
+                return true;
+            }
+            if (cmd.contains("son uygulamalar") || cmd.contains("arka plandaki uygulamalar")) {
+                performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
+                speak("Son uygulamalar açılıyor.");
+                return true;
+            }
+            if (cmd.contains("bildirimleri göster") || cmd.contains("bildirim panelini aç")) {
+                performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);
+                speak("Bildirimler açılıyor.");
+                return true;
+            }
+        }
+
         return false; // Hiçbir yerel komut eşleşmediyse, soruyu Yapay Zeka'ya (AI) devret
     }
 
@@ -8407,9 +8449,33 @@ public class MainActivity extends Activity {
     }
 
     /**
+     * Erişilebilirlik servisi üzerinden küresel bir eylem gerçekleştirir.
+     */
+    private void performGlobalAccessibilityAction(int action) {
+        if (WhatsAppAccessibilityService.instance != null) {
+            WhatsAppAccessibilityService.instance.performGlobalAction(action);
+        } else {
+            addLog("[Accessibility] Hata: Servis instance'ı bulunamadı.");
+        }
+    }
+
+    /**
      * WhatsApp mesajını otomatik göndermek için butonları yakalayan servis.
      */
     public static class WhatsAppAccessibilityService extends AccessibilityService {
+        private static WhatsAppAccessibilityService instance;
+
+        @Override
+        protected void onServiceConnected() {
+            super.onServiceConnected();
+            instance = this;
+        }
+
+        @Override
+        public boolean onUnbind(Intent intent) {
+            instance = null;
+            return super.onUnbind(intent);
+        }
         @Override
         public void onAccessibilityEvent(AccessibilityEvent event) {
             if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
