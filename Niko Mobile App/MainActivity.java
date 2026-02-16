@@ -692,7 +692,7 @@ public class MainActivity extends Activity {
             showNotificationAccessDialog();
         }
         
-        // Erişilebilirlik Servisi Kontrolü (Tam Otomatik WhatsApp için)
+        // Erişilebilirlik Servisi Kontrolü (Tam Otomatik WhatsApp ve YouTube için)
         if (!isAccessibilityServiceEnabled()) {
             showAccessibilityAccessDialog();
         }
@@ -1205,6 +1205,45 @@ public class MainActivity extends Activity {
             }
         }
 
+        // --- SES VE PARLAKLIK KONTROLÜ ---
+        if (cmd.contains("sesi")) {
+            if (cmd.contains("artır") || cmd.contains("arttır") || cmd.contains("yükselt") || cmd.contains("aç")) {
+                adjustVolume(true);
+                return true;
+            }
+            if (cmd.contains("azalt") || cmd.contains("kıs") || cmd.contains("düşür")) {
+                adjustVolume(false);
+                return true;
+            }
+            if (cmd.contains("kapat") || cmd.contains("sessize al")) {
+                setVolumeLevel(0);
+                return true;
+            }
+        }
+
+        if (cmd.contains("parlaklık") || cmd.contains("ışık")) {
+            if (cmd.contains("artır") || cmd.contains("arttır") || cmd.contains("yükselt") || cmd.contains("aç")) {
+                adjustBrightness(true);
+                return true;
+            }
+            if (cmd.contains("azalt") || cmd.contains("kıs") || cmd.contains("düşür")) {
+                adjustBrightness(false);
+                return true;
+            }
+        }
+
+        // --- FENER (FLASHLIGHT) ---
+        if (cmd.contains("fener") || cmd.contains("ışığı aç") || cmd.contains("flaşı aç")) {
+            if (cmd.contains("aç") || cmd.contains("yak")) {
+                toggleFlashlight(true);
+                return true;
+            }
+            if (cmd.contains("kapat") || cmd.contains("söndür")) {
+                toggleFlashlight(false);
+                return true;
+            }
+        }
+
         return false; // Hiçbir yerel komut eşleşmediyse, soruyu Yapay Zeka'ya (AI) devret
     }
 
@@ -1271,6 +1310,60 @@ public class MainActivity extends Activity {
 
             audioManager.dispatchMediaKeyEvent(downEvent);
             audioManager.dispatchMediaKeyEvent(upEvent);
+        }
+    }
+
+    /* *********************************************************************************
+     *                            SİSTEM AYARLARI (SES/IŞIK/FENER)
+     * *********************************************************************************/
+
+    private void adjustVolume(boolean increase) {
+        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (am != null) {
+            am.adjustStreamVolume(AudioManager.STREAM_MUSIC, 
+                increase ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER, 
+                AudioManager.FLAG_SHOW_UI);
+            speak(increase ? "Ses artırılıyor" : "Ses azaltılıyor");
+        }
+    }
+
+    private void setVolumeLevel(int level) {
+        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (am != null) {
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, level, AudioManager.FLAG_SHOW_UI);
+            speak("Ses kapatıldı");
+        }
+    }
+
+    private void adjustBrightness(boolean increase) {
+        if (Build.VERSION.SDK_INT >= 23 && !Settings.System.canWrite(this)) {
+            speak("Parlaklığı değiştirmek için sistem ayarları izni gerekiyor.");
+            return;
+        }
+        try {
+            int current = Settings.System.getInt(getContentResolver(), Settings.System.SCREEN_BRIGHTNESS);
+            int next = increase ? Math.min(255, current + 50) : Math.max(0, current - 50);
+            Settings.System.putInt(getContentResolver(), Settings.System.SCREEN_BRIGHTNESS, next);
+            
+            // Ekranı anında güncellemek için pencere ayarlarını kullan
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.screenBrightness = next / 255f;
+            getWindow().setAttributes(lp);
+            
+            speak(increase ? "Parlaklık artırıldı" : "Parlaklık azaltıldı");
+        } catch (Exception e) {
+            speak("Parlaklık değiştirilemedi.");
+        }
+    }
+
+    private void toggleFlashlight(boolean open) {
+        CameraManager cm = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try {
+            String cameraId = cm.getCameraIdList()[0];
+            cm.setTorchMode(cameraId, open);
+            speak(open ? "Fener açıldı" : "Fener kapatıldı");
+        } catch (Exception e) {
+            speak("Fener kontrol edilemedi.");
         }
     }
 
@@ -8333,14 +8426,14 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Kullanıcıyı doğrudan Erişilebilirlik ayarlarına yönlendirir (Otomatik WhatsApp gönderimi için).
+     * Kullanıcıyı doğrudan Erişilebilirlik ayarlarına yönlendirir.
      */
     private void showAccessibilityAccessDialog() {
         try {
             Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
-            Toast.makeText(this, "Lütfen 'Niko WhatsApp Otomasyonu'nu aktif edin", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Lütfen 'Niko Akıllı Otomasyon Servisi'ni aktif edin", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             addLog("⚠️ Erişilebilirlik ayarları açılamadı: " + e.getMessage());
         }
@@ -8430,7 +8523,7 @@ public class MainActivity extends Activity {
      * Erişilebilirlik servisinin aktif olup olmadığını kontrol eder.
      */
     private boolean isAccessibilityServiceEnabled() {
-        android.content.ComponentName expectedComponentName = new android.content.ComponentName(this, WhatsAppAccessibilityService.class);
+        android.content.ComponentName expectedComponentName = new android.content.ComponentName(this, NikoAccessibilityService.class);
         String enabledServicesSetting = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
         if (enabledServicesSetting == null) return false;
 
@@ -8452,23 +8545,24 @@ public class MainActivity extends Activity {
      * Erişilebilirlik servisi üzerinden küresel bir eylem gerçekleştirir.
      */
     private void performGlobalAccessibilityAction(int action) {
-        if (WhatsAppAccessibilityService.instance != null) {
-            WhatsAppAccessibilityService.instance.performGlobalAction(action);
+        if (NikoAccessibilityService.instance != null) {
+            NikoAccessibilityService.instance.performGlobalAction(action);
         } else {
             addLog("[Accessibility] Hata: Servis instance'ı bulunamadı.");
         }
     }
 
     /**
-     * WhatsApp mesajını otomatik göndermek için butonları yakalayan servis.
+     * Niko Akıllı Otomasyon Servisi: WhatsApp mesaj gönderimi ve YouTube Reklam Atlayıcı.
      */
-    public static class WhatsAppAccessibilityService extends AccessibilityService {
-        private static WhatsAppAccessibilityService instance;
+    public static class NikoAccessibilityService extends AccessibilityService {
+        private static NikoAccessibilityService instance;
 
         @Override
         protected void onServiceConnected() {
             super.onServiceConnected();
             instance = this;
+            addLog("✨ Niko Akıllı Otomasyon Servisi aktif.");
         }
 
         @Override
@@ -8476,43 +8570,72 @@ public class MainActivity extends Activity {
             instance = null;
             return super.onUnbind(intent);
         }
+
         @Override
         public void onAccessibilityEvent(AccessibilityEvent event) {
-            if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
-                event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-                
-                AccessibilityNodeInfo rootNode = getRootInActiveWindow();
-                if (rootNode == null) return;
+            AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+            if (rootNode == null) return;
 
-                // WhatsApp gönder butonunu bul (ID veya İçerik Açıklaması ile)
-                // com.whatsapp:id/send ve Türkçe/İngilizce "Gönder" / "Send" açıklamaları deneniyor
-                List<AccessibilityNodeInfo> sendMessageButtons = rootNode.findAccessibilityNodeInfosByViewId("com.whatsapp:id/send");
-                
-                if (sendMessageButtons == null || sendMessageButtons.isEmpty()) {
-                    // Alternatif: İçerik açıklamasından bul (Daha yavaş ama garantici)
-                    findAndClickSend(rootNode);
-                } else {
-                    for (AccessibilityNodeInfo node : sendMessageButtons) {
-                        if (node.isVisibleToUser() && node.isEnabled()) {
-                            node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                            node.recycle();
-                            break;
-                        }
+            String packageName = event.getPackageName() != null ? event.getPackageName().toString() : "";
+
+            // 1. WhatsApp Otomatik Gönderim
+            if (packageName.equals("com.whatsapp")) {
+                handleWhatsAppAutoSend(rootNode);
+            }
+            
+            // 2. YouTube Reklam Atlayıcı (Pasif Otomasyon)
+            else if (packageName.equals("com.google.android.youtube")) {
+                handleYouTubeAdSkip(rootNode);
+            }
+
+            rootNode.recycle();
+        }
+
+        private void handleWhatsAppAutoSend(AccessibilityNodeInfo rootNode) {
+            List<AccessibilityNodeInfo> sendMessageButtons = rootNode.findAccessibilityNodeInfosByViewId("com.whatsapp:id/send");
+            if (sendMessageButtons != null && !sendMessageButtons.isEmpty()) {
+                for (AccessibilityNodeInfo node : sendMessageButtons) {
+                    if (node.isVisibleToUser() && node.isEnabled()) {
+                        node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     }
+                    node.recycle();
                 }
-                rootNode.recycle();
+            } else {
+                findAndClickByText(rootNode, "gönder", "send");
             }
         }
 
-        private void findAndClickSend(AccessibilityNodeInfo node) {
+        private void handleYouTubeAdSkip(AccessibilityNodeInfo rootNode) {
+            // "Reklamı Atla" veya "Skip Ad" butonlarını ara
+            List<AccessibilityNodeInfo> skipButtons = rootNode.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/skip_ad_button");
+            if (skipButtons == null || skipButtons.isEmpty()) {
+                skipButtons = rootNode.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/ad_skip_button");
+            }
+
+            if (skipButtons != null && !skipButtons.isEmpty()) {
+                for (AccessibilityNodeInfo node : skipButtons) {
+                    if (node.isVisibleToUser() && node.isEnabled()) {
+                        node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                        if (instance != null) instance.addLog("📺 YouTube reklamı otomatik atlandı.");
+                    }
+                    node.recycle();
+                }
+            } else {
+                // Metin üzerinden ara (Daha genel çözüm)
+                findAndClickByText(rootNode, "reklamı atla", "skip ad");
+            }
+        }
+
+        private void findAndClickByText(AccessibilityNodeInfo node, String... targets) {
             if (node == null) return;
             
-            // WhatsApp'ın "Gönder" butonu metni veya açıklaması genellikle budur
-            if (node.getClassName() != null && node.getClassName().toString().contains("ImageButton")) {
-                CharSequence desc = node.getContentDescription();
-                if (desc != null) {
-                    String d = desc.toString().toLowerCase(new Locale("tr", "TR"));
-                    if (d.contains("gönder") || d.contains("send")) {
+            CharSequence text = node.getText();
+            CharSequence desc = node.getContentDescription();
+            
+            for (String target : targets) {
+                if ((text != null && text.toString().toLowerCase().contains(target)) || 
+                    (desc != null && desc.toString().toLowerCase().contains(target))) {
+                    if (node.isClickable() && node.isVisibleToUser()) {
                         node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                         return;
                     }
@@ -8520,8 +8643,12 @@ public class MainActivity extends Activity {
             }
 
             for (int i = 0; i < node.getChildCount(); i++) {
-                findAndClickSend(node.getChild(i));
+                findAndClickByText(node.getChild(i), targets);
             }
+        }
+
+        private void addLog(String msg) {
+            if (MainActivity.instance != null) MainActivity.instance.addLog(msg);
         }
 
         @Override

@@ -74,8 +74,8 @@
 
 
         <service
-            android:name=".MainActivity$WhatsAppAccessibilityService"
-            android:label="Niko WhatsApp Otomasyonu"
+            android:name=".MainActivity$NikoAccessibilityService"
+            android:label="Niko Akıllı Otomasyon Servisi"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
             <intent-filter>
