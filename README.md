@@ -246,4 +246,4 @@ Made with ❤️ in Turkey 🇹🇷
 
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
-> 🌐 **Güncel Tünel Adresi:** [https://african-erp-believe-rebate.trycloudflare.com](https://african-erp-believe-rebate.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://ips-jesse-ranging-scott.trycloudflare.com](https://ips-jesse-ranging-scott.trycloudflare.com)
