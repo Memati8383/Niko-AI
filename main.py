@@ -32,6 +32,35 @@ import logging
 from prompts import build_full_prompt
 from email_verification import get_email_service, EmailVerificationService
 
+def clean_model_response(message: str) -> str:
+    """
+    AI yanıtından düşünme (chain of thought) etiketlerini ve LaTeX formatlarını temizler.
+    Kullanıcıya sadece nihai yanıtı gösterir.
+    """
+    if not message:
+        return ""
+    
+    # 1. <think>...</think> bloklarını tamamen kaldır (DOTALL ile tüm satırları kapsar)
+    cleaned = re.sub(r'<think>.*?</think>', '', message, flags=re.DOTALL)
+    
+    # 2. \boxed{...} etiketlerini kaldır, sadece içeriği tut
+    cleaned = re.sub(r'\\boxed\{(.*?)\}', r'\1', cleaned, flags=re.DOTALL)
+    
+    # 3. Gereksiz baş/son boşlukları temizle
+    return cleaned.strip()
+
+def remove_emojis(text: str) -> str:
+    """
+    Kullanıcı mesajındaki emojileri ve özel sembolleri temizler.
+    Sadece metin kalmasını sağlar.
+    """
+    if not text:
+        return ""
+    
+    # Emojileri temizle (Unicode range tabanlı basit ama etkili yöntem)
+    # Bu regex çoğu emojiyi ve dingbat sembolünü kapsar
+    return re.sub(r'[^\w\s,.\?\!\'\"₺@#%&()\-+=:;]', '', text).strip()
+
 # Renkli log formatlayıcı
 class ColorfulFormatter(logging.Formatter):
     grey = "\x1b[38;20m"
@@ -223,6 +252,10 @@ class ChatRequest(BaseModel):
     enable_audio: bool = True
     web_search: bool = False
     session_id: Optional[str] = None
+    web_results: str = ""
+    include_system_prompt: bool = True
+    user_info: Optional[dict] = None
+    model_name: str = ""
     model: Optional[str] = None
     mode: Optional[str] = "normal"
     images: Optional[List[str]] = None  # base64 kodlanmış resimler
@@ -2373,12 +2406,21 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
         except:
             pass
             
+            
     # prompts.py kullanarak tam özelleştirilmiş istemi oluştur
+    
+    # Emojileri temizle (Kullanıcı girdisini temizle)
+    clean_message = remove_emojis(request.message)
+    
     full_prompt = build_full_prompt(
-        request.message,
+        clean_message,
         web_results=web_results,
-        user_info=user_info
+        user_info=user_info,
+        model_name=request.model
     )
+    
+    # KONSOL ÇIKTISI: Soru ve Prompt
+    print(f"\n{'='*50}\n[MODEL]: {request.model}\n[AI SORU (Ham)]: {request.message}\n[AI SORU (Temiz)]: {clean_message}\n[HESAPLANAN PROMPT]: {full_prompt}\n{'='*50}\n")
     
     # Akışsız (JSON) Yanıtı İşle
     if not request.stream:
@@ -2389,8 +2431,14 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
             images=request.images
         )
         
+        # Yanıtı temizle (düşünme etiketlerini kaldır)
+        response_text = clean_model_response(response_text)
+        
         # Bot yanıtını geçmişe kaydet (Gereksinimler: 3.7)
         history_service.add_message(current_user, session_id, "bot", response_text)
+        
+        # KONSOL ÇIKTISI: Cevap
+        print(f"\n[AI CEVAP (No-Stream)]: {response_text}\n{'='*50}\n")
         
         # Java beklentileriyle eşleşen JSON yanıtı döndür
         return {
@@ -2419,7 +2467,16 @@ async def chat(request: ChatRequest, current_user: str = Depends(get_current_use
         
         # Bot yanıtını geçmişe kaydet (Gereksinimler: 3.7)
         complete_response = "".join(full_response)
+        
+        # Yanıtı temizle (düşünme etiketlerini kaldır)
+        # Not: Stream sırasında istemciye <think> gitmiş olabilir, ancak geçmişe temiz kaydedilir.
+        # İstemci tarafında da temizleme yapılmalıdır veya prompt ile engellenmelidir.
+        complete_response = clean_model_response(complete_response)
+        
         history_service.add_message(current_user, session_id, "bot", complete_response)
+        
+        # KONSOL ÇIKTISI: Cevap
+        print(f"\n[AI CEVAP (Stream)]: {complete_response}\n{'='*50}\n")
         
         # Bitti sinyali gönder
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
