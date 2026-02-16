@@ -1,132 +1,143 @@
+// --- Paket Tanımı: Uygulamanın merkezi kimliği ---
 package com.example.niko;
 
-import android.Manifest;
-import android.app.Activity;
-import android.app.Notification;
-import android.app.PendingIntent;
-import android.app.RemoteInput;
-import android.content.ContentUris;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.IntentFilter;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.provider.CallLog;
-import android.provider.ContactsContract;
-import android.provider.Settings;
-import android.service.notification.NotificationListenerService;
-import android.service.notification.StatusBarNotification;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
-import android.speech.tts.TextToSpeech;
-import android.speech.tts.UtteranceProgressListener;
-import android.view.View;
-import android.widget.ImageButton;
-import android.widget.TextView;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
-import android.widget.Toast;
-import android.media.MediaPlayer;
-import android.media.AudioManager;
-import android.view.KeyEvent;
-import android.util.Base64;
-import android.os.Build;
-import java.io.File;
-import java.io.FileOutputStream;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
-import android.os.BatteryManager;
-import android.os.Environment;
-import android.os.StatFs;
-import android.location.Location;
-import android.location.LocationManager;
-import java.util.List;
-import android.content.pm.ResolveInfo;
-import android.provider.MediaStore;
-import java.io.ByteArrayOutputStream;
+// --- Android Çekirdek Bileşenleri: Uygulama yapısı ve sistem izinleri ---
+import android.Manifest; // Uygulama izin yönetimi
+import android.app.Activity; // Temel ekran yapısı
+import android.app.Notification; // Sistem bildirimleri
+import android.app.PendingIntent; // Gelecekte yürütülecek niyetler
+import android.app.RemoteInput; // Uzaktan giriş (bildirim yanıtları vb.)
+import android.content.ContentUris; // İçerik URI yönetimi
+import android.content.Intent; // Ekranlar arası geçiş ve mesajlaşma
+import android.content.pm.PackageManager; // Paket ve izin kontrolü
+import android.content.IntentFilter; // Sistem olaylarını filtreleme
+import android.database.Cursor; // Veritabanı sorgu sonuçları
+import android.net.Uri; // Kaynak belirleyiciler (dosya/web yolları)
+import android.os.Bundle; // Ekran geçişlerinde veri taşıma
+import android.os.Handler; // İş parçacıkları arası mesajlaşma
+import android.os.Looper; // Mesaj döngüsü yönetimi
+import android.provider.CallLog; // Arama geçmişi erişimi
+import android.provider.ContactsContract; // Rehber verileri erişimi
+import android.provider.Settings; // Sistem ayarları erişimi
+import android.service.notification.NotificationListenerService; // Bildirim dinleme servisi
+import android.service.notification.StatusBarNotification; // Durum çubuğu bildirim yapısı
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import org.json.JSONArray;
-import org.json.JSONObject;
+// --- Ses Tanıma ve Metin Okuma (Speech Interface) ---
+import android.speech.RecognitionListener; // Konuşma tanıma dinleyicisi
+import android.speech.RecognizerIntent; // Ses tanıma başlatma niyeti
+import android.speech.SpeechRecognizer; // Ses tanıma motoru
+import android.speech.tts.TextToSpeech; // Metni sese dönüştürme motoru
+import android.speech.tts.UtteranceProgressListener; // Okuma süreci takibi
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.UUID;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Locale;
-import java.util.Queue;
-import java.util.Date;
-import java.text.SimpleDateFormat;
-import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+// --- Kullanıcı Arayüzü (UI) Temel Bileşenleri ---
+import android.view.View; // Temel görsel yapı taşı
+import android.widget.ImageButton; // Resimli buton
+import android.widget.TextView; // Metin görüntüleme alanı
+import android.widget.ImageView; // Resim görüntüleme alanı
+import android.widget.RelativeLayout; // Esnek yerleşim düzeni
+import android.widget.Toast; // Kısa süreli mesaj bildirimleri
+import android.widget.LinearLayout; // Sıralı yerleşim düzeni
+import android.widget.Button; // Standart tıklanabilir buton
+import android.widget.EditText; // Metin giriş alanı
 
-import android.provider.AlarmClock;
-import android.provider.CalendarContract;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.Calendar;
-import android.net.wifi.WifiManager;
-import android.bluetooth.BluetoothAdapter;
-import android.view.Window;
-import android.view.WindowManager;
-import android.content.SharedPreferences;
+// --- Medya ve Donanım Erişimi ---
+import android.media.MediaPlayer; // Ses/Video oynatma
+import android.media.AudioManager; // Sistem ses kontrolleri
+import android.view.KeyEvent; // Tuş olaylarını yakalama
+import android.util.Base64; // Veri şifreleme/çözme (Base64)
+import android.os.Build; // Cihaz donanım ve sürüm bilgisi
+import android.content.pm.ApplicationInfo; // Yüklü uygulama bilgileri
+import android.content.pm.PackageInfo; // Uygulama paket detayları
+import android.os.BatteryManager; // Pil durumu yönetimi
+import android.os.Environment; // Dosya sistemi erişimi
+import android.os.StatFs; // Depolama alanı istatistikleri
+import android.location.Location; // Konum verisi
+import android.location.LocationManager; // Konum servisi yönetimi
+import java.util.List; // Liste arayüzü
+import android.content.pm.ResolveInfo; // Çözümleme bilgisi
+import android.provider.MediaStore; // Medya galerisi erişimi
+import java.io.ByteArrayOutputStream; // Bellek içi veri akışı
 
-import android.os.AsyncTask;
-import android.widget.LinearLayout;
-import android.graphics.Color;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-import android.widget.Button;
-import android.view.ViewGroup;
-import android.text.TextWatcher;
-import android.text.Editable;
-import android.content.ClipboardManager;
-import android.content.ClipData;
-import android.widget.EditText;
-import android.text.SpannableString;
-import android.text.style.BackgroundColorSpan;
-import android.text.Spanned;
-import android.view.animation.Animation;
-import android.view.animation.TranslateAnimation;
-import android.view.animation.AlphaAnimation;
-import android.view.animation.AnimationSet;
-import android.view.animation.ScaleAnimation;
-import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.WindowInsets;
-import android.view.inputmethod.InputMethodManager;
-import androidx.core.content.FileProvider;
-import android.telephony.TelephonyManager;
-import android.hardware.SensorManager;
-import android.hardware.Sensor;
-import android.app.usage.UsageStatsManager;
-import android.app.usage.UsageStats;
-import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CameraCharacteristics;
-import android.provider.Telephony;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.TimeUnit;
+// --- Veri Giriş/Çıkış (I/O) ve Dosya İşlemleri ---
+import java.io.File; // Dosya nesnesi
+import java.io.FileOutputStream; // Dosya yazma akışı
+import java.io.InputStream; // Veri okuma akışı
+import java.io.OutputStream; // Veri yazma akışı
+import java.io.BufferedReader; // Metin okuyucu
+import java.io.InputStreamReader; // Akıştan okuyucuya dönüştürücü
+import java.io.DataOutputStream; // Ham veri yazma akışı
+import java.io.IOException; // Giriş/Çıkış hata yönetimi
+
+// --- Veri Yapıları ve JSON İşleme ---
+import org.json.JSONArray; // JSON dizi yapısı
+import org.json.JSONObject; // JSON nesne yapısı
+import java.util.ArrayList; // Dinamik dizi listesi
+import java.util.LinkedList; // Bağlı liste yapısı
+import java.util.Queue; // Kuyruk veri yapısı
+import java.util.UUID; // Benzersiz kimlik oluşturucu
+
+// --- Ağ Bağlantısı ve Web İşlemleri ---
+import java.net.HttpURLConnection; // HTTP bağlantı yönetimi
+import java.net.URL; // Web adresi nesnesi
+import java.net.URLEncoder; // URL karakter kodlama
+import android.net.ConnectivityManager; // İnternet bağlantı kontrolü
+import android.net.NetworkInfo; // Ağ detayları
+import android.net.wifi.WifiManager; // Wi-Fi yönetimi
+
+// --- Zamanlama, Takvim ve Arka Plan İşlemleri ---
+import java.util.Date; // Tarih nesnesi
+import java.text.SimpleDateFormat; // Tarih formatlama
+import java.util.Calendar; // Takvim işlemleri
+import android.provider.AlarmClock; // Alarm sistemi erişimi
+import android.provider.CalendarContract; // Takvim verileri erişimi
+import java.util.concurrent.ExecutorService; // İş parçacığı havuzu yönetimi
+import java.util.concurrent.Executors; // İş parçacığı oluşturucu
+import java.util.concurrent.atomic.AtomicInteger; // Güvenli tamsayı işlemleri
+import java.util.concurrent.TimeUnit; // Zaman birimleri dönüşümü
+import android.os.AsyncTask; // Arka plan görevleri
+import java.util.Locale; // Dil ve bölge ayarları
+
+// --- Grafik, Animasyon ve Metin Stil İşlemleri ---
+import android.graphics.Color; // Renk yönetimi
+import android.graphics.Bitmap; // Dijital resim verisi
+import android.graphics.BitmapFactory; // Resim çözümleyici
+import android.graphics.Matrix; // Resim döndürme/boyutlandırma matrisi
+import android.text.TextWatcher; // Metin değişim dinleyicisi
+import android.text.Editable; // Düzenlenebilir metin nesnesi
+import android.text.SpannableString; // Stil verilebilen metin
+import android.text.style.BackgroundColorSpan; // Metin arka plan rengi stili
+import android.text.Spanned; // Biçimlendirilmiş metin arayüzü
+import android.view.animation.Animation; // Temel animasyon sınıfı
+import android.view.animation.TranslateAnimation; // Kaydırma animasyonu
+import android.view.animation.AlphaAnimation; // Şeffaflık animasyonu
+import android.view.animation.AnimationSet; // Çoklu animasyon grubu
+import android.view.animation.ScaleAnimation; // Boyutlandırma animasyonu
+import android.view.animation.AccelerateDecelerateInterpolator; // Yumuşak geçişli animasyon eğrisi
+
+// --- Diğer Sistem Bileşenleri ve Yardımcı Sınıflar ---
+import android.content.Context; // Uygulama bağlamı
+import android.content.SharedPreferences; // Yerel küçük veri depolama
+import android.view.Window; // Ekran penceresi yönetimi
+import android.view.WindowManager; // Pencere yöneticisi özellikleri
+import android.view.ViewGroup; // Görsel grup sarmalayıcı
+import android.content.ClipboardManager; // Pano (Kopyala/Yapıştır) yönetimi
+import android.content.ClipData; // Pano veri yapısı
+import android.view.WindowInsets; // Ekran içi boşluklar (çentik vb.)
+import android.view.inputmethod.InputMethodManager; // Klavye yönetimi
+import androidx.core.content.FileProvider; // Dosya paylaşım sağlayıcısı
+import android.telephony.TelephonyManager; // Telefon ve operatör bilgileri
+import android.hardware.SensorManager; // Sensör yönetimi
+import android.hardware.Sensor; // Sensör nesnesi
+import android.app.usage.UsageStatsManager; // Uygulama kullanım istatistikleri
+import android.app.usage.UsageStats; // Kullanım verisi detayları
+import android.hardware.camera2.CameraManager; // Kamera servisi
+import android.hardware.camera2.CameraCharacteristics; // Kamera teknik özellikleri
+import android.provider.Telephony; // SMS ve telefon sağlayıcısı
+import android.bluetooth.BluetoothAdapter; // Bluetooth yönetimi
+import java.util.regex.Matcher; // Düzenli ifade eşleştirici (Regex)
+import java.util.regex.Pattern; // Düzenli ifade kalıbı (Regex)
 
 /* *********************************************************************************
- * PROJE: Niko Mobil Asistan
- * MİMAR: Kıdemli Frontend Mimarı ve Yapay Zeka Mühendisi
- * TARİH: 2026
- * 
- * AÇIKLAMA:
  * Niko Mobil Asistan'ın merkezi aktivite sınıfı. Bu sınıf; ses tanıma, 
  * yapay zeka entegrasyonu, cihaz kontrolü ve kullanıcı yönetimi gibi 
  * tüm çekirdek işlevlerin orkestrasyonunu sağlar.
