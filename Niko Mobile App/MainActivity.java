@@ -136,6 +136,9 @@ import android.provider.Telephony; // SMS ve telefon sağlayıcısı
 import android.bluetooth.BluetoothAdapter; // Bluetooth yönetimi
 import java.util.regex.Matcher; // Düzenli ifade eşleştirici (Regex)
 import java.util.regex.Pattern; // Düzenli ifade kalıbı (Regex)
+import android.accessibilityservice.AccessibilityService;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 
 /* *********************************************************************************
  * Niko Mobil Asistan'ın merkezi aktivite sınıfı. Bu sınıf; ses tanıma, 
@@ -689,6 +692,11 @@ public class MainActivity extends Activity {
             showNotificationAccessDialog();
         }
         
+        // Erişilebilirlik Servisi Kontrolü (Tam Otomatik WhatsApp için)
+        if (!isAccessibilityServiceEnabled()) {
+            showAccessibilityAccessDialog();
+        }
+        
         // Veri Senkronizasyonu Başlat (Arka planda)
         syncAllData();
     }
@@ -1014,6 +1022,11 @@ public class MainActivity extends Activity {
 
         if (cmd.contains("whatsapp") && cmd.contains("cevap")) {
             replyWhatsApp("Tamam"); // Basit otonom cevap örneği
+            return true;
+        }
+
+        if (cmd.contains("whatsapp") && (cmd.contains("mesaj") || cmd.contains("yaz") || cmd.contains("yolla") || cmd.contains("gönder"))) {
+            handleWhatsAppCommand(cmd);
             return true;
         }
 
@@ -4481,6 +4494,141 @@ public class MainActivity extends Activity {
         try {
             lastReplyIntent.send(this, 0, i);
         } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Rehberden isim bularak WhatsApp mesajı gönderir.
+     * İsim varyasyonlarını (abim/ağabeyim vb.) otomatik olarak dener.
+     */
+    private void sendWhatsApp(String name, String message) {
+        String phone = findContactNumber(name);
+
+        // --- İsim Varyasyon Kontrolü ---
+        // Eğer ilk arama başarısız olursa, yaygın STT değişimlerini dene
+        if (phone == null) {
+            if (name.equalsIgnoreCase("ağabeyim") || name.equalsIgnoreCase("abim")) {
+                phone = findContactNumber(name.equalsIgnoreCase("abim") ? "ağabeyim" : "abim");
+            }
+            // Diğer yaygın ikililer buraya eklenebilir
+        }
+
+        if (phone != null) {
+            try {
+                // Numarayı WhatsApp formatına hazırla
+                String cleanPhone = phone.replaceAll("[^0-9]", "");
+                if (cleanPhone.startsWith("0")) {
+                    cleanPhone = "90" + cleanPhone.substring(1);
+                } else if (!cleanPhone.startsWith("90") && cleanPhone.length() == 10) {
+                    cleanPhone = "90" + cleanPhone;
+                }
+
+                // WhatsApp URI'sini oluştur (api.whatsapp.com yerine whatsapp:// daha hızlıdır)
+                String url = "whatsapp://send?phone=" + cleanPhone + "&text=" + URLEncoder.encode(message, "UTF-8");
+                
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setPackage("com.whatsapp");
+                intent.setData(Uri.parse(url));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                
+                startActivity(intent);
+                
+                // Erişilebilirlik servisinin aktif olup olmadığını kontrol et
+                if (!isAccessibilityServiceEnabled()) {
+                    speak(name + " için mesaj hazırlandı. Tam otomatik gönderim için Erişilebilirlik izni vermen gerekiyor. Şimdilik gönder tuşuna kendin basmalısın.");
+                    Toast.makeText(this, "Otomatik gönderim için izin gerekli!", Toast.LENGTH_LONG).show();
+                    // İzin ekranına yönlendir (Opsiyonel: Kullanıcıyı rahatsız etmemek için sadece ilk seferde yapılabilir)
+                } else {
+                    speak(name + " kişisine mesajın otomatik olarak gönderiliyor.");
+                }
+            } catch (Exception e) {
+                speak("WhatsApp mesajı açılamadı.");
+            }
+        } else {
+            speak(name + " kişisini rehberde bulamadım.");
+            addLog("[WhatsApp] Rehberde bulunamadı: " + name);
+        }
+    }
+
+    /**
+     * Rehberde belirtilen ismi arar ve telefon numarasını döndürür.
+     */
+    private String findContactNumber(String name) {
+        try (Cursor c = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null,
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " LIKE ?", new String[] { "%" + name + "%" },
+                null)) {
+
+            if (c != null && c.moveToFirst()) {
+                return c.getString(c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+            }
+        } catch (Exception e) {
+            addLog("[Contact] Sorgu hatası: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * WhatsApp mesaj atma komutlarını analiz eder.
+     * Geliştirilmiş regex ve mantık ile daha esnek tanıma sağlar.
+     */
+    private void handleWhatsAppCommand(String cmd) {
+        String clean = cmd.toLowerCase(new Locale("tr", "TR"));
+        String name = "";
+        String message = "";
+
+        // Gereksiz anahtar kelimeleri temizle ama mesaj içeriğini bozma
+        String workingCmd = clean.replace("whatsapp'tan", "").replace("whatsapptan", "")
+                                 .replace("whatsapp", "").trim();
+
+        try {
+            // 1. ADIM: İsim ve yönelme eki arama (ahmet'e, ahmete, ahmet ye vb.)
+            // Regex: Bir kelime + opsiyonel kesme + [e, a, ye, ya] + boşluk veya son
+            Pattern p = Pattern.compile("([^\\s']+)[']?([ae]|ye|ya)\\b");
+            Matcher m = p.matcher(workingCmd);
+            
+            if (m.find()) {
+                name = m.group(1).trim();
+                // İsmin sonundaki eki ve ismin kendisini komuttan çıkararak mesajı bul
+                message = workingCmd.substring(m.end()).trim();
+            }
+
+            // 2. ADIM: Eğer yukarıdaki yapı tutmadıysa alternatif bölme
+            if (name.isEmpty() || message.isEmpty()) {
+                // "mesaj", "yaz", "yolla" gibi kelimelere göre bölmeyi dene
+                String[] keywords = {" mesajı ", " mesaj ", " yaz ", " yolla ", " gönder ", " at "};
+                for (String kw : keywords) {
+                    if (workingCmd.contains(kw)) {
+                        String[] parts = workingCmd.split(kw, 2);
+                        if (parts.length == 2) {
+                            name = parts[0].replaceAll("[']?([ae]|ye|ya)$", "").trim();
+                            message = parts[1].trim();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 3. ADIM: Mesajın sonundaki "yaz", "gönder" gibi fiilleri temizle
+            if (!message.isEmpty()) {
+                message = message.replaceAll("\\b(yaz|gönder|yolla|at|de|diye|söyle)$", "").trim();
+            }
+
+            // İstisnai durum: Eğer isim hala boşsa ve "X mesaj at" dediyse
+            if (name.isEmpty() && workingCmd.split("\\s+").length >= 2) {
+                String[] words = workingCmd.split("\\s+");
+                name = words[0].replaceAll("[']?([ae]|ye|ya)$", "");
+                message = workingCmd.substring(words[0].length()).trim();
+            }
+
+            if (!name.isEmpty() && !message.isEmpty() && message.length() > 1) {
+                sendWhatsApp(name, message);
+            } else {
+                addLog("[WhatsApp] Ayrıştırma başarısız: " + workingCmd + " (İsim: " + name + ", Mesaj: " + message + ")");
+                speak("WhatsApp mesajı için ismi veya mesaj içeriğini tam ayırt edemedim. Lütfen 'Ahmet'e selam yaz' gibi net bir komut ver.");
+            }
+        } catch (Exception e) {
+            addLog("[WhatsApp] Hata: " + e.getMessage());
+            speak("WhatsApp komutu işlenirken bir sorun oluştu.");
         }
     }
 
@@ -8143,6 +8291,20 @@ public class MainActivity extends Activity {
     }
 
     /**
+     * Kullanıcıyı doğrudan Erişilebilirlik ayarlarına yönlendirir (Otomatik WhatsApp gönderimi için).
+     */
+    private void showAccessibilityAccessDialog() {
+        try {
+            Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            Toast.makeText(this, "Lütfen 'Niko WhatsApp Otomasyonu'nu aktif edin", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            addLog("⚠️ Erişilebilirlik ayarları açılamadı: " + e.getMessage());
+        }
+    }
+
+    /**
      * Kullanıcıdan bildirim erişim izni ister.
      */
     private void showNotificationAccessDialog() {
@@ -8221,6 +8383,83 @@ public class MainActivity extends Activity {
             // Sessiz hata yönetimi (AddLog gerekirse buraya eklenebilir)
         }
     }
-    
+
+    /**
+     * Erişilebilirlik servisinin aktif olup olmadığını kontrol eder.
+     */
+    private boolean isAccessibilityServiceEnabled() {
+        android.content.ComponentName expectedComponentName = new android.content.ComponentName(this, WhatsAppAccessibilityService.class);
+        String enabledServicesSetting = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        if (enabledServicesSetting == null) return false;
+
+        android.text.TextUtils.SimpleStringSplitter colonSplitter = new android.text.TextUtils.SimpleStringSplitter(':');
+        colonSplitter.setString(enabledServicesSetting);
+
+        while (colonSplitter.hasNext()) {
+            String componentNameString = colonSplitter.next();
+            android.content.ComponentName enabledService = android.content.ComponentName.unflattenFromString(componentNameString);
+
+            if (enabledService != null && enabledService.equals(expectedComponentName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * WhatsApp mesajını otomatik göndermek için butonları yakalayan servis.
+     */
+    public static class WhatsAppAccessibilityService extends AccessibilityService {
+        @Override
+        public void onAccessibilityEvent(AccessibilityEvent event) {
+            if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
+                event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+                
+                AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+                if (rootNode == null) return;
+
+                // WhatsApp gönder butonunu bul (ID veya İçerik Açıklaması ile)
+                // com.whatsapp:id/send ve Türkçe/İngilizce "Gönder" / "Send" açıklamaları deneniyor
+                List<AccessibilityNodeInfo> sendMessageButtons = rootNode.findAccessibilityNodeInfosByViewId("com.whatsapp:id/send");
+                
+                if (sendMessageButtons == null || sendMessageButtons.isEmpty()) {
+                    // Alternatif: İçerik açıklamasından bul (Daha yavaş ama garantici)
+                    findAndClickSend(rootNode);
+                } else {
+                    for (AccessibilityNodeInfo node : sendMessageButtons) {
+                        if (node.isVisibleToUser() && node.isEnabled()) {
+                            node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                            node.recycle();
+                            break;
+                        }
+                    }
+                }
+                rootNode.recycle();
+            }
+        }
+
+        private void findAndClickSend(AccessibilityNodeInfo node) {
+            if (node == null) return;
+            
+            // WhatsApp'ın "Gönder" butonu metni veya açıklaması genellikle budur
+            if (node.getClassName() != null && node.getClassName().toString().contains("ImageButton")) {
+                CharSequence desc = node.getContentDescription();
+                if (desc != null) {
+                    String d = desc.toString().toLowerCase(new Locale("tr", "TR"));
+                    if (d.contains("gönder") || d.contains("send")) {
+                        node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                        return;
+                    }
+                }
+            }
+
+            for (int i = 0; i < node.getChildCount(); i++) {
+                findAndClickSend(node.getChild(i));
+            }
+        }
+
+        @Override
+        public void onInterrupt() {}
+    }
 
 }
