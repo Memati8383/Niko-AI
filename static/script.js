@@ -1554,24 +1554,167 @@ function closeProfileModal() {
     elements.profileModal.classList.remove('active');
 }
 
-// Social Media FAB Logic
+// Social Media FAB Logic (Draggable + Animated)
 document.addEventListener('DOMContentLoaded', () => {
     const fabToggle = document.getElementById('socialFabToggle');
     const fabContainer = document.getElementById('socialFabContainer');
-    
-    if (fabToggle && fabContainer) {
-        fabToggle.addEventListener('click', () => {
-            fabContainer.classList.toggle('active');
-            fabToggle.classList.toggle('active');
-        });
-        
-        // Close when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!fabContainer.contains(e.target) && fabContainer.classList.contains('active')) {
-                fabContainer.classList.remove('active');
-                fabToggle.classList.remove('active');
-            }
-        });
-    }
-});
 
+    if (!fabToggle || !fabContainer) return;
+
+    // ── Pozisyon yükle ──────────────────────────────────────────
+    const savedPos = JSON.parse(localStorage.getItem('fabPosition') || 'null');
+    if (savedPos) {
+        fabContainer.style.bottom = 'auto';
+        fabContainer.style.right  = 'auto';
+        fabContainer.style.top    = savedPos.top  + 'px';
+        fabContainer.style.left   = savedPos.left + 'px';
+        if (savedPos.isLeft) fabContainer.classList.add('snapped-left');
+    }
+
+    // ── Sürükleme ───────────────────────────────────────────────
+    let isDragging = false;
+    let dragMoved   = false;
+    let startX, startY, startLeft, startTop;
+    let dragTimeout;
+
+    function getContainerRect() {
+        return fabContainer.getBoundingClientRect();
+    }
+
+    function startDrag(clientX, clientY) {
+        const rect = getContainerRect();
+        startX    = clientX;
+        startY    = clientY;
+        startLeft = rect.left;
+        startTop  = rect.top;
+
+        isDragging = true;
+        dragMoved  = false;
+
+        fabContainer.style.transition = 'none';
+        fabContainer.style.bottom     = 'auto';
+        fabContainer.style.right      = 'auto';
+        fabContainer.style.top        = startTop + 'px';
+        fabContainer.style.left       = startLeft + 'px';
+        fabContainer.classList.add('dragging');
+    }
+
+    function moveDrag(clientX, clientY) {
+        if (!isDragging) return;
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragMoved = true;
+
+        const rect  = fabContainer.getBoundingClientRect();
+        const maxX  = window.innerWidth  - rect.width;
+        const maxY  = window.innerHeight - rect.height;
+
+        const newLeft = Math.min(Math.max(startLeft + dx, 0), maxX);
+        const newTop  = Math.min(Math.max(startTop  + dy, 0), maxY);
+
+        fabContainer.style.left = newLeft + 'px';
+        fabContainer.style.top  = newTop  + 'px';
+    }
+
+    function endDrag() {
+        if (!isDragging) return;
+        isDragging = false;
+        fabContainer.classList.remove('dragging');
+
+        // Yumuşak snap animasyonu
+        fabContainer.style.transition = 'left 0.45s cubic-bezier(0.16, 1, 0.3, 1), top 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease';
+
+        const rect   = fabContainer.getBoundingClientRect();
+        const midX   = rect.left + rect.width / 2;
+        const margin = 16;
+        const isLeft = midX < window.innerWidth / 2;
+        const snapLeft = isLeft
+            ? margin
+            : window.innerWidth - rect.width - margin;
+
+        // snapped-left class'ını güncelle (tooltip ve açılış yönü için)
+        fabContainer.classList.toggle('snapped-left', isLeft);
+
+        fabContainer.style.left = snapLeft + 'px';
+
+        // Snap bittikten sonra transition'ı temizle ve kaydet
+        setTimeout(() => {
+            fabContainer.style.transition = '';
+            const finalRect = fabContainer.getBoundingClientRect();
+            localStorage.setItem('fabPosition', JSON.stringify({ top: finalRect.top, left: finalRect.left, isLeft }));
+        }, 460);
+    }
+
+    // Mouse events
+    fabToggle.addEventListener('mousedown', (e) => {
+        dragTimeout = setTimeout(() => startDrag(e.clientX, e.clientY), 150);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging) moveDrag(e.clientX, e.clientY);
+    });
+
+    document.addEventListener('mouseup', () => {
+        clearTimeout(dragTimeout);
+        if (isDragging) { endDrag(); return; }
+    });
+
+    // Touch events
+    fabToggle.addEventListener('touchstart', (e) => {
+        const t = e.touches[0];
+        dragTimeout = setTimeout(() => startDrag(t.clientX, t.clientY), 150);
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault(); // Sürükleme sırasında sayfanın kaymasını engelle
+        const t = e.touches[0];
+        moveDrag(t.clientX, t.clientY);
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(dragTimeout);
+        if (isDragging) endDrag();
+    });
+
+    document.addEventListener('touchcancel', () => {
+        clearTimeout(dragTimeout);
+        if (isDragging) endDrag();
+    });
+
+    // ── Toggle (sadece tıklama, sürükleme değil) ────────────────
+    fabToggle.addEventListener('click', () => {
+        if (dragMoved) { dragMoved = false; return; }
+        const isActive = fabContainer.classList.toggle('active');
+        fabToggle.classList.toggle('active', isActive);
+
+        // Staggered animasyon için her butona delay ver
+        const btns = fabContainer.querySelectorAll('.social-btn');
+        btns.forEach((btn, i) => {
+            btn.style.transitionDelay = isActive
+                ? (i * 60) + 'ms'
+                : ((btns.length - 1 - i) * 40) + 'ms';
+        });
+    });
+
+    // Dışarı tıklayınca kapat
+    document.addEventListener('click', (e) => {
+        if (!fabContainer.contains(e.target) && fabContainer.classList.contains('active')) {
+            fabContainer.classList.remove('active');
+            fabToggle.classList.remove('active');
+            fabContainer.querySelectorAll('.social-btn').forEach(btn => {
+                btn.style.transitionDelay = '';
+            });
+        }
+    });
+
+    // Pencere boyutu değişince sınırlar içinde tut
+    window.addEventListener('resize', () => {
+        const rect  = fabContainer.getBoundingClientRect();
+        const maxX  = window.innerWidth  - rect.width  - 16;
+        const maxY  = window.innerHeight - rect.height - 16;
+        if (rect.left > maxX) fabContainer.style.left = maxX + 'px';
+        if (rect.top  > maxY) fabContainer.style.top  = maxY + 'px';
+    });
+});

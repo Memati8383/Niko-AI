@@ -1692,26 +1692,28 @@ option {
 /* Sosyal Medya Yüzen Aksiyon Butonu */
 .social-fab-container {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 24px;
+  right: 24px;
   z-index: 10000;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .social-fab-toggle {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: var(--accent-gradient);
-  border: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(15, 15, 22, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: white;
-  font-size: 2rem;
+  font-size: 1.5rem;
   cursor: pointer;
-  box-shadow: var(--shadow-lg);
-  transition: transform var(--transition-normal);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1719,11 +1721,20 @@ option {
 }
 
 .social-fab-toggle:hover {
-  transform: scale(1.1);
+  background: rgba(25, 25, 35, 0.95);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.08);
 }
 
 .social-fab-toggle.active {
   transform: rotate(45deg);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.fab-icon {
+  line-height: 1;
+  font-weight: 300;
 }
 
 .social-fab-options {
@@ -1732,40 +1743,49 @@ option {
   gap: 10px;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(20px);
-  transition: all var(--transition-normal);
-  margin-bottom: 5px;
+  transform: translateY(16px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 4px;
 }
 
 .social-fab-container.active .social-fab-options {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
 .social-btn {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border-primary);
-  color: var(--text-primary);
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(15, 15, 22, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-md);
-  transition: all var(--transition-fast);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
 }
 
 .social-btn svg {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .social-btn:hover {
-  transform: scale(1.1);
+  transform: translateY(-2px) scale(1.05);
   color: white;
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.social-btn:hover svg {
+  transform: scale(1.1);
 }
 
 /* Profil Resmi Stilleri */
@@ -1910,23 +1930,170 @@ option {
   box-shadow: 0 10px 20px -5px rgba(168, 85, 247, 0.3);
 }
 
-/* Özel renkler */
+/* Platform'a özgü hover renkleri */
 .social-btn.github:hover {
-  background: #333;
+  background: rgba(36, 36, 36, 0.95);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 .social-btn.telegram:hover {
-  background: #0088cc;
+  background: rgba(0, 120, 180, 0.85);
+  border-color: rgba(0, 168, 255, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 136, 204, 0.35);
 }
 .social-btn.tiktok:hover {
-  background: #000;
+  background: rgba(10, 10, 10, 0.95);
+  border-color: rgba(105, 201, 208, 0.35);
+  box-shadow: 0 8px 24px rgba(105, 201, 208, 0.2);
 }
 .social-btn.instagram:hover {
-  background: radial-gradient(
-    circle at 30% 107%,
-    #fdf497 0%,
-    #fdf497 5%,
-    #fd5949 45%,
-    #d6249f 60%,
-    #285aeb 90%
-  );
+  background: linear-gradient(135deg, rgba(64, 93, 230, 0.8) 0%, rgba(214, 36, 159, 0.8) 50%, rgba(253, 89, 73, 0.8) 100%);
+  border-color: rgba(253, 89, 73, 0.35);
+  box-shadow: 0 8px 24px rgba(214, 36, 159, 0.3);
+}
+
+/* Sürükleme durumu */
+.social-fab-container.dragging {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+.social-fab-container.dragging .social-fab-toggle {
+  cursor: grabbing !important;
+  transform: scale(1.08);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(255,255,255,0.1);
+}
+
+.social-fab-toggle {
+  cursor: grab;
+}
+
+/* Toggle butonu aktif animasyonu */
+.social-fab-toggle .fab-icon {
+  display: inline-block;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.social-fab-toggle.active .fab-icon {
+  transform: rotate(45deg);
+}
+
+/* Pulse animasyonu — pasif halde toggle etrafında */
+@keyframes fabPulse {
+  0%   { box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 0 rgba(255,255,255,0.08); }
+  70%  { box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 10px rgba(255,255,255,0); }
+  100% { box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 0 rgba(255,255,255,0); }
+}
+
+.social-fab-toggle:not(.active) {
+  animation: fabPulse 3s ease-out infinite;
+}
+
+.social-fab-toggle.active,
+.social-fab-container.dragging .social-fab-toggle {
+  animation: none;
+}
+
+/* Buton açılış animasyonu — snapped-left class'ına göre yön değişir */
+.social-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Sağa yapışık → butonlar sağdan gelir */
+.social-fab-container:not(.snapped-left) .social-btn {
+  transform: translateX(12px) scale(0.85);
+}
+
+/* Sola yapışık → butonlar soldan gelir */
+.social-fab-container.snapped-left .social-btn {
+  transform: translateX(-12px) scale(0.85);
+}
+
+.social-fab-container.active .social-btn {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Hover tooltip — sadece mouse cihazlarda göster */
+.social-btn {
+  position: relative;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .social-btn::before {
+    content: attr(title);
+    position: absolute;
+    top: 50%;
+    background: rgba(10, 10, 18, 0.92);
+    backdrop-filter: blur(8px);
+    color: rgba(255,255,255,0.85);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    font-family: var(--font-family);
+  }
+
+  /* Sağ tarafa yapışık → tooltip sola açılır */
+  .social-fab-container:not(.snapped-left) .social-btn::before {
+    right: calc(100% + 10px);
+    left: auto;
+    transform: translateY(-50%) translateX(6px);
+  }
+
+  .social-fab-container:not(.snapped-left) .social-btn:hover::before {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+
+  /* Sol tarafa yapışık → tooltip sağa açılır */
+  .social-fab-container.snapped-left .social-btn::before {
+    left: calc(100% + 10px);
+    right: auto;
+    transform: translateY(-50%) translateX(-6px);
+  }
+
+  .social-fab-container.snapped-left .social-btn:hover::before {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* ===== Mobil Optimizasyonlar ===== */
+@media (max-width: 768px) {
+  .social-fab-toggle {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+
+  .social-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 13px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .social-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .social-fab-options {
+    gap: 8px;
+  }
+
+  .social-fab-container.dragging .social-fab-toggle {
+    transform: scale(1.12);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255,255,255,0.15);
+  }
 }
