@@ -246,4 +246,4 @@ Made with ❤️ in Turkey 🇹🇷
 
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
-> 🌐 **Güncel Tünel Adresi:** [https://terminal-developers-necessary-scanning.trycloudflare.com](https://terminal-developers-necessary-scanning.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://adventure-concrete-shut-yarn.trycloudflare.com](https://adventure-concrete-shut-yarn.trycloudflare.com)
