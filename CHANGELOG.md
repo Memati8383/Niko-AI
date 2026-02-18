@@ -8,6 +8,7 @@ ve bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 ## [1.0.0] - 2026-02-07
 
 ### Eklenenler
+
 - 🎉 İlk stabil sürüm yayınlandı
 - 🤖 Ollama entegrasyonu ile çoklu LLM desteği
 - 🔐 JWT tabanlı unified authentication sistemi
@@ -30,6 +31,7 @@ ve bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 - 🛠️ Sistem başlatıcı (sistemi_baslat.bat)
 
 ### Güvenlik
+
 - Bcrypt ile şifre hashleme
 - JWT token tabanlı oturum yönetimi
 - CORS koruması
@@ -39,6 +41,7 @@ ve bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 ## [Gelecek Sürümler]
 
 ### Planlanıyor
+
 - [ ] iOS uygulaması
 - [ ] Çoklu dil desteği
 - [ ] Sesli yanıt (TTS) web için
@@ -53,4 +56,4 @@ ve bu proje [Semantic Versioning](https://semver.org/lang/tr/) kullanır.
 
 ---
 
-[1.0.0]: https://github.com/Memati8383/niko-with-kiro/releases/tag/v1.0.0
+[1.0.0]: https://github.com/Memati8383/Niko-AI/releases/tag/v1.0.0

@@ -8,11 +8,12 @@ Niko AI projesine katkıda bulunmak istediğiniz için teşekkür ederiz! Bu reh
    - GitHub'da projeyi fork edin
    - Yerel makinenize klonlayın:
      ```bash
-     git clone https://github.com/KULLANICI_ADINIZ/niko-with-kiro.git
-     cd niko-with-kiro
+     git clone https://github.com/KULLANICI_ADINIZ/Niko-AI.git
+     cd Niko-AI
      ```
 
 2. **Geliştirme Ortamını Kurun**
+
    ```bash
    python -m venv .venv
    .venv\Scripts\activate  # Windows
@@ -34,12 +35,14 @@ Niko AI projesine katkıda bulunmak istediğiniz için teşekkür ederiz! Bu reh
 ## 🔄 Pull Request Süreci
 
 1. Değişikliklerinizi commit edin:
+
    ```bash
    git add .
    git commit -m "feat: yeni özellik eklendi"
    ```
 
 2. Branch'inizi push edin:
+
    ```bash
    git push origin feature/yeni-ozellik
    ```
@@ -49,6 +52,7 @@ Niko AI projesine katkıda bulunmak istediğiniz için teşekkür ederiz! Bu reh
 ## 🐛 Bug Raporlama
 
 Bug bulduğunuzda lütfen şu bilgileri ekleyin:
+
 - Bug'ın açıklaması
 - Yeniden üretme adımları
 - Beklenen davranış
@@ -59,6 +63,7 @@ Bug bulduğunuzda lütfen şu bilgileri ekleyin:
 ## 💡 Özellik Önerileri
 
 Yeni özellik önerilerinizi GitHub Issues üzerinden paylaşabilirsiniz. Lütfen:
+
 - Özelliğin amacını açıklayın
 - Kullanım senaryolarını belirtin
 - Mümkünse mockup veya örnek ekleyin
@@ -72,6 +77,7 @@ Detaylı açıklama (opsiyonel)
 ```
 
 **Tipler:**
+
 - `feat`: Yeni özellik
 - `fix`: Bug düzeltmesi
 - `docs`: Dokümantasyon değişikliği
@@ -83,6 +89,7 @@ Detaylı açıklama (opsiyonel)
 ## 🧪 Test
 
 Değişikliklerinizi test etmek için:
+
 ```bash
 pytest test_validation.py
 ```

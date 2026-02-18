@@ -18,6 +18,7 @@ API, JWT (JSON Web Token) tabanlı kimlik doğrulama kullanır.
 **Endpoint:** `POST /token`
 
 **Request Body:**
+
 ```json
 {
   "username": "kullanici_adi",
@@ -26,6 +27,7 @@ API, JWT (JSON Web Token) tabanlı kimlik doğrulama kullanır.
 ```
 
 **Response:**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -36,6 +38,7 @@ API, JWT (JSON Web Token) tabanlı kimlik doğrulama kullanır.
 ### Token Kullanımı
 
 Tüm korumalı endpoint'lerde header'a ekleyin:
+
 ```
 Authorization: Bearer <token>
 ```
@@ -45,6 +48,7 @@ Authorization: Bearer <token>
 ### 1. Kullanıcı İşlemleri
 
 #### Kayıt Ol
+
 ```http
 POST /signup
 Content-Type: application/json
@@ -57,6 +61,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Kullanıcı başarıyla oluşturuldu",
@@ -65,6 +70,7 @@ Content-Type: application/json
 ```
 
 #### Giriş Yap
+
 ```http
 POST /token
 Content-Type: application/x-www-form-urlencoded
@@ -73,12 +79,14 @@ username=kullanici&password=sifre
 ```
 
 #### Profil Bilgisi
+
 ```http
 GET /profile
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "user_id": "uuid",
@@ -90,6 +98,7 @@ Authorization: Bearer <token>
 ```
 
 #### Profil Güncelle
+
 ```http
 PUT /profile
 Authorization: Bearer <token>
@@ -104,6 +113,7 @@ Content-Type: application/json
 ### 2. Chat İşlemleri
 
 #### Mesaj Gönder
+
 ```http
 POST /chat
 Authorization: Bearer <token>
@@ -118,6 +128,7 @@ Content-Type: application/json
 ```
 
 **Response (Stream):**
+
 ```json
 data: {"type": "thought", "content": "Kullanıcı selamlaşıyor..."}
 data: {"type": "response", "content": "Merhaba! Nasıl yardımcı olabilirim?"}
@@ -125,12 +136,14 @@ data: {"type": "done"}
 ```
 
 #### Sohbet Geçmişi
+
 ```http
 GET /history?limit=50&offset=0
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "total": 100,
@@ -147,12 +160,14 @@ Authorization: Bearer <token>
 ```
 
 #### Geçmişi Temizle
+
 ```http
 DELETE /history
 Authorization: Bearer <token>
 ```
 
 #### Geçmişi Dışa Aktar
+
 ```http
 GET /history/export?format=json
 Authorization: Bearer <token>
@@ -161,12 +176,14 @@ Authorization: Bearer <token>
 ### 3. Model İşlemleri
 
 #### Mevcut Modelleri Listele
+
 ```http
 GET /models
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 {
   "models": [
@@ -180,6 +197,7 @@ Authorization: Bearer <token>
 ```
 
 #### Model Bilgisi
+
 ```http
 GET /models/{model_name}
 Authorization: Bearer <token>
@@ -188,11 +206,13 @@ Authorization: Bearer <token>
 ### 4. Sistem İşlemleri
 
 #### Sağlık Kontrolü
+
 ```http
 GET /health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -202,11 +222,13 @@ GET /health
 ```
 
 #### Versiyon Bilgisi
+
 ```http
 GET /version
 ```
 
 **Response:**
+
 ```json
 {
   "version": "1.0.0",
@@ -219,12 +241,14 @@ GET /version
 ### 5. Admin İşlemleri
 
 #### Tüm Kullanıcıları Listele
+
 ```http
 GET /admin/users
 Authorization: Bearer <admin_token>
 ```
 
 **Response:**
+
 ```json
 {
   "users": [
@@ -239,18 +263,21 @@ Authorization: Bearer <admin_token>
 ```
 
 #### Kullanıcı Sil
+
 ```http
 DELETE /admin/users/{user_id}
 Authorization: Bearer <admin_token>
 ```
 
 #### Sistem İstatistikleri
+
 ```http
 GET /admin/stats
 Authorization: Bearer <admin_token>
 ```
 
 **Response:**
+
 ```json
 {
   "total_users": 100,
@@ -263,6 +290,7 @@ Authorization: Bearer <admin_token>
 ## 🔊 Text-to-Speech
 
 #### Metni Sese Çevir
+
 ```http
 POST /tts
 Authorization: Bearer <token>
@@ -281,6 +309,7 @@ Content-Type: application/json
 ## 🔍 Web Arama
 
 #### Arama Yap
+
 ```http
 POST /search
 Authorization: Bearer <token>
@@ -293,6 +322,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "results": [
@@ -307,16 +337,16 @@ Content-Type: application/json
 
 ## ⚠️ Hata Kodları
 
-| Kod | Açıklama |
-|-----|----------|
-| 200 | Başarılı |
-| 201 | Oluşturuldu |
-| 400 | Geçersiz istek |
-| 401 | Yetkisiz |
-| 403 | Yasak |
-| 404 | Bulunamadı |
-| 429 | Çok fazla istek |
-| 500 | Sunucu hatası |
+| Kod | Açıklama              |
+| --- | --------------------- |
+| 200 | Başarılı              |
+| 201 | Oluşturuldu           |
+| 400 | Geçersiz istek        |
+| 401 | Yetkisiz              |
+| 403 | Yasak                 |
+| 404 | Bulunamadı            |
+| 429 | Çok fazla istek       |
+| 500 | Sunucu hatası         |
 | 503 | Servis kullanılamıyor |
 
 ## 🔒 Rate Limiting
@@ -328,6 +358,7 @@ Content-Type: application/json
 ## 📝 Örnek Kullanım
 
 ### Python
+
 ```python
 import requests
 
@@ -347,30 +378,32 @@ response = requests.post(
 ```
 
 ### JavaScript
+
 ```javascript
 // Giriş yap
-const loginResponse = await fetch('http://localhost:8000/token', {
-  method: 'POST',
-  headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-  body: 'username=user&password=pass'
+const loginResponse = await fetch("http://localhost:8000/token", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: "username=user&password=pass",
 });
 const { access_token } = await loginResponse.json();
 
 // Mesaj gönder
-const chatResponse = await fetch('http://localhost:8000/chat', {
-  method: 'POST',
+const chatResponse = await fetch("http://localhost:8000/chat", {
+  method: "POST",
   headers: {
-    'Authorization': `Bearer ${access_token}`,
-    'Content-Type': 'application/json'
+    Authorization: `Bearer ${access_token}`,
+    "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    message: 'Merhaba',
-    model: 'RefinedNeuro/RN_TR_R2:latest'
-  })
+    message: "Merhaba",
+    model: "RefinedNeuro/RN_TR_R2:latest",
+  }),
 });
 ```
 
 ### cURL
+
 ```bash
 # Giriş yap
 TOKEN=$(curl -X POST "http://localhost:8000/token" \
@@ -389,4 +422,4 @@ Gerçek zamanlı chat için WebSocket desteği planlanıyor.
 
 ---
 
-Daha fazla bilgi için [GitHub Wiki](https://github.com/Memati8383/niko-with-kiro/wiki) sayfasını ziyaret edin.
+Daha fazla bilgi için [GitHub Wiki](https://github.com/Memati8383/Niko-AI/wiki) sayfasını ziyaret edin.

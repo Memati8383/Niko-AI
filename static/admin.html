@@ -274,12 +274,18 @@
       /* Modal & Form - Avant-Garde Premium Redesign */
       .admin-modal .modal {
         max-width: 520px;
-        background: linear-gradient(145deg, rgba(15, 15, 25, 0.95) 0%, rgba(8, 8, 12, 0.95) 100%);
+        background: linear-gradient(
+          145deg,
+          rgba(15, 15, 25, 0.95) 0%,
+          rgba(8, 8, 12, 0.95) 100%
+        );
         backdrop-filter: blur(40px);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 32px;
         padding: 40px;
-        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 100px rgba(6, 182, 212, 0.05);
+        box-shadow:
+          0 30px 60px rgba(0, 0, 0, 0.5),
+          0 0 100px rgba(6, 182, 212, 0.05);
       }
 
       .modal-title {
@@ -480,7 +486,11 @@
       }
 
       .device-card {
-        background: linear-gradient(135deg, rgba(13, 13, 22, 0.8) 0%, rgba(8, 8, 12, 0.9) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(13, 13, 22, 0.8) 0%,
+          rgba(8, 8, 12, 0.9) 100%
+        );
         backdrop-filter: blur(30px);
         -webkit-backdrop-filter: blur(30px);
         border: 1px solid var(--border-primary);
@@ -498,7 +508,11 @@
         content: "";
         position: absolute;
         inset: 0;
-        background: radial-gradient(circle at top right, rgba(6, 182, 212, 0.15), transparent 60%);
+        background: radial-gradient(
+          circle at top right,
+          rgba(6, 182, 212, 0.15),
+          transparent 60%
+        );
         pointer-events: none;
         transition: opacity var(--transition-premium);
       }
@@ -506,7 +520,9 @@
       .device-card:hover {
         transform: translateY(-8px) rotateX(1deg);
         border-color: rgba(6, 182, 212, 0.4);
-        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(6, 182, 212, 0.1);
+        box-shadow:
+          0 30px 60px rgba(0, 0, 0, 0.5),
+          0 0 30px rgba(6, 182, 212, 0.1);
       }
 
       .device-card:hover::before {
@@ -558,25 +574,33 @@
       }
 
       body::before {
-        content: '';
+        content: "";
         position: fixed;
         top: -10%;
         right: -10%;
         width: 50vw;
         height: 50vw;
-        background: radial-gradient(circle, rgba(6, 182, 212, 0.05) 0%, transparent 70%);
+        background: radial-gradient(
+          circle,
+          rgba(6, 182, 212, 0.05) 0%,
+          transparent 70%
+        );
         z-index: -1;
         pointer-events: none;
       }
 
       body::after {
-        content: '';
+        content: "";
         position: fixed;
         bottom: -10%;
         left: -10%;
         width: 40vw;
         height: 40vw;
-        background: radial-gradient(circle, rgba(45, 212, 191, 0.03) 0%, transparent 70%);
+        background: radial-gradient(
+          circle,
+          rgba(45, 212, 191, 0.03) 0%,
+          transparent 70%
+        );
         z-index: -1;
         pointer-events: none;
       }
@@ -634,8 +658,14 @@
       }
 
       @keyframes pulse-ring {
-        0% { transform: scale(1); opacity: 0.5; }
-        100% { transform: scale(2.5); opacity: 0; }
+        0% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        100% {
+          transform: scale(2.5);
+          opacity: 0;
+        }
       }
 
       .device-info {
@@ -720,7 +750,11 @@
       .is-active-premium {
         border-color: rgba(34, 197, 94, 0.4) !important;
         box-shadow: 0 15px 40px -10px rgba(34, 197, 94, 0.15) !important;
-        background: linear-gradient(135deg, rgba(20, 30, 20, 0.6) 0%, rgba(10, 15, 10, 0.6) 100%) !important;
+        background: linear-gradient(
+          135deg,
+          rgba(20, 30, 20, 0.6) 0%,
+          rgba(10, 15, 10, 0.6) 100%
+        ) !important;
       }
 
       .device-status.online {
@@ -740,7 +774,11 @@
         max-width: 1150px;
         width: 95%;
         height: 85vh;
-        background: linear-gradient(135deg, rgba(15, 15, 25, 0.98) 0%, rgba(10, 10, 15, 0.98) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(15, 15, 25, 0.98) 0%,
+          rgba(10, 10, 15, 0.98) 100%
+        );
         backdrop-filter: blur(40px);
         border: 1px solid rgba(255, 255, 255, 0.08);
         padding: 0;
@@ -752,8 +790,14 @@
       }
 
       @keyframes modalScaleUp {
-        from { opacity: 0; transform: scale(0.98) translateY(10px); }
-        to { opacity: 1; transform: scale(1) translateY(0); }
+        from {
+          opacity: 0;
+          transform: scale(0.98) translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
       }
 
       #dataViewerModal .modal-title {
@@ -837,10 +881,16 @@
       }
 
       .data-type-item.active {
-        background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(6, 182, 212, 0.04) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(6, 182, 212, 0.12) 0%,
+          rgba(6, 182, 212, 0.04) 100%
+        );
         color: #22d3ee;
         border-color: rgba(6, 182, 212, 0.3);
-        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3), inset 0 0 15px rgba(6, 182, 212, 0.05);
+        box-shadow:
+          0 10px 20px -5px rgba(0, 0, 0, 0.3),
+          inset 0 0 15px rgba(6, 182, 212, 0.05);
         font-weight: 700;
       }
 
@@ -853,7 +903,7 @@
       }
 
       .data-type-item.active::after {
-        content: '';
+        content: "";
         position: absolute;
         right: 12px;
         width: 6px;
@@ -865,9 +915,18 @@
       }
 
       @keyframes active-pulse {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.5); opacity: 0.5; }
-        100% { transform: scale(1); opacity: 1; }
+        0% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.5);
+          opacity: 0.5;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
       }
 
       .data-content-wrapper {
@@ -925,7 +984,11 @@
         flex: 1;
         padding: 32px;
         overflow-y: auto;
-        background: radial-gradient(circle at top right, rgba(6, 182, 212, 0.05), transparent 40%);
+        background: radial-gradient(
+          circle at top right,
+          rgba(6, 182, 212, 0.05),
+          transparent 40%
+        );
       }
 
       /* Premium JSON Syntax Highlighting */
@@ -942,11 +1005,24 @@
         box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
       }
 
-      .data-pre .key { color: #2dd4bf; font-weight: 600; }
-      .data-pre .string { color: #10b981; }
-      .data-pre .number { color: #fbbf24; }
-      .data-pre .boolean { color: #06b6d4; font-weight: 600; }
-      .data-pre .null { color: #94a3b8; font-style: italic; }
+      .data-pre .key {
+        color: #2dd4bf;
+        font-weight: 600;
+      }
+      .data-pre .string {
+        color: #10b981;
+      }
+      .data-pre .number {
+        color: #fbbf24;
+      }
+      .data-pre .boolean {
+        color: #06b6d4;
+        font-weight: 600;
+      }
+      .data-pre .null {
+        color: #94a3b8;
+        font-style: italic;
+      }
 
       /* Premium Data Pretty View */
       .pretty-data-container {
@@ -954,12 +1030,22 @@
       }
 
       @keyframes fadeInSlideUp {
-        from { opacity: 0; transform: translateY(30px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       .data-summary-bar {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.03) 0%,
+          rgba(255, 255, 255, 0.01) 100%
+        );
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1061,7 +1147,11 @@
       }
 
       .device-list-table tr td {
-        background: linear-gradient(135deg, rgba(13, 13, 22, 0.6) 0%, rgba(8, 8, 12, 0.4) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(13, 13, 22, 0.6) 0%,
+          rgba(8, 8, 12, 0.4) 100%
+        );
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         padding: 20px 25px;
@@ -1071,7 +1161,11 @@
       }
 
       .device-list-table tr:hover td {
-        background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(6, 182, 212, 0.03) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(6, 182, 212, 0.08) 0%,
+          rgba(6, 182, 212, 0.03) 100%
+        );
         border-color: rgba(6, 182, 212, 0.3);
         transform: translateY(-3px) scale(1.005);
         color: #fff;
@@ -1170,7 +1264,11 @@
       }
 
       .btn-close-premium:hover {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.1) 100%);
+        background: linear-gradient(
+          135deg,
+          rgba(239, 68, 68, 0.2) 0%,
+          rgba(239, 68, 68, 0.1) 100%
+        );
         border-color: rgba(239, 68, 68, 0.4);
         box-shadow: 0 15px 40px rgba(239, 68, 68, 0.2);
         transform: translateY(-4px);
@@ -1223,14 +1321,19 @@
           padding: 10px 20px;
           height: fit-content;
         }
-        .data-content-wrapper { order: 1; }
+        .data-content-wrapper {
+          order: 1;
+        }
 
         /* User Table Mobile Refinement */
         .users-table thead {
           display: none;
         }
 
-        .users-table, .users-table tbody, .users-table tr, .users-table td {
+        .users-table,
+        .users-table tbody,
+        .users-table tr,
+        .users-table td {
           display: block;
           width: 100%;
         }
@@ -1319,12 +1422,22 @@
         gap: 0.75rem;
       }
 
-      .toast.success { border-left: 4px solid var(--success); }
-      .toast.error { border-left: 4px solid var(--error); }
+      .toast.success {
+        border-left: 4px solid var(--success);
+      }
+      .toast.error {
+        border-left: 4px solid var(--error);
+      }
 
       @keyframes toastIn {
-        from { opacity: 0; transform: translateX(30px); }
-        to { opacity: 1; transform: translateX(0); }
+        from {
+          opacity: 0;
+          transform: translateX(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
       }
 
       /* Premium Medya Galeri Stilleri */
@@ -1364,7 +1477,8 @@
         overflow: hidden;
       }
 
-      .media-preview-box img, .media-preview-box video {
+      .media-preview-box img,
+      .media-preview-box video {
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -1464,35 +1578,15 @@
         </div>
       </header>
 
-      <!-- Multi-Tab Navigation -->
+      <!-- Multi-Tab Navigation (Simplified: Only User Management remains) -->
       <div class="admin-tabs">
-        <button class="tab-btn active" data-tab="devices">
-          📱 Cihaz Takibi
+        <button class="tab-btn active" data-tab="users">
+          👥 Kullanıcı Yönetimi
         </button>
-        <button class="tab-btn" data-tab="users">👥 Kullanıcı Yönetimi</button>
-      </div>
-
-      <!-- Device Monitoring Section -->
-      <div id="devicesTab" class="tab-content active">
-        <div class="table-controls" style="justify-content: flex-end; margin-bottom: var(--spacing-md);">
-          <div class="view-toggle" id="deviceViewToggle">
-            <button class="toggle-btn active" data-view="grid">🔲 Izgara</button>
-            <button class="toggle-btn" data-view="table">📋 Tablo</button>
-          </div>
-        </div>
-        <div id="deviceContainer">
-          <div class="device-grid" id="deviceGrid">
-            <!-- Devices will be rendered here -->
-            <div class="loading-state">
-              <div class="loading-spinner"></div>
-              <p>Cihazlar taranıyor...</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Users Table Section -->
-      <div id="usersTab" class="tab-content">
+      <div id="usersTab" class="tab-content active">
         <!-- Table Controls -->
         <div class="table-controls">
           <div class="filter-group">
@@ -1592,52 +1686,11 @@
             <button type="button" class="modal-btn cancel" id="cancelUserBtn">
               İptal
             </button>
-            <button
-              type="submit"
-              class="modal-btn confirm"
-              id="saveUserBtn"
-            >
+            <button type="submit" class="modal-btn confirm" id="saveUserBtn">
               Kaydet
             </button>
           </div>
         </form>
-      </div>
-    </div>
-
-    <!-- Device Data Viewer Modal -->
-    <div class="modal-overlay" id="dataViewerModal">
-      <div class="modal">
-        <h3 class="modal-title" id="dataViewerTitle">
-          <span>📱</span> Cihaz Verileri
-        </h3>
-        <div class="data-viewer-container">
-          <div class="data-sidebar" id="dataSidebar">
-            <!-- Data types will be listed here -->
-          </div>
-          <div class="data-content-wrapper">
-            <div class="data-header-bar" id="dataHeaderBar">
-              <div style="display: flex; align-items: center; gap: var(--spacing-md);">
-                <h4 id="currentDataTypeName" style="color: #06b6d4; text-transform: uppercase; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.15em;">Veri Seçilmedi</h4>
-                <div class="view-toggle" id="viewToggle" style="display: none;">
-                  <button class="toggle-btn active" data-view="pretty">Analiz</button>
-                  <button class="toggle-btn" data-view="raw">Ham JSON</button>
-                </div>
-              </div>
-              <button class="btn btn-copy-premium" id="copyDataBtn" style="display: none;">📋 Veriyi Kopyala</button>
-            </div>
-            <div class="data-content" id="dataContent">
-              <div class="empty-state">
-                <div class="empty-state-icon" style="opacity: 0.5;">📡</div>
-                <p>Veri kaynağı seçimi bekleniyor...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="btn-close-premium" id="closeDataViewerBtn">
-            <span>✖</span> Kapat
-          </button>
-        </div>
       </div>
     </div>
 
@@ -1669,12 +1722,6 @@
       let users = [];
       let currentEditUser = null;
       let userToDelete = null;
-      let currentDevice = null;
-      let currentData = null;
-      let currentDataType = null;
-      let currentView = 'pretty'; // Modal view
-      let deviceView = 'grid'; // Main device view: 'grid' or 'table'
-      let allDevices = [];
 
       // DOM Elemanları
       const usersTableBody = document.getElementById("usersTableBody");
@@ -1704,8 +1751,7 @@
           btn.classList.add("active");
           document.getElementById(`${tab}Tab`).classList.add("active");
 
-          if (tab === "devices") fetchDevices();
-          else if (tab === "users") fetchUsers();
+          if (tab === "users") fetchUsers();
         });
       });
 
@@ -1793,463 +1839,8 @@
       // API Fonksiyonları
       // ============================================================================
 
-      async function fetchDevices() {
-        const token = getToken();
-        const container = document.getElementById("deviceContainer");
-
-        try {
-          const response = await fetch("/api/admin/devices", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-
-          if (!response.ok) throw new Error("Cihazlar yüklenemedi");
-
-          const data = await response.json();
-          allDevices = data.devices || [];
-
-          renderDevices();
-        } catch (error) {
-          container.innerHTML = `<div class="error-message">${error.message}</div>`;
-        }
-      }
-
-      function renderDevices() {
-        const container = document.getElementById("deviceContainer");
-        
-        if (allDevices.length === 0) {
-          container.innerHTML = `
-            <div class="empty-state" style="padding: var(--spacing-2xl) var(--spacing-xl); background: var(--bg-glass); border-radius: var(--radius-xl); border: 1px dashed var(--border-primary); margin-top: var(--spacing-lg);">
-                <div class="empty-state-icon" style="font-size: 4rem; margin-bottom: var(--spacing-md); filter: drop-shadow(0 0 20px var(--accent-glow));">📡</div>
-                <h3 style="color: var(--text-primary); margin-bottom: var(--spacing-xs);">Veri Bağlantısı Bekleniyor</h3>
-                <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto;">Henüz senkronize edilmiş bir cihaz bulunamadı. Cihazlar otomatik olarak burada görünecektir.</p>
-            </div>
-          `;
-          return;
-        }
-
-        if (deviceView === 'grid') {
-          container.innerHTML = `<div class="device-grid">${allDevices.map(device => renderDeviceCard(device)).join('')}</div>`;
-        } else {
-          container.innerHTML = renderDeviceTable();
-        }
-      }
-
-      function timeAgo(dateString) {
-        if (!dateString) return "Bilinmiyor";
-        try {
-          const date = new Date(dateString);
-          const now = new Date();
-          const diffInSeconds = Math.floor((now - date) / 1000);
-          
-          if (diffInSeconds < 60) return "Saniyeler önce";
-          if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} dk önce`;
-          if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} sa önce`;
-          return date.toLocaleDateString('tr-TR');
-        } catch {
-          return "Bilinmiyor";
-        }
-      }
-
-      function renderDeviceCard(device) {
-        return `
-          <div class="device-card ${device.is_online ? 'is-active-premium' : ''}">
-              <div class="device-header">
-                  <div class="device-name-wrapper">
-                      <div class="device-icon-box">${device.is_online ? '📡' : '📱'}</div>
-                      <div class="device-name" title="${escapeHtml(device.name)}">${escapeHtml(device.name)}</div>
-                  </div>
-                  <div class="device-status ${device.is_online ? 'online' : ''}">
-                      <div class="pulse-dot"></div>
-                      ${device.is_online ? "Aktif" : "Pasif"}
-                  </div>
-              </div>
-              
-              <div class="device-info">
-                  <div class="info-item">
-                      <span class="info-label">Son Senkronizasyon</span>
-                      <span class="info-value">${timeAgo(device.last_seen)}</span>
-                  </div>
-                  <div class="info-item">
-                      <span class="info-label">OS Sürümü</span>
-                      <span class="info-value">${escapeHtml(device.os_version)}</span>
-                  </div>
-              </div>
-
-              <div class="device-actions">
-                   <button class="card-btn btn-view" style="width: 100%;" onclick="viewDeviceDetails('${escapeHtml(device.name)}')">
-                    <span style="font-size: 1.1rem;">📊</span> Verileri Gör
-                  </button>
-              </div>
-          </div>
-        `;
-      }
-
-      function renderDeviceTable() {
-        return `
-          <div class="table-responsive" style="animation: fadeIn 0.5s ease;">
-            <table class="device-list-table">
-              <thead>
-                <tr>
-                  <th>Cihaz Bilgisi</th>
-                  <th>Durum</th>
-                  <th>Sürüm</th>
-                  <th>Son Etkinlik</th>
-                  <th>İşlemler</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${allDevices.map(device => {
-                  return `
-                    <tr>
-                      <td>
-                        <div class="device-table-name">
-                          <div class="device-table-icon">${device.is_online ? '📡' : '📱'}</div>
-                          <div style="display: flex; flex-direction: column; gap: 2px;">
-                            <span style="color: var(--accent-primary)">${escapeHtml(device.name)}</span>
-                            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">Android Cihaz</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div class="table-badge ${device.is_online ? 'online' : 'offline'}">
-                          <div class="pulse-dot" style="width: 6px; height: 6px; background: ${device.is_online ? "#22c55e" : "rgba(255,255,255,0.2)"}; box-shadow: ${device.is_online ? '0 0 8px #22c55e' : 'none'};"></div>
-                          ${device.is_online ? "AKTİF" : "PASİF"}
-                        </div>
-                      </td>
-                      <td>
-                        <div style="font-size: 0.9rem; font-weight: 600; color: rgba(255,255,255,0.7);">Android ${escapeHtml(device.os_version)}</div>
-                      </td>
-                      <td>
-                        <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">${timeAgo(device.last_seen)}</div>
-                      </td>
-                      <td>
-                         <button class="btn btn-secondary btn-sm" style="border-radius: 12px; padding: 10px 24px; font-weight: 700; display: flex; align-items: center; gap: 8px;" onclick="viewDeviceDetails('${escapeHtml(device.name)}')">
-                            <span style="font-size: 1.1rem;">📊</span> DETAYLI ANALİZ
-                          </button>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        `;
-      }
-
-      // Main Device View Toggle
-      document.querySelectorAll('#deviceViewToggle .toggle-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('#deviceViewToggle .toggle-btn').forEach(el => el.classList.remove('active'));
-          btn.classList.add('active');
-          deviceView = btn.dataset.view;
-          renderDevices();
-        });
-      });
-
-      async function viewDeviceDetails(device) {
-        currentDevice = device;
-        const modal = document.getElementById("dataViewerModal");
-        const title = document.getElementById("dataViewerTitle");
-        const sidebar = document.getElementById("dataSidebar");
-        const content = document.getElementById("dataContent");
-        const headerTitle = document.getElementById("currentDataTypeName");
-        const copyBtn = document.getElementById("copyDataBtn");
-
-        title.innerHTML = `<span>📱</span> ${device}`;
-        headerTitle.textContent = "Veri Kaynağı Bekleniyor";
-        copyBtn.style.display = "none";
-        sidebar.innerHTML = '<div class="loading-state" style="padding: 20px;"><div class="loading-spinner" style="width: 24px; height: 24px;"></div></div>';
-        content.innerHTML = '<div class="empty-state"><p>Detaylı analiz için veri türü seçin.</p></div>';
-        
-        // View state sync
-        document.querySelectorAll('#viewToggle .toggle-btn').forEach(btn => {
-          btn.classList.toggle('active', btn.dataset.view === currentView);
-        });
-
-        modal.classList.add("active");
-
-        const typeIcons = {
-          'contacts': '👥',
-          'call_logs': '📞',
-          'sms': '💬',
-          'location': '📍',
-          'installed_apps': '📦',
-          'usage_stats': '📊',
-          'surveillance_info': '📷',
-          'network_info': '📶',
-          'bluetooth_devices': '📡',
-          'sensors': '🌡️',
-          'clipboard': '📋',
-          'calendar': '📅',
-          'accounts': '🔑',
-          'documents_list': '📄',
-          'social_messages': '💬',
-          'social_media': '🌐',
-          'social_media_files': '📁',
-          'photos': '🖼️',
-          'videos': '🎬',
-          'audio': '🎵'
-        };
-
-        try {
-          const token = getToken();
-          const response = await fetch(`/api/admin/devices/${encodeURIComponent(device)}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          if (!response.ok) throw new Error("Veriler okunamadı");
-          
-          const data = await response.json();
-          const dataTypes = data.data_types || [];
-          
-          if (dataTypes.length === 0) {
-            sidebar.innerHTML = '<p style="padding: 20px; font-size: 13px; color: var(--text-muted); text-align: center;">Kayıtlı veri bulunamadı.</p>';
-            return;
-          }
-
-          sidebar.innerHTML = dataTypes.map(type => {
-            const icon = typeIcons[type] || '📄';
-            const label = type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-            return `
-              <div class="data-type-item" onclick="fetchDeviceData('${escapeHtml(device)}', '${escapeHtml(type)}', this)">
-                <span>${icon}</span>
-                <span>${label}</span>
-              </div>
-            `;
-          }).join('');
-
-          // İlk veriyi otomatik aç
-          const firstItem = sidebar.querySelector('.data-type-item');
-          if (firstItem) firstItem.click();
-
-        } catch (error) {
-          sidebar.innerHTML = `<p style="color: var(--error); padding: 20px;">${error.message}</p>`;
-        }
-      }
-
-      async function fetchDeviceData(device, type, element) {
-        document.querySelectorAll('.data-type-item').forEach(el => el.classList.remove('active'));
-        if (element) element.classList.add('active');
-
-        const content = document.getElementById("dataContent");
-        const headerTitle = document.getElementById("currentDataTypeName");
-        const copyBtn = document.getElementById("copyDataBtn");
-        const viewToggle = document.getElementById("viewToggle");
-        
-        currentDataType = type;
-        headerTitle.textContent = type.replace(/_/g, ' ').toUpperCase();
-        content.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Dijital kalıntılar taranıyor...</p></div>';
-
-        try {
-          const token = getToken();
-          const response = await fetch(`/api/admin/devices/${encodeURIComponent(device)}/${encodeURIComponent(type)}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-
-          if (!response.ok) throw new Error("Veri paketine erişilemedi");
-
-          currentData = await response.json();
-          renderDeviceContent();
-          
-          copyBtn.style.display = "flex";
-          copyBtn.onclick = () => {
-            const dataToCopy = currentData ? JSON.stringify(currentData, null, 2) : "";
-            if (dataToCopy) {
-              copyToClipboard(dataToCopy);
-            } else {
-              showToast("Kopyalanacak veri bulunamadı", "error");
-            }
-          };
-          viewToggle.style.display = "flex";
-
-        } catch (error) {
-          content.innerHTML = `<div class="error-message">${error.message}</div>`;
-          copyBtn.style.display = "none";
-          viewToggle.style.display = "none";
-        }
-      }
-
-      function renderDeviceContent() {
-        const content = document.getElementById("dataContent");
-        
-        if (currentView === 'raw') {
-          const jsonStr = JSON.stringify(currentData, null, 2);
-          content.innerHTML = `
-            <div class="pretty-data-container" style="animation: fadeInSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
-              <pre class="data-pre"><code>${syntaxHighlight(jsonStr)}</code></pre>
-            </div>
-          `;
-        } else {
-          renderPrettyContent();
-        }
-      }
-
-      function renderPrettyContent() {
-        const content = document.getElementById("dataContent");
-        
-        const deviceName = currentData.device || currentDevice || "N/A";
-        const timestamp = currentData.timestamp ? new Date(currentData.timestamp).toLocaleString('tr-TR') : "N/A";
-        const items = Array.isArray(currentData.data) ? currentData.data : (Array.isArray(currentData) ? currentData : null);
-
-        // Galeri Modu Lazım mı?
-        const isGalleryMode = ["photos", "videos", "audio", "social_media", "social_media_files"].includes(currentDataType);
-
-        let html = `
-          <div class="pretty-data-container">
-            <div class="data-summary-bar">
-              <div class="summary-item">
-                <span>AKTİF CİHAZ</span>
-                <strong>${deviceName}</strong>
-              </div>
-              <div class="summary-item">
-                <span>VERİ TÜRÜ</span>
-                <strong style="color: var(--accent-primary)">${currentDataType.replace(/_/g, ' ').toUpperCase()}</strong>
-              </div>
-              ${items ? `
-              <div class="summary-item">
-                <span>TOPLAM KAYIT</span>
-                <strong>${items.length}</strong>
-              </div>` : ''}
-              <div class="summary-item" style="margin-left: auto;">
-                <span>DURUM</span>
-                <strong style="color: var(--success); display: flex; align-items: center; gap: 6px;">
-                  <div class="pulse-dot" style="width: 8px; height: 8px; background: var(--success);"></div>
-                  VERİ ONAYLANDI
-                </strong>
-              </div>
-            </div>
-        `;
-
-        if (items && items.length > 0) {
-          if (isGalleryMode) {
-            // Galeri Görünümü
-            html += `<div class="media-gallery-grid">`;
-            items.forEach(item => {
-              const fileName = item.dosya_adi || item.name;
-              if (!fileName) return;
-
-              const isVideo = fileName.match(/\.(mp4|3gp|avi|mov)$/i);
-              const isAudio = fileName.match(/\.(mp3|wav|ogg|m4a)$/i);
-              const typeLabel = isVideo ? "VIDEO" : (isAudio ? "AUDIO" : "IMAGE");
-              
-              // Dosya URL'i
-              const fileUrl = `/api/admin/devices/${encodeURIComponent(currentDevice)}/${encodeURIComponent(currentDataType)}/file/${encodeURIComponent(fileName)}?token=${getToken()}`;
-
-              html += `
-                <div class="media-item-card" onclick="window.open('${fileUrl}', '_blank')">
-                  <div class="media-preview-box">
-                    <span class="media-format-badge">${typeLabel}</span>
-                    ${isVideo ? `
-                      <video src="${fileUrl}" muted preload="metadata"></video>
-                      <div class="media-overlay-play"><div class="play-icon">▶</div></div>
-                    ` : isAudio ? `
-                      <div style="font-size: 3.5rem; filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.3));">🎵</div>
-                    ` : `
-                      <img src="${fileUrl}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23222%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23444%22 font-size=%2212%22>Yüklenemedi</text></svg>'">
-                    `}
-                  </div>
-                  <div class="media-footer">
-                    <div class="media-name">${escapeHtml(fileName)}</div>
-                    <div class="media-meta">
-                      <span>${item.app_media || (isVideo ? 'Video' : (isAudio ? 'Ses Kaydı' : 'Galeri'))}</span>
-                      <span>${item.boyut_kb ? item.boyut_kb + ' KB' : (item.size ? Math.round(item.size/1024) + ' KB' : '')}</span>
-                    </div>
-                  </div>
-                </div>
-              `;
-            });
-            html += `</div>`;
-          } else {
-            // Standart Tablo Görünümü
-            const keys = Object.keys(items[0]).filter(k => k !== 'id' && k !== '_id');
-            // Sadece dosya referansı (dosya_adi) olan satırlar için İŞLEM sütunu göster
-            const hasActions = items.some(item => !!item.dosya_adi);
-
-            html += `
-              <table class="pretty-table">
-                <thead>
-                  <tr>
-                    ${keys.map(k => `<th>${k.replace(/_/g, ' ').toUpperCase()}</th>`).join('')}
-                    ${hasActions ? '<th>İŞLEM</th>' : ''}
-                  </tr>
-                </thead>
-                <tbody>
-                  ${items.map(item => `
-                    <tr>
-                      ${keys.map(k => {
-                        const val = item[k];
-                        if (typeof val === 'object' && val !== null) {
-                           return `<td><span class="data-badge" style="background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.2); color: #06b6d4;">Sistem Verisi</span></td>`;
-                        }
-                        return `<td>${escapeHtml(String(val))}</td>`;
-                      }).join('')}
-                      ${hasActions ? `
-                        <td>
-                          ${item.dosya_adi ? `
-                            <button class="btn btn-primary btn-sm" onclick="window.open('/api/admin/devices/${encodeURIComponent(currentDevice)}/${encodeURIComponent(currentDataType)}/file/${encodeURIComponent(item.dosya_adi)}?token=' + getToken(), '_blank')">
-                              📂 Gör
-                            </button>
-                          ` : '<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>'}
-                        </td>
-                      ` : ''}
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            `;
-          }
-        } else if (!items && typeof currentData === 'object') {
-          html += `
-            <div class="info-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; padding: 10px;">
-              ${Object.entries(currentData).filter(([k]) => k !== 'data' && k !== 'device' && k !== 'timestamp').map(([k, v]) => `
-                <div style="background: rgba(255, 255, 255, 0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); transition: transform 0.3s ease;">
-                  <div style="color: var(--text-muted); font-size: 10px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.05em;">${k.replace(/_/g, ' ')}</div>
-                  <div style="color: var(--text-primary); font-size: 14px; font-weight: 500; word-break: break-all;">${typeof v === 'object' ? JSON.stringify(v) : v}</div>
-                </div>
-              `).join('')}
-            </div>
-          `;
-        } else {
-          html += `<div class="empty-state" style="padding: 60px;"><div class="empty-state-icon" style="opacity: 0.3;">📉</div><p>Görüntülenecek veri bulunamadı.</p></div>`;
-        }
-
-        html += `</div>`;
-        content.innerHTML = html;
-      }
-
-      // Modal View Toggle (Analiz / Ham JSON)
-      document.querySelectorAll('#viewToggle .toggle-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('#viewToggle .toggle-btn').forEach(el => el.classList.remove('active'));
-          btn.classList.add('active');
-          currentView = btn.dataset.view;
-          if (currentData) renderDeviceContent();
-        });
-      });
-
-      function syntaxHighlight(json) {
-        if (!json) return "";
-        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
-            var cls = 'number';
-            if (/^"/.test(match)) {
-                if (/:$/.test(match)) {
-                    cls = 'key';
-                } else {
-                    cls = 'string';
-                }
-            } else if (/true|false/.test(match)) {
-                cls = 'boolean';
-            } else if (/null/.test(match)) {
-                cls = 'null';
-            }
-            return '<span class="' + cls + '">' + match + '</span>';
-        });
-      }
-
       function copyToClipboard(text) {
         if (!navigator.clipboard) {
-          // Fallback for non-secure contexts
           const textArea = document.createElement("textarea");
           textArea.value = text;
           document.body.appendChild(textArea);
@@ -2263,15 +1854,13 @@
           document.body.removeChild(textArea);
           return;
         }
-        
+
         navigator.clipboard.writeText(text).then(() => {
           showToast("Panoya kopyalandı", "success");
         }).catch(err => {
           showToast("Kopyalama hatası", "error");
         });
       }
-
-      // Remote command functions removed
 
       async function fetchUsers() {
         const token = getToken();

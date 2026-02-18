@@ -10,7 +10,7 @@
 
 **Türkçe optimize edilmiş, sesli komut destekli, hibrit yapay zeka asistanı**
 
-[🚀 Hızlı Başlangıç](#-kurulum-ve-çalıştırma) • [📖 Dokümantasyon](docs/) • [🐛 Hata Bildir](https://github.com/Memati8383/niko-with-kiro/issues) • [💡 Özellik İste](https://github.com/Memati8383/niko-with-kiro/issues/new?template=feature_request.md)
+[🚀 Hızlı Başlangıç](#-kurulum-ve-çalıştırma) • [📖 Dokümantasyon](docs/) • [🐛 Hata Bildir](https://github.com/Memati8383/Niko-AI/issues) • [💡 Özellik İste](https://github.com/Memati8383/Niko-AI/issues/new?template=feature_request.md)
 
 </div>
 
@@ -52,7 +52,7 @@ Proje tamamen **Türkçe** olarak yerelleştirilmiştir (kod içi dokümantasyon
 ## 📁 Proje Yapısı
 
 ```text
-kiro/
+Niko-AI/
 ├── sistemi_baslat.bat      # 🔥 ÖNERİLEN: Tüm sistemi yöneten ana başlatıcı
 ├── main.py                 # Ana FastAPI Backend uygulaması (Tamamen Türkçe)
 ├── manage_users.py         # Kullanıcı Yönetim Sistemi (CLI Admin)
@@ -98,8 +98,8 @@ Eğer projeyi ilk kez kuruyorsanız, aşağıdaki adımları sırasıyla takip e
 ### 2. Projeyi İndirme (Clone)
 
 ```bash
-git clone https://github.com/Memati8383/niko-with-kiro.git
-cd niko-with-kiro/kiro
+git clone https://github.com/Memati8383/Niko-AI.git
+cd Niko-AI
 ```
 
 ### 3. Sanal Ortam Oluşturma ve Bağımlılıklar (Önerilen)
@@ -222,13 +222,13 @@ Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
 
 ## 📞 İletişim
 
-- 🐛 **Bug Raporu:** [GitHub Issues](https://github.com/Memati8383/niko-with-kiro/issues)
-- 💡 **Özellik İsteği:** [Feature Request](https://github.com/Memati8383/niko-with-kiro/issues/new?template=feature_request.md)
-- 💬 **Tartışma:** [GitHub Discussions](https://github.com/Memati8383/niko-with-kiro/discussions)
+- 🐛 **Bug Raporu:** [GitHub Issues](https://github.com/Memati8383/Niko-AI/issues)
+- 💡 **Özellik İsteği:** [Feature Request](https://github.com/Memati8383/Niko-AI/issues/new?template=feature_request.md)
+- 💬 **Tartışma:** [GitHub Discussions](https://github.com/Memati8383/Niko-AI/discussions)
 
 ## ⭐ Yıldız Geçmişi
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Memati8383/niko-with-kiro&type=Date)](https://star-history.com/#Memati8383/niko-with-kiro&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Memati8383/Niko-AI&type=Date)](https://star-history.com/#Memati8383/Niko-AI&Date)
 
 ---
 

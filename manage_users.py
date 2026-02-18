@@ -190,7 +190,7 @@ HTML_CONTENT = """
             <div class="glass-panel p-6 rounded-2xl flex items-center justify-between">
                 <div>
                     <div class="text-slate-400 text-sm font-medium mb-1">Json Dosyası</div>
-                    <div class="text-xs text-slate-500 font-mono">kiro/users.json</div>
+                    <div class="text-xs text-slate-500 font-mono">users.json</div>
                 </div>
                 <div class="p-3 bg-blue-500/10 rounded-lg">
                     <i data-lucide="database" class="w-6 h-6 text-blue-400"></i>

@@ -199,25 +199,4 @@ self.addEventListener('message', (event) => {
     }
 });
 
-/**
- * Background sync event - handle offline actions when back online
- */
-self.addEventListener('sync', (event) => {
-    console.log('[Service Worker] Sync event:', event.tag);
-    
-    if (event.tag === 'sync-messages') {
-        // Handle syncing offline messages when back online
-        event.waitUntil(syncOfflineMessages());
-    }
-});
-
-/**
- * Sync offline messages (placeholder for future implementation)
- */
-async function syncOfflineMessages() {
-    // This could be implemented to sync messages that were
-    // queued while offline
-    console.log('[Service Worker] Syncing offline messages...');
-}
-
 console.log('[Service Worker] Script loaded');

@@ -16,7 +16,7 @@ if os.path.exists(".env"):
 # --- AYARLAR ---
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 REPO_OWNER = "memati8383"
-REPO_NAME = "niko-with-kiro"
+REPO_NAME = "Niko-AI"
 FILE_PATH = "README.md"
 # ---------------
 
