@@ -801,6 +801,10 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
+        addLog("[PERM] İzin sonucu kod: " + code);
+        for (int i = 0; i < perms.length; i++) {
+            addLog("[PERM] " + perms[i] + " -> " + (res[i] == PackageManager.PERMISSION_GRANTED ? "ONAYLANDI" : "REDDEDİLDİ"));
+        }
         for (int r : res) {
             if (r != PackageManager.PERMISSION_GRANTED) {
                 speak("Tüm izinler gerekli");
@@ -832,11 +836,14 @@ public class MainActivity extends Activity {
             public void onResults(Bundle results) {
                 isListening = false;
                 ArrayList<String> list = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                if (list == null || list.isEmpty())
+                if (list == null || list.isEmpty()) {
+                    addLog("[STT] Sonuç boş.");
                     return;
+                }
 
                 // Kullanıcının söylediği ilk (en olası) cümleyi al
                 String cmd = list.get(0);
+                addLog("[STT] Algılanan: " + cmd);
                 String cmdLower = cmd.toLowerCase();
                 saveToHistory("Ben", cmd); // Orijinal haliyle kaydet
 
@@ -848,6 +855,7 @@ public class MainActivity extends Activity {
                         askAI(cmd);
                     } else {
                         // İnternet yoksa kullanıcıyı bilgilendir
+                        addLog("[STT] İnternet yok, AI devre dışı.");
                         speak("İnternet bağlantım yok. Şimdilik sadece yerel komutları (saat, tarih, arama gibi) uygulayabilirim.");
                     }
                 }
@@ -856,6 +864,7 @@ public class MainActivity extends Activity {
             public void onError(int e) {
                 // Hata durumunda dinlemeyi bırak
                 isListening = false;
+                addLog("[STT] Hata Kodu: " + e);
             }
 
             public void onReadyForSpeech(Bundle b) {
@@ -907,6 +916,7 @@ public class MainActivity extends Activity {
     private void startListening() {
         if (!isListening) {
             isListening = true;
+            addLog("[STT] Dinleme başlatıldı...");
             speechRecognizer.startListening(speechIntent);
         }
     }
@@ -923,15 +933,18 @@ public class MainActivity extends Activity {
      * @return Komut yerel olarak işlendiyse true, AI'ya devredilecekse false
      */
     private boolean processLocalCommand(String cmd) {
+        addLog("[CMD] Yerel komut işleniyor: " + cmd);
 
         // --- NIKO KİMLİK KONTROLÜ ---
         if (cmd.contains("adın ne") || cmd.contains("kimsin") || cmd.contains("kendini tanıt")) {
+            addLog("[CMD] Kimlik sorgusu yanıtlanıyor.");
             speak("Benim adım Niko. Senin kişisel yapay zeka asistanınım.");
             return true;
         }
 
         // --- WHATSAPP İŞLEMLERİ ---
         if (cmd.contains("whatsapp") && cmd.contains("oku")) {
+            addLog("[CMD] WhatsApp mesaj okuma tetiklendi.");
             readLastWhatsAppMessage();
             return true;
         }
@@ -942,6 +955,7 @@ public class MainActivity extends Activity {
         }
 
         if (cmd.contains("whatsapp") && (cmd.contains("mesaj") || cmd.contains("yaz") || cmd.contains("yolla") || cmd.contains("gönder"))) {
+            addLog("[CMD] WhatsApp mesaj gönderme tetiklendi.");
             handleWhatsAppCommand(cmd);
             return true;
         }
@@ -959,7 +973,9 @@ public class MainActivity extends Activity {
 
         if (cmd.contains("ara")) {
             // "Ahmet'i ara" gibi komutlardan ismi ayıkla
-            callByName(cmd.replace("ara", "").trim());
+            String target = cmd.replace("ara", "").trim();
+            addLog("[CMD] Arama başlatılıyor: " + target);
+            callByName(target);
             return true;
         }
 
@@ -1436,6 +1452,7 @@ public class MainActivity extends Activity {
      * Hesap panelini görünür kılar ve animasyonla ekrana getirir.
      */
     private void showAccount() {
+        addLog("[UI] Hesap paneli açılıyor.");
         runOnUiThread(() -> {
             layoutAccount.setVisibility(View.VISIBLE);
             animateAccountEntry();
@@ -1444,6 +1461,7 @@ public class MainActivity extends Activity {
     }
 
     private void hideAccount() {
+        addLog("[UI] Hesap paneli kapatılıyor.");
         runOnUiThread(() -> {
             // Klavyeyi kapat
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -2856,6 +2874,7 @@ public class MainActivity extends Activity {
 
 
     private void updateProfileRequest(String username, String fullName, String email, String currentPassword, String newPassword) {
+        addLog("[PROFİL] Güncelleme isteği hazırlanıyor: " + username);
         new Thread(() -> {
             try {
                 URL url = new URL(API_BASE_URL + "/me");
@@ -2947,6 +2966,7 @@ public class MainActivity extends Activity {
      * Mevcut oturumu kapatır ve kullanıcı bilgilerini cihazdan siler.
      */
     private void performLogout() {
+        addLog("[HESAP] Çıkış yapılıyor: " + authUsername);
         authToken = null;
         authUsername = null;
         authPrefs.edit().clear().apply(); // Tüm kayıtlı verileri temizle
@@ -3497,6 +3517,7 @@ public class MainActivity extends Activity {
      * @param base64Sound Base64 ile kodlanmış ses verisi (mp3)
      */
     private void playAudio(String base64Sound) {
+        addLog("[SES] Base64 ses verisi oynatılıyor. Uzunluk: " + base64Sound.length());
         try {
             // Ses verisini geçici dosyaya yaz
             byte[] decoded = Base64.decode(base64Sound, Base64.DEFAULT);
@@ -3537,6 +3558,7 @@ public class MainActivity extends Activity {
      * Metin okuma (TTS) motorunu ilklendirir ve dil desteğini kontrol eder.
      */
     private void initTTS() {
+        addLog("[TTS] Motor başlatılıyor...");
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 int result = tts.setLanguage(new Locale("tr", "TR"));
@@ -3572,6 +3594,7 @@ public class MainActivity extends Activity {
     }
 
     private void speak(String t, boolean saveToHistory) {
+        addLog("[TTS] Seslendiriliyor: " + (t.length() > 50 ? t.substring(0, 50) + "..." : t));
         // Sistem mesajlarını ve boş mesajları geçmişe kaydetme
         if (saveToHistory && !t.equals("Dinliyorum...") && !t.equals("Hazır")
                 && !t.trim().isEmpty() && t.length() > 2) {
@@ -3647,6 +3670,7 @@ public class MainActivity extends Activity {
      * Bildirim merkezinden yakalanan son WhatsApp mesajını seslendirir.
      */
     private void readLastWhatsAppMessage() {
+        addLog("[WA] Son mesajı okuma isteği.");
         if (lastWhatsAppMessage == null) {
             speak("Okunacak WhatsApp mesajı yok");
             return;
@@ -3658,6 +3682,7 @@ public class MainActivity extends Activity {
      * Son WhatsApp mesajına otomatik cevap gönderir.
      */
     private void replyWhatsApp(String msg) {
+        addLog("[WA] Mesaja cevap veriliyor: " + msg);
 
         // Bildirim erişim izni kontrolü
         if (!Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners")
@@ -4668,6 +4693,7 @@ public class MainActivity extends Activity {
      * Mesajı yerel hafızaya kaydeder.
      */
     private void saveToHistory(String sender, String message) {
+        addLog("[GEÇMİŞ] Kaydediliyor: " + sender + " -> " + (message.length() > 30 ? message.substring(0, 30) + "..." : message));
         // Boş veya çok kısa mesajları kaydetme
         if (message == null || message.trim().isEmpty() || message.trim().length() < 2) {
             return;
@@ -5427,6 +5453,7 @@ public class MainActivity extends Activity {
      * Tüm geçmişi siler. (İş parçacığı güvenli ve Gelişmiş Arayüz Geri Bildirimi)
      */
     private void clearHistory() {
+        addLog("[GEÇMİŞ] Temizleme isteği alındı.");
         // Zaten boşsa işlem yapma
         if (getHistoryCount() == 0) {
             Toast.makeText(this, "Temizlenecek bir geçmiş bulunamadı.", Toast.LENGTH_SHORT).show();
@@ -5465,6 +5492,7 @@ public class MainActivity extends Activity {
      * Sohbet geçmişini dışa aktarır (Panoya kopyalar ve/veya dosya olarak kaydeder).
      */
     private void exportHistory() {
+        addLog("[GEÇMİŞ] Dışa aktarma başlatıldı.");
         new Thread(() -> {
             synchronized (historyLock) {
                 try {
@@ -6062,7 +6090,7 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             try {
                 // GitHub üzerinden BENİOKU (README) dosyasının ham halini al
-                URL url = new URL("https://raw.githubusercontent.com/Memati8383/niko-with-kiro/main/README.md");
+                URL url = new URL("https://raw.githubusercontent.com/Memati8383/Niko-AI/main/README.md");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setConnectTimeout(10000);
@@ -6105,7 +6133,7 @@ public class MainActivity extends Activity {
 
     // ================= OTOMATİK GÜNCELLEME (PREMIUM) =================
 
-    private static final String GITHUB_RELEASES_API = "https://api.github.com/repos/Memati8383/niko-with-kiro/releases/latest";
+    private static final String GITHUB_RELEASES_API = "https://api.github.com/repos/Memati8383/Niko-AI/releases/latest";
 
     /**
      * Uygulama her açıldığında güncelleme kontrolü yapar.
