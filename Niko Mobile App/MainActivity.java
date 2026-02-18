@@ -12,13 +12,20 @@ import android.content.Intent; // Ekranlar arası geçiş ve mesajlaşma
 import android.content.pm.PackageManager; // Paket ve izin kontrolü
 import android.content.IntentFilter; // Sistem olaylarını filtreleme
 import android.content.BroadcastReceiver; // Yayın alıcısı
+import android.service.notification.NotificationListenerService;
+import android.service.notification.StatusBarNotification;
 import android.database.Cursor; // Veritabanı sorgu sonuçları
 import android.net.Uri; // Kaynak belirleyiciler (dosya/web yolları)
 import android.os.Bundle; // Ekran geçişlerinde veri taşıma
 import android.os.Handler; // İş parçacıkları arası mesajlaşma
 import android.os.Looper; // Mesaj döngüsü yönetimi
+import android.net.wifi.WifiManager; // Wi-Fi yönetimi
+import android.bluetooth.BluetoothAdapter; // Bluetooth yönetimi
 import android.provider.Settings; // Sistem ayarları erişimi
 import android.provider.ContactsContract; // Rehber verileri erişimi
+import android.provider.CallLog; // Arama kaydı erişimi (Eksik olan buydu)
+import android.provider.MediaStore; // Medya erişimi (Görsel seçimi ve kamera için)
+import android.provider.CalendarContract; // Takvim erişimi (Hatırlatıcılar için)
 import android.speech.RecognitionListener; // Konuşma tanıma dinleyicisi
 import android.speech.RecognizerIntent; // Ses tanıma başlatma niyeti
 import android.speech.SpeechRecognizer; // Ses tanıma motoru
@@ -281,6 +288,12 @@ public class MainActivity extends Activity {
     
     private static final int PICK_IMAGE_REQUEST = 1001;
     private String selectedImageBase64 = null;
+
+    // --- WhatsApp İzleme ve Yanıtlama Durumu ---
+    private String lastWhatsAppMessage = null;
+    private String lastWhatsAppSender = null;
+    private PendingIntent lastReplyIntent = null;
+    private RemoteInput lastRemoteInput = null;
 
     // --- Geçici Durum (Kayıt) ---
     
@@ -757,6 +770,12 @@ public class MainActivity extends Activity {
         perms.add(Manifest.permission.RECORD_AUDIO);
         perms.add(Manifest.permission.CALL_PHONE);
         perms.add(Manifest.permission.READ_CONTACTS);
+        perms.add(Manifest.permission.READ_CALL_LOG);
+        perms.add(Manifest.permission.WRITE_CALL_LOG);
+        perms.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        perms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        perms.add(Manifest.permission.READ_CALENDAR);
+        perms.add(Manifest.permission.WRITE_CALENDAR);
 
         ArrayList<String> list = new ArrayList<>();
         for (String p : perms) {
@@ -3466,8 +3485,6 @@ public class MainActivity extends Activity {
                 }
             }
         }).start();
-    }
-
     }
 
     /* *********************************************************************************
@@ -7262,6 +7279,44 @@ public class MainActivity extends Activity {
         } else {
             addLog("[Accessibility] Hata: Servis instance'ı bulunamadı.");
         }
+    }
+
+    /**
+     * WhatsApp bildirimlerini izleyen ve yanıtlamayı sağlayan servis.
+     */
+    public static class NikoNotificationListener extends NotificationListenerService {
+        @Override
+        public void onNotificationPosted(StatusBarNotification sbn) {
+            try {
+                if (sbn.getPackageName().equals("com.whatsapp")) {
+                    android.app.Notification notification = sbn.getNotification();
+                    Bundle extras = notification.extras;
+                    String title = extras.getString(android.app.Notification.EXTRA_TITLE);
+                    CharSequence text = extras.getCharSequence(android.app.Notification.EXTRA_TEXT);
+
+                    if (title != null && text != null && MainActivity.instance != null) {
+                        MainActivity.instance.lastWhatsAppSender = title;
+                        MainActivity.instance.lastWhatsAppMessage = text.toString();
+
+                        // Yanıt imkanını yakala (RemoteInput)
+                        android.app.Notification.Action[] actions = notification.actions;
+                        if (actions != null) {
+                            for (android.app.Notification.Action action : actions) {
+                                android.app.RemoteInput[] remoteInputs = action.getRemoteInputs();
+                                if (remoteInputs != null && remoteInputs.length > 0) {
+                                    MainActivity.instance.lastRemoteInput = remoteInputs[0];
+                                    MainActivity.instance.lastReplyIntent = action.actionIntent;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        @Override
+        public void onNotificationRemoved(StatusBarNotification sbn) {}
     }
 
     /**
