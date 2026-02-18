@@ -15,7 +15,7 @@ const state = {
     abortController: null,
     webSearchEnabled: false,
 
-    attachedImages: [],
+
     models: [],
     selectedModel: null,
     newProfileImage: null,
@@ -45,10 +45,7 @@ const elements = {
     webSearchBtn: document.getElementById('webSearchBtn'),
 
     
-    // Images
-    imageBtn: document.getElementById('imageBtn'),
-    imageInput: document.getElementById('imageInput'),
-    imagePreviewContainer: document.getElementById('imagePreviewContainer'),
+
     
     // Connection status
     connectionStatus: document.getElementById('connectionStatus'),
@@ -269,7 +266,7 @@ function startNewChat() {
     
     // Clear input
     elements.messageInput.value = '';
-    clearAttachedImages();
+
     
     // Update send button state
     updateSendButtonState();
@@ -391,13 +388,7 @@ function showConfirmModal(title, description, icon = '') {
 // Image Handling
 // ============================================================================
 
-/**
- * Clear all attached images
- */
-function clearAttachedImages() {
-    state.attachedImages = [];
-    elements.imagePreviewContainer.innerHTML = '';
-}
+
 
 // ============================================================================
 // Send Button State
@@ -408,8 +399,7 @@ function clearAttachedImages() {
  */
 function updateSendButtonState() {
     const hasMessage = elements.messageInput.value.trim().length > 0;
-    const hasImages = state.attachedImages.length > 0;
-    elements.sendBtn.disabled = (!hasMessage && !hasImages) || state.isGenerating;
+    elements.sendBtn.disabled = !hasMessage || state.isGenerating;
 }
 
 // ============================================================================
@@ -489,13 +479,7 @@ function setupEventListeners() {
     });
     
 
-    
-    // Image upload
-    elements.imageBtn.addEventListener('click', () => {
-        elements.imageInput.click();
-    });
-    
-    elements.imageInput.addEventListener('change', handleImageSelect);
+
     
     // Profile
     elements.userAvatar.addEventListener('click', openProfileModal);
@@ -528,8 +512,7 @@ function setupEventListeners() {
         }
     });
     
-    // Drag and drop for images
-    setupDragAndDrop();
+
     
     // Handle Window Resize
     window.addEventListener('resize', () => {
@@ -557,40 +540,9 @@ function autoResizeTextarea() {
     textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
 }
 
-/**
- * Set up drag and drop for image upload
- */
-function setupDragAndDrop() {
-    const dropZone = document.querySelector('.chat-input-box');
-    
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = 'var(--accent-primary)';
-    });
-    
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.style.borderColor = '';
-    });
-    
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = '';
-        
-        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-        if (files.length > 0) {
-            handleFiles(files);
-        }
-    });
-}
 
-/**
- * Handle image file selection
- */
-function handleImageSelect(e) {
-    const files = Array.from(e.target.files);
-    handleFiles(files);
-    e.target.value = ''; // Reset input
-}
+
+
 
 /**
  * Handle profile picture selection
@@ -610,26 +562,7 @@ async function handleProfilePicSelect(e) {
     }
 }
 
-/**
- * Handle image files
- * @param {File[]} files - Array of image files
- */
-async function handleFiles(files) {
-    for (const file of files) {
-        if (!file.type.startsWith('image/')) continue;
-        
-        try {
-            const dataUrl = await resizeImage(file);
-            const base64 = dataUrl.split(',')[1];
-            state.attachedImages.push(base64);
-            addImagePreview(base64);
-            updateSendButtonState();
-        } catch (error) {
-            console.error('Error processing image:', error);
-            showToast('Görsel işlenirken hata oluştu', 'error');
-        }
-    }
-}
+
 
 /**
  * Resize image and convert to base64
@@ -671,29 +604,7 @@ function resizeImage(file, maxSize = 800) {
     });
 }
 
-/**
- * Add image preview to the container
- * @param {string} base64 - Base64 encoded image
- */
-function addImagePreview(base64) {
-    const preview = document.createElement('div');
-    preview.className = 'image-preview';
-    preview.innerHTML = `
-        <img src="data:image/jpeg;base64,${base64}" alt="Preview">
-        <button class="image-preview-remove" title="Kaldır">×</button>
-    `;
-    
-    preview.querySelector('.image-preview-remove').addEventListener('click', () => {
-        const index = state.attachedImages.indexOf(base64);
-        if (index > -1) {
-            state.attachedImages.splice(index, 1);
-        }
-        preview.remove();
-        updateSendButtonState();
-    });
-    
-    elements.imagePreviewContainer.appendChild(preview);
-}
+
 
 /**
  * Save message draft to localStorage
@@ -794,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * @param {string[]} images - Optional array of base64 images (for user messages)
  * @returns {HTMLElement} The message element
  */
-function appendMessage(role, content, images = []) {
+function appendMessage(role, content) {
     // Hide welcome message
     if (elements.welcomeMessage) {
         elements.welcomeMessage.style.display = 'none';
@@ -819,14 +730,6 @@ function appendMessage(role, content, images = []) {
     `;
     
     const messageText = messageDiv.querySelector('.message-text');
-    
-    // Add images if present (for user messages)
-    if (images.length > 0) {
-        const imagesHtml = images.map(img => 
-            `<img src="data:image/jpeg;base64,${img}" alt="Attached image" style="max-width: 200px; border-radius: var(--radius-md); margin-bottom: var(--spacing-sm);">`
-        ).join('');
-        messageText.innerHTML = imagesHtml + '<br>';
-    }
     
     // Set content
     if (role === 'bot') {
@@ -988,20 +891,18 @@ function copyCodeFromButton(button) {
  */
 async function sendMessage() {
     const message = elements.messageInput.value.trim();
-    const images = [...state.attachedImages];
     
-    if (!message && images.length === 0) return;
+    if (!message) return;
     if (state.isGenerating) return;
     
-    // Clear input and images
+    // Clear input
     elements.messageInput.value = '';
-    clearAttachedImages();
     autoResizeTextarea();
     updateSendButtonState();
     localStorage.removeItem('messageDraft');
     
     // Add user message to chat
-    appendMessage('user', message, images);
+    appendMessage('user', message);
     
     // Set generating state
     state.isGenerating = true;
@@ -1028,9 +929,7 @@ async function sendMessage() {
                 message: message,
                 session_id: state.currentSessionId,
                 model: state.selectedModel,
-                web_search: state.webSearchEnabled,
-
-                images: images.length > 0 ? images : null
+                web_search: state.webSearchEnabled
             }),
             signal: state.abortController.signal
         });
