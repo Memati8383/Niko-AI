@@ -720,12 +720,14 @@ function appendMessage(role, content) {
     }
     
     messageDiv.innerHTML = `
-        <div class="message-avatar">${avatar}</div>
+        <div class="message-avatar-col">
+            <div class="message-avatar">${avatar}</div>
+            <div class="message-actions">
+                <button class="message-action-btn copy-btn" title="Kopyala">📋</button>
+            </div>
+        </div>
         <div class="message-content">
             <div class="message-text"></div>
-            <div class="message-actions">
-                <button class="message-action-btn copy-btn" title="Kopyala">📋 Kopyala</button>
-            </div>
         </div>
     `;
     
@@ -742,7 +744,22 @@ function appendMessage(role, content) {
     
     // Add copy functionality
     const copyBtn = messageDiv.querySelector('.copy-btn');
-    copyBtn.addEventListener('click', () => {
+    copyBtn.addEventListener('click', (e) => {
+        // Ripple efekti
+        const ripple = document.createElement('span');
+        ripple.classList.add('ripple');
+        copyBtn.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 500);
+
+        // İkon → ✓ dönüşümü
+        const original = copyBtn.innerHTML;
+        copyBtn.innerHTML = '✓';
+        copyBtn.classList.add('copied');
+        setTimeout(() => {
+            copyBtn.innerHTML = original;
+            copyBtn.classList.remove('copied');
+        }, 1800);
+
         copyToClipboard(content);
     });
     
@@ -803,7 +820,7 @@ function parseMarkdown(content) {
     codeBlocks.forEach((block, index) => {
         const escapedCode = escapeHtml(block.code);
         const highlightedCode = highlightCode(escapedCode, block.language);
-        const codeBlockHtml = `<pre class="code-block" data-language="${block.language}"><code class="language-${block.language}">${highlightedCode}</code><button class="code-copy-btn" data-code="${encodeURIComponent(block.code)}" title="Kodu Kopyala">📋 Kopyala</button></pre>`;
+        const codeBlockHtml = `<pre class="code-block" data-language="${block.language}"><div class="code-block-header"><span class="code-lang">${block.language || 'kod'}</span><button class="code-copy-btn" data-code="${encodeURIComponent(block.code)}" title="Kodu Kopyala"> 📋</button></div><code class="language-${block.language}">${highlightedCode}</code></pre>`;
         html = html.replace(`__CODE_BLOCK_${index}__`, codeBlockHtml);
     });
     
