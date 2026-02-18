@@ -131,13 +131,16 @@ Niko aşağıdaki sesli komutları anlayabilir ve yerine getirebilir:
 
 Uygulama için hazırlanan logo/ikon çalışmaları ve referans görseller:
 
-|                        Önizleme                        | Dosya Adı               |
-| :----------------------------------------------------: | :---------------------- |
-| <img src="./icons/icon_candidate_01.png" width="80" /> | `icon_candidate_01.png` |
-| <img src="./icons/icon_candidate_02.png" width="80" /> | `icon_candidate_02.png` |
-| <img src="./icons/icon_candidate_03.png" width="80" /> | `icon_candidate_03.png` |
-| <img src="./icons/icon_candidate_04.png" width="80" /> | `icon_candidate_04.png` |
-|  <img src="./icons/icon_reference.jpeg" width="80" />  | `icon_reference.jpeg`   |
+|                         Önizleme                          | Dosya Adı                  |
+| :-------------------------------------------------------: | :------------------------- |
+|     <img src="./icons/niko_icon_1.png" width="80" />      | `niko_icon_1.png`          |
+|     <img src="./icons/niko_icon_2.png" width="80" />      | `niko_icon_2.png`          |
+|     <img src="./icons/niko_icon_3.png" width="80" />      | `niko_icon_3.png`          |
+|     <img src="./icons/niko_icon_4.png" width="80" />      | `niko_icon_4.png`          |
+|     <img src="./icons/niko_icon_5.png" width="80" />      | `niko_icon_5.png`          |
+|     <img src="./icons/niko_icon_6.png" width="80" />      | `niko_icon_6.png`          |
+|     <img src="./icons/niko_icon_7.png" width="80" />      | `niko_icon_7.png`          |
+| <img src="./icons/niko_icon_reference.jpeg" width="80" /> | `niko_icon_reference.jpeg` |
 
 ## Proje Dosya Yapısı
 
