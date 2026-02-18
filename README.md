@@ -246,4 +246,4 @@ Made with ❤️ in Turkey 🇹🇷
 
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
-> 🌐 **Güncel Tünel Adresi:** [https://drinks-api-charles-decided.trycloudflare.com](https://drinks-api-charles-decided.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://waterproof-similar-arranged-secretariat.trycloudflare.com](https://waterproof-similar-arranged-secretariat.trycloudflare.com)
