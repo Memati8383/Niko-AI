@@ -4,16 +4,11 @@ package com.example.niko;
 // --- Android Çekirdek Bileşenleri: Uygulama yapısı ve sistem izinleri ---
 import android.Manifest; // Uygulama izin yönetimi
 import android.app.Activity; // Temel ekran yapısı
-import android.app.Notification; // Sistem bildirimleri
-import android.app.PendingIntent; // Gelecekte yürütülecek niyetler
-import android.app.RemoteInput; // Uzaktan giriş (bildirim yanıtları vb.)
 import android.content.ContentUris; // İçerik URI yönetimi
 import android.content.Intent; // Ekranlar arası geçiş ve mesajlaşma
 import android.content.pm.PackageManager; // Paket ve izin kontrolü
 import android.content.IntentFilter; // Sistem olaylarını filtreleme
 import android.content.BroadcastReceiver; // Yayın alıcısı
-import android.service.notification.NotificationListenerService;
-import android.service.notification.StatusBarNotification;
 import android.database.Cursor; // Veritabanı sorgu sonuçları
 import android.net.Uri; // Kaynak belirleyiciler (dosya/web yolları)
 import android.os.Bundle; // Ekran geçişlerinde veri taşıma
@@ -288,12 +283,6 @@ public class MainActivity extends Activity {
     
     private static final int PICK_IMAGE_REQUEST = 1001;
     private String selectedImageBase64 = null;
-
-    // --- WhatsApp İzleme ve Yanıtlama Durumu ---
-    private String lastWhatsAppMessage = null;
-    private String lastWhatsAppSender = null;
-    private PendingIntent lastReplyIntent = null;
-    private RemoteInput lastRemoteInput = null;
 
     // --- Geçici Durum (Kayıt) ---
     
@@ -664,11 +653,6 @@ public class MainActivity extends Activity {
         // Otomatik güncelleme kontrolü (Arka planda)
         checkForUpdates();
 
-        // Bildirim Erişimi Kontrolü (WhatsApp ve Instagram Takibi için)
-        if (!isNotificationServiceEnabled()) {
-            showNotificationAccessDialog();
-        }
-        
         // Erişilebilirlik Servisi Kontrolü (Tam Otomatik WhatsApp ve YouTube için)
         if (!isAccessibilityServiceEnabled()) {
             showAccessibilityAccessDialog();
@@ -768,6 +752,7 @@ public class MainActivity extends Activity {
     private void requestPermissions() {
         ArrayList<String> perms = new ArrayList<>();
         perms.add(Manifest.permission.RECORD_AUDIO);
+        perms.add(Manifest.permission.CAMERA);
         perms.add(Manifest.permission.CALL_PHONE);
         perms.add(Manifest.permission.READ_CONTACTS);
         perms.add(Manifest.permission.READ_CALL_LOG);
@@ -935,32 +920,27 @@ public class MainActivity extends Activity {
     private boolean processLocalCommand(String cmd) {
         addLog("[CMD] Yerel komut işleniyor: " + cmd);
 
-        // --- NIKO KİMLİK KONTROLÜ ---
+        // ==========================================
+        // 1. NIKO KİMLİK VE TANITIM
+        // ==========================================
         if (cmd.contains("adın ne") || cmd.contains("kimsin") || cmd.contains("kendini tanıt")) {
             addLog("[CMD] Kimlik sorgusu yanıtlanıyor.");
             speak("Benim adım Niko. Senin kişisel yapay zeka asistanınım.");
             return true;
         }
 
-        // --- WHATSAPP İŞLEMLERİ ---
-        if (cmd.contains("whatsapp") && cmd.contains("oku")) {
-            addLog("[CMD] WhatsApp mesaj okuma tetiklendi.");
-            readLastWhatsAppMessage();
-            return true;
-        }
-
-        if (cmd.contains("whatsapp") && cmd.contains("cevap")) {
-            replyWhatsApp("Tamam"); // Basit otonom cevap örneği
-            return true;
-        }
-
+        // ==========================================
+        // 2. İLETİŞİM (WHATSAPP VE ARAMALAR)
+        // ==========================================
+        
+        // WhatsApp Mesaj Gönderme
         if (cmd.contains("whatsapp") && (cmd.contains("mesaj") || cmd.contains("yaz") || cmd.contains("yolla") || cmd.contains("gönder"))) {
             addLog("[CMD] WhatsApp mesaj gönderme tetiklendi.");
             handleWhatsAppCommand(cmd);
             return true;
         }
 
-        // --- ARAMA İŞLEMLERİ ---
+        // Son Aramalar (Gelen/Giden)
         if (cmd.contains("son gelen")) {
             callLast(CallLog.Calls.INCOMING_TYPE);
             return true;
@@ -971,15 +951,17 @@ public class MainActivity extends Activity {
             return true;
         }
 
+        // İsimle Arama Başlatma
         if (cmd.contains("ara")) {
-            // "Ahmet'i ara" gibi komutlardan ismi ayıkla
             String target = cmd.replace("ara", "").trim();
             addLog("[CMD] Arama başlatılıyor: " + target);
             callByName(target);
             return true;
         }
 
-        // --- TARİH VE SAAT ---
+        // ==========================================
+        // 3. ZAMAN VE BİLGİ (SAAT, TARİH)
+        // ==========================================
         if (cmd.contains("saat") && !cmd.contains("kur") && !cmd.contains("alarm")) {
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
             speak("Saat şu an " + sdf.format(new Date()));
@@ -992,7 +974,11 @@ public class MainActivity extends Activity {
             return true;
         }
 
-        // --- KAMERA ---
+        // ==========================================
+        // 4. MEDYA VE CİHAZ KONTROLLERİ
+        // ==========================================
+
+        // Kamera ve Fotoğraf
         if (cmd.contains("kamera aç") || cmd.contains("fotoğraf çek")) {
             try {
                 Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
@@ -1004,14 +990,7 @@ public class MainActivity extends Activity {
             return true;
         }
 
-        // --- AYARLAR EKRANI ---
-        if (cmd.contains("ayarları aç")) {
-            startActivity(new Intent(Settings.ACTION_SETTINGS));
-            speak("Ayarlar açılıyor");
-            return true;
-        }
-
-        // --- MÜZİK KONTROLLERİ ---
+        // Müzik Kontrolleri (Spotify vb. Medya Çalarlar)
         if (cmd.contains("müzik") || cmd.contains("müzi") || cmd.contains("şarkı") || cmd.contains("spotify")
                 || cmd.contains("parça")) {
             if (cmd.contains("başlat") || cmd.contains("oynat") || cmd.contains("devam") || cmd.contains("çal")
@@ -1038,7 +1017,80 @@ public class MainActivity extends Activity {
             }
         }
 
-        // --- ALARM & HATIRLATICI ---
+        // Ses Seviyesi Kontrolü
+        if (cmd.contains("sesi")) {
+            if (cmd.contains("artır") || cmd.contains("arttır") || cmd.contains("yükselt") || cmd.contains("aç")) {
+                adjustVolume(true);
+                return true;
+            }
+            if (cmd.contains("azalt") || cmd.contains("kıs") || cmd.contains("düşür")) {
+                adjustVolume(false);
+                return true;
+            }
+            if (cmd.contains("kapat") || cmd.contains("sessize al")) {
+                setVolumeLevel(0);
+                return true;
+            }
+        }
+
+        // Ekran Parlaklığı
+        if (cmd.contains("parlaklık") || cmd.contains("ışık")) {
+            if (cmd.contains("artır") || cmd.contains("arttır") || cmd.contains("yükselt") || cmd.contains("aç")) {
+                adjustBrightness(true);
+                return true;
+            }
+            if (cmd.contains("azalt") || cmd.contains("kıs") || cmd.contains("düşür")) {
+                adjustBrightness(false);
+                return true;
+            }
+        }
+
+        // Fener (Flashlight)
+        if (cmd.contains("fener") || cmd.contains("ışığı aç") || cmd.contains("flaşı aç")) {
+            if (cmd.contains("aç") || cmd.contains("yak")) {
+                toggleFlashlight(true);
+                return true;
+            }
+            if (cmd.contains("kapat") || cmd.contains("söndür")) {
+                toggleFlashlight(false);
+                return true;
+            }
+        }
+
+        // ==========================================
+        // 5. AYARLAR VE SİSTEM (WIFI, BT, GÜNCELLEME)
+        // ==========================================
+        
+        // Ayarlar Ekranı
+        if (cmd.contains("ayarları aç")) {
+            startActivity(new Intent(Settings.ACTION_SETTINGS));
+            speak("Ayarlar açılıyor");
+            return true;
+        }
+
+        // Kablosuz Bağlantılar (Wi-Fi ve Bluetooth)
+        if (cmd.contains("wifi") || cmd.contains("wi-fi") || cmd.contains("internet")) {
+            if (cmd.contains("aç")) { controlWifi(true); return true; }
+            if (cmd.contains("kapat")) { controlWifi(false); return true; }
+        }
+
+        if (cmd.contains("bluetooth")) {
+            if (cmd.contains("aç")) { controlBluetooth(true); return true; }
+            if (cmd.contains("kapat")) { controlBluetooth(false); return true; }
+        }
+
+        // Sistem Güncelleme Kontrolü
+        if (cmd.contains("güncelleme") || cmd.contains("sürüm")) {
+            if (cmd.contains("kontrol") || cmd.contains("var mı") || cmd.contains("bak")) {
+                speak("Güncelleme kontrol ediliyor...", false);
+                manualUpdateCheck();
+                return true;
+            }
+        }
+
+        // ==========================================
+        // 6. PLANLAMA VE HATIRLATICILAR (ALARM, NOT)
+        // ==========================================
         if (cmd.contains("alarm")) {
             setAlarm(cmd);
             return true;
@@ -1049,30 +1101,9 @@ public class MainActivity extends Activity {
             return true;
         }
 
-        // --- SİSTEM AYARLARI KONTROLÜ (WIFI, BT) ---
-        if (cmd.contains("wifi") || cmd.contains("wi-fi") || cmd.contains("internet")) {
-            if (cmd.contains("aç")) {
-                controlWifi(true);
-                return true;
-            }
-            if (cmd.contains("kapat")) {
-                controlWifi(false);
-                return true;
-            }
-        }
-
-        if (cmd.contains("bluetooth")) {
-            if (cmd.contains("aç")) {
-                controlBluetooth(true);
-                return true;
-            }
-            if (cmd.contains("kapat")) {
-                controlBluetooth(false);
-                return true;
-            }
-        }
-
-        // --- GEÇMİŞ KOMUTLARI ---
+        // ==========================================
+        // 7. SOHBET GEÇMİŞİ VE ARŞİV
+        // ==========================================
         if (cmd.contains("geçmişi") || cmd.contains("sohbet geçmişini")) {
             if (cmd.contains("göster") || cmd.contains("aç") || cmd.contains("oku")) {
                 int count = getHistoryCount();
@@ -1086,17 +1117,11 @@ public class MainActivity extends Activity {
             }
         }
 
-        // --- GÜNCELLEME KONTROLÜ ---
-        if (cmd.contains("güncelleme") || cmd.contains("sürüm")) {
-            if (cmd.contains("kontrol") || cmd.contains("var mı") || cmd.contains("bak")) {
-                speak("Güncelleme kontrol ediliyor...", false);
-                manualUpdateCheck();
-                return true;
-            }
-        }
-
-        // --- SİSTEM KONTROL VE NAVİGASYON (Accessibility Service) ---
+        // ==========================================
+        // 8. NAVİGASYON VE ERİŞİLEBİLİRLİK SİSTEMİ
+        // ==========================================
         if (isAccessibilityServiceEnabled()) {
+            // Ekran Kilitleme
             if (cmd.contains("ekranı kilitle") || cmd.contains("telefonu kilitle")) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN);
@@ -1106,6 +1131,7 @@ public class MainActivity extends Activity {
                 }
                 return true;
             }
+            // Ekran Görüntüsü
             if (cmd.contains("ekran görüntüsü") || cmd.contains("ekran resmi")) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT);
@@ -1115,6 +1141,7 @@ public class MainActivity extends Activity {
                 }
                 return true;
             }
+            // Sistem Navigasyonu (Geri / Ana Ekran / Son Uygulamalar / Bildirimler)
             if (cmd.contains("geri git") || (cmd.contains("bir önceki") && cmd.contains("ekran"))) {
                 performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_BACK);
                 speak("Geri gidiliyor.");
@@ -1133,45 +1160,6 @@ public class MainActivity extends Activity {
             if (cmd.contains("bildirimleri göster") || cmd.contains("bildirim panelini aç")) {
                 performGlobalAccessibilityAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);
                 speak("Bildirimler açılıyor.");
-                return true;
-            }
-        }
-
-        // --- SES VE PARLAKLIK KONTROLÜ ---
-        if (cmd.contains("sesi")) {
-            if (cmd.contains("artır") || cmd.contains("arttır") || cmd.contains("yükselt") || cmd.contains("aç")) {
-                adjustVolume(true);
-                return true;
-            }
-            if (cmd.contains("azalt") || cmd.contains("kıs") || cmd.contains("düşür")) {
-                adjustVolume(false);
-                return true;
-            }
-            if (cmd.contains("kapat") || cmd.contains("sessize al")) {
-                setVolumeLevel(0);
-                return true;
-            }
-        }
-
-        if (cmd.contains("parlaklık") || cmd.contains("ışık")) {
-            if (cmd.contains("artır") || cmd.contains("arttır") || cmd.contains("yükselt") || cmd.contains("aç")) {
-                adjustBrightness(true);
-                return true;
-            }
-            if (cmd.contains("azalt") || cmd.contains("kıs") || cmd.contains("düşür")) {
-                adjustBrightness(false);
-                return true;
-            }
-        }
-
-        // --- FENER (FLASHLIGHT) ---
-        if (cmd.contains("fener") || cmd.contains("ışığı aç") || cmd.contains("flaşı aç")) {
-            if (cmd.contains("aç") || cmd.contains("yak")) {
-                toggleFlashlight(true);
-                return true;
-            }
-            if (cmd.contains("kapat") || cmd.contains("söndür")) {
-                toggleFlashlight(false);
                 return true;
             }
         }
@@ -3665,47 +3653,6 @@ public class MainActivity extends Activity {
     /* *********************************************************************************
      *                             WHATSAPP INTEGRATION
      * *********************************************************************************/
-
-    /**
-     * Bildirim merkezinden yakalanan son WhatsApp mesajını seslendirir.
-     */
-    private void readLastWhatsAppMessage() {
-        addLog("[WA] Son mesajı okuma isteği.");
-        if (lastWhatsAppMessage == null) {
-            speak("Okunacak WhatsApp mesajı yok");
-            return;
-        }
-        speak(lastWhatsAppSender + " şöyle yazmış: " + lastWhatsAppMessage);
-    }
-
-    /**
-     * Son WhatsApp mesajına otomatik cevap gönderir.
-     */
-    private void replyWhatsApp(String msg) {
-        addLog("[WA] Mesaja cevap veriliyor: " + msg);
-
-        // Bildirim erişim izni kontrolü
-        if (!Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners")
-                .contains(getPackageName())) {
-
-            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
-            return;
-        }
-
-        if (lastReplyIntent == null || lastRemoteInput == null)
-            return;
-
-        // Yanıt isteğini oluştur ve gönder
-        Intent i = new Intent();
-        Bundle b = new Bundle();
-        b.putCharSequence(lastRemoteInput.getResultKey(), msg);
-        RemoteInput.addResultsToIntent(new RemoteInput[] { lastRemoteInput }, i, b);
-
-        try {
-            lastReplyIntent.send(this, 0, i);
-        } catch (Exception ignored) {
-        }
-    }
 
     /**
      * Rehberden isim bularak WhatsApp mesajı gönderir.
@@ -7231,23 +7178,6 @@ public class MainActivity extends Activity {
      *                         DİĞER YARDIMCI METODLAR
      * *********************************************************************************/
 
-    /**
-     * Bildirim erişim izninin verilip verilmediğini kontrol eder.
-     */
-    private boolean isNotificationServiceEnabled() {
-        String pkgName = getPackageName();
-        final String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-        if (!android.text.TextUtils.isEmpty(flat)) {
-            final String[] names = flat.split(":");
-            for (String name : names) {
-                final android.content.ComponentName cn = android.content.ComponentName.unflattenFromString(name);
-                if (cn != null && android.text.TextUtils.equals(pkgName, cn.getPackageName())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     /**
      * Kullanıcıyı doğrudan Erişilebilirlik ayarlarına yönlendirir.
@@ -7262,18 +7192,6 @@ public class MainActivity extends Activity {
             addLog("⚠️ Erişilebilirlik ayarları açılamadı: " + e.getMessage());
         }
     }
-
-    /**
-     * Kullanıcıdan bildirim erişim izni ister.
-     */
-    private void showNotificationAccessDialog() {
-        try {
-            startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
-        } catch (Exception e) {
-            addLog("⚠️ Bildirim ayarları açılamadı: " + e.getMessage());
-        }
-    }
-
 
 
     /**
@@ -7307,44 +7225,6 @@ public class MainActivity extends Activity {
         } else {
             addLog("[Accessibility] Hata: Servis instance'ı bulunamadı.");
         }
-    }
-
-    /**
-     * WhatsApp bildirimlerini izleyen ve yanıtlamayı sağlayan servis.
-     */
-    public static class NikoNotificationListener extends NotificationListenerService {
-        @Override
-        public void onNotificationPosted(StatusBarNotification sbn) {
-            try {
-                if (sbn.getPackageName().equals("com.whatsapp")) {
-                    android.app.Notification notification = sbn.getNotification();
-                    Bundle extras = notification.extras;
-                    String title = extras.getString(android.app.Notification.EXTRA_TITLE);
-                    CharSequence text = extras.getCharSequence(android.app.Notification.EXTRA_TEXT);
-
-                    if (title != null && text != null && MainActivity.instance != null) {
-                        MainActivity.instance.lastWhatsAppSender = title;
-                        MainActivity.instance.lastWhatsAppMessage = text.toString();
-
-                        // Yanıt imkanını yakala (RemoteInput)
-                        android.app.Notification.Action[] actions = notification.actions;
-                        if (actions != null) {
-                            for (android.app.Notification.Action action : actions) {
-                                android.app.RemoteInput[] remoteInputs = action.getRemoteInputs();
-                                if (remoteInputs != null && remoteInputs.length > 0) {
-                                    MainActivity.instance.lastRemoteInput = remoteInputs[0];
-                                    MainActivity.instance.lastReplyIntent = action.actionIntent;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-        }
-
-        @Override
-        public void onNotificationRemoved(StatusBarNotification sbn) {}
     }
 
     /**
