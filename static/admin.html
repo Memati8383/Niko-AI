@@ -530,67 +530,6 @@
         transform: scale(1);
       }
 
-      /* Tab Sistemi - Avant-Garde Upgrade */
-      .admin-tabs {
-        display: inline-flex;
-        gap: 12px;
-        margin-bottom: 48px;
-        padding: 10px;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 24px;
-        backdrop-filter: blur(20px);
-      }
-
-      .tab-btn {
-        padding: 14px 32px;
-        background: transparent;
-        border: none;
-        color: rgba(255, 255, 255, 0.4);
-        font-size: 0.9rem;
-        font-weight: 700;
-        cursor: pointer;
-        border-radius: 16px;
-        transition: all 0.4s var(--transition-premium);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-      }
-
-      .tab-btn:hover {
-        background: rgba(255, 255, 255, 0.04);
-        color: rgba(255, 255, 255, 0.8);
-      }
-
-      .tab-btn.active {
-        background: var(--accent-gradient);
-        color: white;
-        box-shadow: 0 10px 25px rgba(6, 182, 212, 0.3);
-        transform: translateY(-2px);
-      }
-
-      .tab-content {
-        display: none;
-        animation: contentFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-
-      @keyframes contentFadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(20px) scale(0.98);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-      }
-
-      .tab-content.active {
-        display: block;
-      }
-
       /* User Table Mobile Refinement */
       @media (max-width: 768px) {
         .admin-header {
@@ -603,18 +542,6 @@
         .admin-title {
           flex-direction: column;
           gap: 12px;
-        }
-
-        .admin-tabs {
-          width: 100%;
-          overflow-x: auto;
-          justify-content: flex-start;
-          border-radius: 20px;
-        }
-
-        .tab-btn {
-          white-space: nowrap;
-          padding: 12px 24px;
         }
 
         .users-table thead {
@@ -775,15 +702,9 @@
         </div>
       </header>
 
-      <!-- Multi-Tab Navigation (Simplified: Only User Management remains) -->
-      <div class="admin-tabs">
-        <button class="tab-btn active" data-tab="users">
-          👥 Kullanıcı Yönetimi
-        </button>
-      </div>
 
       <!-- Users Table Section -->
-      <div id="usersTab" class="tab-content active">
+      <div id="usersTab">
         <!-- Table Controls -->
         <div class="table-controls">
           <div class="filter-group">
@@ -934,23 +855,6 @@
       const deleteDescription = document.getElementById("deleteDescription");
       const toastContainer = document.getElementById("toastContainer");
 
-      // Tab Switching
-      document.querySelectorAll(".tab-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const tab = btn.dataset.tab;
-          document
-            .querySelectorAll(".tab-btn")
-            .forEach((b) => b.classList.remove("active"));
-          document
-            .querySelectorAll(".tab-content")
-            .forEach((c) => c.classList.remove("active"));
-
-          btn.classList.add("active");
-          document.getElementById(`${tab}Tab`).classList.add("active");
-
-          if (tab === "users") fetchUsers();
-        });
-      });
 
       // ============================================================================
       // Yardımcı Fonksiyonlar
