@@ -246,4 +246,4 @@ Made with ❤️ in Turkey 🇹🇷
 
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
-> 🌐 **Güncel Tünel Adresi:** [https://using-anderson-lit-evaluating.trycloudflare.com](https://using-anderson-lit-evaluating.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://decent-popular-cpu-holes.trycloudflare.com](https://decent-popular-cpu-holes.trycloudflare.com)
