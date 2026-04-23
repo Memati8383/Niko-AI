@@ -246,4 +246,4 @@ Made with ❤️ in Turkey 🇹🇷
 
 _Niko AI - Geleceğin Asistanı, Bugün Yanınızda._
 
-> 🌐 **Güncel Tünel Adresi:** [https://herein-diary-routines-bon.trycloudflare.com](https://herein-diary-routines-bon.trycloudflare.com)
+> 🌐 **Güncel Tünel Adresi:** [https://using-anderson-lit-evaluating.trycloudflare.com](https://using-anderson-lit-evaluating.trycloudflare.com)
