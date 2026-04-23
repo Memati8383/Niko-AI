@@ -12,7 +12,6 @@ load_dotenv()
 import re
 import json
 import time
-import hashlib
 from typing import Optional, List, Dict, Tuple
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
@@ -21,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, field_validator, EmailStr
+from pydantic import BaseModel, field_validator
 import bcrypt
 from jose import jwt, JWTError
 import httpx
@@ -29,7 +28,7 @@ from typing import AsyncGenerator
 from fastapi.responses import StreamingResponse
 import logging
 from prompts import build_full_prompt
-from email_verification import get_email_service, EmailVerificationService
+from email_verification import get_email_service
 
 def clean_model_response(message: str) -> str:
     """
@@ -1455,7 +1454,7 @@ async def get_current_user(
     username = auth_service.verify_token(token)
     
     if username is None:
-        logger.warning(f"⚠️ Geçersiz veya süresi dolmuş token")
+        logger.warning("⚠️ Geçersiz veya süresi dolmuş token")
         raise HTTPException(
             status_code=401,
             detail="Geçersiz veya süresi dolmuş token"
@@ -2222,11 +2221,8 @@ async def get_search_status(current_user: str = Depends(get_current_user)):
     Web araması ve RAG aramasının kullanılabilirliğini döndürür.
     """
     # Web arama kullanılabilirliğini kontrol et
-    web_search_available = True
-    try:
-        from duckduckgo_search import DDGS
-    except ImportError:
-        web_search_available = False
+    import importlib.util
+    web_search_available = importlib.util.find_spec("duckduckgo_search") is not None
     
     # RAG arama kullanılabilirliğini kontrol et
     rag_search_available = False
@@ -2247,15 +2243,7 @@ async def get_search_status(current_user: str = Depends(get_current_user)):
 # Yönetici Paneli Uç Noktaları
 # ============================================================================
 
-@app.get("/admin")
-@app.get("/admin.html")
-async def admin_page():
-    """
-    Admin paneli sayfasını sunar.
-    Kimlik doğrulama, JavaScript aracılığıyla istemci tarafında yönetilir.
-    Gereksinimler: 1.3
-    """
-    return FileResponse("static/admin.html")
+
 
 
 @app.get("/api/admin/users")
